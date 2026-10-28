@@ -1,0 +1,930 @@
+[
+  {
+    "id": "hagiang-img_8794",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8794.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8794.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Roads worth taking",
+      "vi": "Những cung đường đáng đi"
+    },
+    "alt": {
+      "en": "Terraced mountain slopes and a winding road in Ha Giang",
+      "vi": "Sườn núi bậc thang và đường uốn lượn ở Hà Giang"
+    }
+  },
+  {
+    "id": "hagiang-img_8705",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8705.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8705.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "The greener way home",
+      "vi": "Thung lũng xanh"
+    },
+    "alt": {
+      "en": "A green valley surrounded by layers of mountains",
+      "vi": "Thung lũng xanh giữa những lớp núi trùng điệp"
+    }
+  },
+  {
+    "id": "hagiang-img_8706",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8706.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8706.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "A stop with a view",
+      "vi": "Dừng chân giữa núi đồi"
+    },
+    "alt": {
+      "en": "Travelers at a mountain viewpoint with a Vietnamese flag",
+      "vi": "Du khách tại điểm ngắm núi với lá cờ Việt Nam"
+    }
+  },
+  {
+    "id": "hagiang-img_8708",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8708.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8708.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "Hello from the highlands",
+      "vi": "Xin chào từ vùng cao"
+    },
+    "alt": {
+      "en": "A traveler greeting the camera at a mountain viewpoint",
+      "vi": "Du khách chào máy ảnh tại điểm ngắm núi"
+    }
+  },
+  {
+    "id": "hagiang-img_8715",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8715.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8715.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Chasing waterfalls",
+      "vi": "Bên dòng thác"
+    },
+    "alt": {
+      "en": "Travelers beside a waterfall on a mountain road",
+      "vi": "Du khách bên thác nước trên đường núi"
+    }
+  },
+  {
+    "id": "hagiang-img_8779",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8779.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8779.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Paths through green",
+      "vi": "Lối đi giữa màu xanh"
+    },
+    "alt": {
+      "en": "A stone wall and path through green mountain fields",
+      "vi": "Bờ đá và lối đi giữa những cánh đồng xanh trên núi"
+    }
+  },
+  {
+    "id": "hagiang-img_8800",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8800.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8800.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Highland moments",
+      "vi": "Khoảnh khắc vùng cao"
+    },
+    "alt": {
+      "en": "A traveler in a red top looking across the mountains",
+      "vi": "Du khách mặc áo đỏ ngắm núi đồi"
+    }
+  },
+  {
+    "id": "hagiang-img_8802",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8802.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8802.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "A little travel companion",
+      "vi": "Người bạn nhỏ trên đường"
+    },
+    "alt": {
+      "en": "A baby resting in a carrier during a trip",
+      "vi": "Em bé nghỉ ngơi trong địu trên chuyến đi"
+    }
+  },
+  {
+    "id": "hagiang-img_8805",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8805.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8805.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "Bends in the road",
+      "vi": "Những khúc quanh"
+    },
+    "alt": {
+      "en": "A mountain road winding through green hills under clouds",
+      "vi": "Đường núi quanh co giữa đồi xanh dưới mây"
+    }
+  },
+  {
+    "id": "hagiang-img_8807",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8807.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8807.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "A highland pause",
+      "vi": "Một khoảng nghỉ vùng cao"
+    },
+    "alt": {
+      "en": "A covered terrace opening onto a mountain viewpoint",
+      "vi": "Hiên có mái nhìn ra điểm ngắm núi"
+    }
+  },
+  {
+    "id": "hagiang-img_8811",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8811.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8811.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "Another point of view",
+      "vi": "Một góc nhìn khác"
+    },
+    "alt": {
+      "en": "A rustic wooden railing overlooking a green valley",
+      "vi": "Lan can gỗ mộc nhìn xuống thung lũng xanh"
+    }
+  },
+  {
+    "id": "hagiang-img_8854",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8854.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8854.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "By the river",
+      "vi": "Bên dòng sông"
+    },
+    "alt": {
+      "en": "Turquoise water between steep rocky hills",
+      "vi": "Mặt nước xanh ngọc giữa núi đá dốc"
+    }
+  },
+  {
+    "id": "hagiang-img_8866",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8866.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8866.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Between the mountains",
+      "vi": "Giữa những ngọn núi"
+    },
+    "alt": {
+      "en": "A boat traveling along a green river through a steep canyon",
+      "vi": "Thuyền trên dòng sông xanh giữa hẻm núi dốc"
+    }
+  },
+  {
+    "id": "hagiang-img_8869",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8869.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8869.webp",
+    "width": 800,
+    "height": 600,
+    "title": {
+      "en": "The slow way downriver",
+      "vi": "Chậm rãi theo dòng sông"
+    },
+    "alt": {
+      "en": "A boat railing and green hills beside the river",
+      "vi": "Lan can thuyền và đồi xanh bên dòng sông"
+    }
+  },
+  {
+    "id": "hagiang-img_8922",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8922.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8922.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Coffee with a view",
+      "vi": "Cà phê giữa núi đồi"
+    },
+    "alt": {
+      "en": "A hillside café and tiled rooftops below the mountains",
+      "vi": "Quán cà phê bên sườn đồi và mái ngói dưới chân núi"
+    }
+  },
+  {
+    "id": "hagiang-img_8926",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8926.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8926.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Above the clouds",
+      "vi": "Trên những tầng mây"
+    },
+    "alt": {
+      "en": "A viewpoint terrace above misty mountains",
+      "vi": "Hiên ngắm cảnh phía trên núi phủ sương"
+    }
+  },
+  {
+    "id": "hagiang-img_8927",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8927.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8927.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "A valley in the mist",
+      "vi": "Thung lũng trong sương"
+    },
+    "alt": {
+      "en": "Clouds drifting around mountains above a winding river",
+      "vi": "Mây quanh núi phía trên dòng sông uốn lượn"
+    }
+  },
+  {
+    "id": "hagiang-img_8934",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8934.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8934.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Stone and sky",
+      "vi": "Đá và trời"
+    },
+    "alt": {
+      "en": "Stone steps leading to a small building against a rocky hillside",
+      "vi": "Bậc đá dẫn lên ngôi nhà nhỏ bên sườn núi đá"
+    }
+  },
+  {
+    "id": "hagiang-img_8935",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8935.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8935.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Mountains in layers",
+      "vi": "Những lớp núi"
+    },
+    "alt": {
+      "en": "Layered mountain silhouettes disappearing into cloud",
+      "vi": "Những lớp núi mờ dần trong mây"
+    }
+  },
+  {
+    "id": "hagiang-img_8939",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8939.HEIC",
+    "src": "assets/public/images/hagiang/gallery/img_8939.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Under a different sky",
+      "vi": "Dưới một bầu trời khác"
+    },
+    "alt": {
+      "en": "A rocky mountain path with a view into the valley",
+      "vi": "Lối đi trên núi đá nhìn xuống thung lũng"
+    }
+  },
+  {
+    "id": "hagiang-img_8952",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8952.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8952.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "A quiet place to stop",
+      "vi": "Một nơi để dừng chân"
+    },
+    "alt": {
+      "en": "A wooden viewing platform with plants and a Vietnamese flag",
+      "vi": "Sàn gỗ ngắm cảnh với cây xanh và cờ Việt Nam"
+    }
+  },
+  {
+    "id": "hagiang-img_8963",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8963.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8963.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Stories in the courtyard",
+      "vi": "Chuyện kể trong sân"
+    },
+    "alt": {
+      "en": "A traveler in the courtyard of a traditional wooden building",
+      "vi": "Du khách trong sân ngôi nhà gỗ truyền thống"
+    }
+  },
+  {
+    "id": "hagiang-img_8964",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8964.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8964.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Old roofs, new stories",
+      "vi": "Mái cũ, chuyện mới"
+    },
+    "alt": {
+      "en": "Tiled roofs and wooden balconies around a courtyard",
+      "vi": "Mái ngói và ban công gỗ quanh sân"
+    }
+  },
+  {
+    "id": "hagiang-img_8965",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8965.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8965.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "A glimpse of local history",
+      "vi": "Một góc lịch sử địa phương"
+    },
+    "alt": {
+      "en": "Wooden stairs and a visitor notice in a historic building",
+      "vi": "Cầu thang gỗ và bảng hướng dẫn trong tòa nhà lịch sử"
+    }
+  },
+  {
+    "id": "hagiang-img_8990",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8990.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8990.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Look up",
+      "vi": "Ngước nhìn"
+    },
+    "alt": {
+      "en": "Tall tree trunks and green branches seen from below",
+      "vi": "Thân cây cao và tán lá xanh nhìn từ phía dưới"
+    }
+  },
+  {
+    "id": "hagiang-img_8992",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8992.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8992.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Take the long way",
+      "vi": "Đi một con đường dài hơn"
+    },
+    "alt": {
+      "en": "A grassy path through a grove of tall trees",
+      "vi": "Lối đi trên cỏ giữa những hàng cây cao"
+    }
+  },
+  {
+    "id": "hagiang-img_8993",
+    "region": "hagiang",
+    "source": "assets/public/images/hagiang/IMG_8993.heic",
+    "src": "assets/public/images/hagiang/gallery/img_8993.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "One more mountain road",
+      "vi": "Thêm một cung đường núi"
+    },
+    "alt": {
+      "en": "A misty mountain road with travelers and motorbikes",
+      "vi": "Đường núi trong sương với du khách và xe máy"
+    }
+  },
+  {
+    "id": "hoian-img_2849",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2849.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2849.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Follow the yellow walls",
+      "vi": "Theo những bức tường vàng"
+    },
+    "alt": {
+      "en": "A narrow yellow-walled alley with a brick arch and motorbikes",
+      "vi": "Ngõ nhỏ tường vàng với vòm gạch và xe máy"
+    }
+  },
+  {
+    "id": "hoian-img_2832",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2832.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2832.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "An everyday morning",
+      "vi": "Một buổi sáng thường ngày"
+    },
+    "alt": {
+      "en": "A street-side stall beside an open road in Hoi An",
+      "vi": "Quầy hàng ven đường ở Hội An"
+    }
+  },
+  {
+    "id": "hoian-img_2841",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2841.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2841.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Small everyday adventures",
+      "vi": "Những khám phá nhỏ mỗi ngày"
+    },
+    "alt": {
+      "en": "A neighborhood playground under the trees",
+      "vi": "Sân chơi trong khu phố dưới những hàng cây"
+    }
+  },
+  {
+    "id": "hoian-img_2842",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2842.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2842.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Room to play",
+      "vi": "Không gian vui chơi"
+    },
+    "alt": {
+      "en": "A yellow slide at an outdoor playground",
+      "vi": "Cầu trượt vàng tại sân chơi ngoài trời"
+    }
+  },
+  {
+    "id": "hoian-img_2844",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2844.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2844.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "A slower afternoon",
+      "vi": "Một buổi chiều chậm hơn"
+    },
+    "alt": {
+      "en": "Climbing frames in a quiet outdoor playground",
+      "vi": "Khung leo trèo tại sân chơi ngoài trời yên tĩnh"
+    }
+  },
+  {
+    "id": "hoian-img_2845",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2845.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2845.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Under the Hoi An sky",
+      "vi": "Dưới bầu trời Hội An"
+    },
+    "alt": {
+      "en": "A park and street lamps under a blue sky",
+      "vi": "Công viên và đèn đường dưới bầu trời xanh"
+    }
+  },
+  {
+    "id": "hoian-img_2847",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2847.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2847.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "A taste of Hoi An",
+      "vi": "Hương vị Hội An"
+    },
+    "alt": {
+      "en": "A bowl of noodles with fresh herbs and vegetables",
+      "vi": "Tô mì với rau và các loại rau thơm"
+    }
+  },
+  {
+    "id": "hoian-img_2850",
+    "region": "hoian",
+    "source": "assets/public/images/hoian/IMG_2850.jpg",
+    "src": "assets/public/images/hoian/gallery/img_2850.webp",
+    "width": 600,
+    "height": 800,
+    "title": {
+      "en": "Coffee, then wander",
+      "vi": "Cà phê rồi dạo bước"
+    },
+    "alt": {
+      "en": "Iced coffee and a banh mi bag on a café table",
+      "vi": "Cà phê đá và túi bánh mì trên bàn quán"
+    }
+  },
+  {
+    "id": "hanoi-img_9174",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9174.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9174.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Colour along the waterfront",
+      "vi": "Sắc màu bên mặt nước"
+    },
+    "alt": {
+      "en": "Colorful waterfront buildings reflected in a canal",
+      "vi": "Những tòa nhà nhiều màu bên kênh nước"
+    }
+  },
+  {
+    "id": "hanoi-img_9079",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9079.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9079.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "A little colour after class",
+      "vi": "Chút sắc màu sau giờ học"
+    },
+    "alt": {
+      "en": "An immersive room filled with purple projected artwork",
+      "vi": "Căn phòng tràn ngập tác phẩm trình chiếu màu tím"
+    }
+  },
+  {
+    "id": "hanoi-img_9082",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9082.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9082.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Step into the colour",
+      "vi": "Bước vào sắc màu"
+    },
+    "alt": {
+      "en": "Large projected brushstrokes filling the walls of an art room",
+      "vi": "Nét cọ được chiếu lớn trên tường phòng nghệ thuật"
+    }
+  },
+  {
+    "id": "hanoi-img_9169",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9169.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9169.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "A bright afternoon",
+      "vi": "Một buổi chiều trong nắng"
+    },
+    "alt": {
+      "en": "Palm trees and a city street beneath large white clouds",
+      "vi": "Hàng cọ và phố xá dưới những đám mây trắng lớn"
+    }
+  },
+  {
+    "id": "hanoi-img_9170",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9170.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9170.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Take the scenic route",
+      "vi": "Chọn con đường đẹp"
+    },
+    "alt": {
+      "en": "A tiled promenade alongside a modern building",
+      "vi": "Lối đi lát gạch dọc theo tòa nhà hiện đại"
+    }
+  },
+  {
+    "id": "hanoi-img_9171",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9171.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9171.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "A different city rhythm",
+      "vi": "Một nhịp sống thành phố khác"
+    },
+    "alt": {
+      "en": "Colorful buildings seen through a tree-lined square",
+      "vi": "Những tòa nhà nhiều màu qua quảng trường có cây xanh"
+    }
+  },
+  {
+    "id": "hanoi-img_9172",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9172.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9172.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Around the next corner",
+      "vi": "Phía sau góc phố"
+    },
+    "alt": {
+      "en": "A pedestrian walkway with red bridge railings and colorful buildings",
+      "vi": "Lối đi bộ với lan can cầu đỏ và các tòa nhà nhiều màu"
+    }
+  },
+  {
+    "id": "hanoi-img_9173",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9173.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9173.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Walk by the water",
+      "vi": "Dạo bước bên mặt nước"
+    },
+    "alt": {
+      "en": "A waterside promenade shaded by trees",
+      "vi": "Lối đi ven mặt nước dưới bóng cây"
+    }
+  },
+  {
+    "id": "hanoi-img_9175",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9175.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9175.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "City days, small surprises",
+      "vi": "Ngày thành phố, niềm vui nhỏ"
+    },
+    "alt": {
+      "en": "A colorful display beside a canal and pastel buildings",
+      "vi": "Trang trí nhiều màu bên kênh và những tòa nhà màu nhạt"
+    }
+  },
+  {
+    "id": "hanoi-img_9176",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9176.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9176.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "An unhurried afternoon",
+      "vi": "Một buổi chiều thong thả"
+    },
+    "alt": {
+      "en": "A long paved walkway beside waterfront buildings",
+      "vi": "Lối đi lát gạch dài bên các tòa nhà ven mặt nước"
+    }
+  },
+  {
+    "id": "hanoi-img_9177",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9177.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9177.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Find your next café",
+      "vi": "Tìm quán cà phê tiếp theo"
+    },
+    "alt": {
+      "en": "A café in a colorful multi-story building",
+      "vi": "Quán cà phê trong tòa nhà nhiều tầng đầy màu sắc"
+    }
+  },
+  {
+    "id": "hanoi-img_9178",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9178.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9178.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Pause for a coffee",
+      "vi": "Dừng chân uống cà phê"
+    },
+    "alt": {
+      "en": "Outdoor seating in front of a lively café façade",
+      "vi": "Chỗ ngồi ngoài trời trước mặt tiền quán cà phê"
+    }
+  },
+  {
+    "id": "hanoi-img_9190",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9190.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9190.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Room to celebrate",
+      "vi": "Không gian cho niềm vui"
+    },
+    "alt": {
+      "en": "A broad courtyard in front of an event venue",
+      "vi": "Sân rộng phía trước địa điểm tổ chức sự kiện"
+    }
+  },
+  {
+    "id": "hanoi-img_9191",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9191.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9191.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "An evening to remember",
+      "vi": "Một buổi tối đáng nhớ"
+    },
+    "alt": {
+      "en": "A grand event venue with blue and gold columns",
+      "vi": "Địa điểm sự kiện với những cột lớn màu xanh và vàng"
+    }
+  },
+  {
+    "id": "hanoi-img_9192",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9192.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9192.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "A golden-hour arrival",
+      "vi": "Đến nơi lúc nắng chiều"
+    },
+    "alt": {
+      "en": "A curved building and garden in warm afternoon light",
+      "vi": "Tòa nhà cong và khu vườn trong ánh nắng chiều ấm"
+    }
+  },
+  {
+    "id": "hanoi-img_9193",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9193.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9193.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "A different perspective",
+      "vi": "Một góc nhìn mới"
+    },
+    "alt": {
+      "en": "An escalator inside an ornate, bright interior",
+      "vi": "Thang cuốn trong không gian sáng với trang trí cầu kỳ"
+    }
+  },
+  {
+    "id": "hanoi-img_9194",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9194.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9194.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Art along the way",
+      "vi": "Nghệ thuật trên hành trình"
+    },
+    "alt": {
+      "en": "A large forest landscape artwork on an interior wall",
+      "vi": "Tác phẩm phong cảnh rừng lớn trên tường trong nhà"
+    }
+  },
+  {
+    "id": "hanoi-img_9195",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9195.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9195.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Welcoming the celebration",
+      "vi": "Chào đón ngày vui"
+    },
+    "alt": {
+      "en": "A lion dance performer and a guest at a gathering",
+      "vi": "Người biểu diễn múa lân và khách trong buổi gặp mặt"
+    }
+  },
+  {
+    "id": "hanoi-img_9196",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9196.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9196.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Colours of celebration",
+      "vi": "Sắc màu ngày vui"
+    },
+    "alt": {
+      "en": "Guests in colorful traditional clothes at an event",
+      "vi": "Khách mặc trang phục truyền thống nhiều màu trong sự kiện"
+    }
+  },
+  {
+    "id": "hanoi-img_9197",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9197.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9197.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "Together in the city",
+      "vi": "Cùng nhau giữa thành phố"
+    },
+    "alt": {
+      "en": "Friends gathering for a group photograph indoors",
+      "vi": "Bạn bè chụp ảnh tập thể trong nhà"
+    }
+  },
+  {
+    "id": "hanoi-img_9198",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9198.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9198.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "People make the place",
+      "vi": "Con người làm nên nơi chốn"
+    },
+    "alt": {
+      "en": "A group of friends posing in a decorated hall",
+      "vi": "Nhóm bạn chụp ảnh trong sảnh được trang trí"
+    }
+  },
+  {
+    "id": "hanoi-img_9199",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9199.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9199.webp",
+    "width": 800,
+    "height": 450,
+    "title": {
+      "en": "A shared moment",
+      "vi": "Khoảnh khắc bên nhau"
+    },
+    "alt": {
+      "en": "A group sharing a photograph at a gathering",
+      "vi": "Mọi người chụp ảnh chung trong buổi gặp mặt"
+    }
+  },
+  {
+    "id": "hanoi-img_9200",
+    "region": "hanoi",
+    "source": "assets/public/images/hanoi/IMG_9200.jpg",
+    "src": "assets/public/images/hanoi/gallery/img_9200.webp",
+    "width": 450,
+    "height": 800,
+    "title": {
+      "en": "Look up, once more",
+      "vi": "Lại một lần ngước nhìn"
+    },
+    "alt": {
+      "en": "An ornate gold and white interior seen from below",
+      "vi": "Nội thất trắng và vàng cầu kỳ nhìn từ phía dưới"
+    }
+  }
+]

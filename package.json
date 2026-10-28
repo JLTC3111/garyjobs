@@ -1,0 +1,9 @@
+{
+  "name": "gary-agency-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix gary-agency run dev",
+    "start": "node gary-agency/server.mjs",
+    "build": "npm --prefix gary-agency run build"
+  }
+}

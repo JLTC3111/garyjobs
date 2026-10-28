@@ -1,0 +1,5 @@
+OGL 1.0.11
+Author: Nathan Gordon
+License: Unlicense (public domain)
+Source: https://github.com/oframe/ogl
+Package: https://www.npmjs.com/package/ogl
