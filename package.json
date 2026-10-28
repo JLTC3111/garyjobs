@@ -1,5 +1,6 @@
 {
   "name": "gary-agency-workspace",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "npm --prefix gary-agency run dev",
