@@ -17,6 +17,12 @@ npm run build
 
 The photo carousel uses React, React DOM, and OGL, bundled locally with esbuild. `npm run dev` rebuilds the gallery when its source changes. `dist/` is the complete static site and can be served by any static host without installing dependencies on that host. `server.mjs` is a small development server; it is not needed by a static hosting service.
 
+### Vercel
+
+Deploy this directory with the included `vercel.json`. It selects the **Other** framework preset, runs `npm run build`, and serves `dist/` as static files. If this repository contains multiple projects, set Vercel's **Root Directory** to `gary-agency`.
+
+The website does not need a Vercel Function or a production start command. `npm start` runs the local preview server only. If an older deployment shows `500 FUNCTION_INVOCATION_FAILED`, deploy the updated configuration so Vercel serves the static build. Existing deployments keep their original configuration until a new deployment is created.
+
 The Sites project is registered in `.openai/hosting.json`. Publication was not completed because the execution environment could not resolve `git.chatgpt-team.site`. The expected Sites origin in the social image metadata is not a verified live URL. Before deploying elsewhere, update `og:image` to that host's origin.
 
 ## Visitor experience
