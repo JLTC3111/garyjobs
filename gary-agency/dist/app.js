@@ -1,4 +1,4 @@
-import { mountPhotoGallery } from './photo-gallery.js';
+import { mountGaryApps, mountPhotoGallery } from './photo-gallery.js';
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
@@ -7,6 +7,18 @@ const readStored = (key, fallback) => { try { return JSON.parse(localStorage.get
 const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Private browser sessions can still use the site. */ } };
 const state = { lang: readStored('gary-language', 'en') === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
 let photoGalleryMount;
+let headerApps = [];
+function clearHeaderApps() {
+  headerApps.forEach(mount => mount.unmount());
+  headerApps = [];
+}
+function mountHeaderApps() {
+  const shared = { language: state.lang, onFollow: () => toggleMenu(false) };
+  const header = $('#gary-apps-header');
+  const mobile = $('#gary-apps-mobile');
+  if (header) headerApps.push(mountGaryApps(header, { ...shared, className: 'gary-apps-menu--header' }));
+  if (mobile) headerApps.push(mountGaryApps(mobile, shared));
+}
 const t = (en, vi) => state.lang === 'vi' ? vi : en;
 const pick = value => Array.isArray(value) ? value[state.lang === 'vi' ? 1 : 0] : value;
 const icons = {
@@ -115,6 +127,7 @@ const destinations = {
 function renderPage() {
   photoGalleryMount?.unmount();
   photoGalleryMount = null;
+  clearHeaderApps();
   document.documentElement.lang = state.lang;
   document.title = t('Gary Agency — Teach. Travel. Belong.', 'Gary Agency — Giảng dạy. Khám phá. Gắn kết.');
   $('.skip-link').textContent = t('Skip to content', 'Chuyển đến nội dung');
@@ -124,8 +137,8 @@ function renderPage() {
       <nav class="desktop-nav" aria-label="${t('Main navigation', 'Điều hướng chính')}">
         <a href="#opportunities">${t('Teaching jobs', 'Việc giảng dạy')}</a><a href="#why-gary">${t('Why Gary', 'Vì sao chọn Gary')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="#services">${t('Our support', 'Hỗ trợ')}</a>
       </nav>
-      <div class="nav-actions"><button class="language-button" data-action="language" aria-label="${t('Switch to Vietnamese', 'Chuyển sang tiếng Anh')}">${icon('globe')} <span>${state.lang.toUpperCase()}</span>${icon('chevron')}</button><button class="button button-small nav-cta" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button><button class="icon-button menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
-    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Teaching jobs', 'Việc giảng dạy')}</a><a href="#why-gary">${t('Why Gary', 'Vì sao chọn Gary')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="#services">${t('Our support', 'Hỗ trợ')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a>${serviceSiteLink('housing')}${serviceSiteLink('documents')}<button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
+      <div class="nav-actions"><div id="gary-apps-header" class="gary-apps-slot"></div><button class="language-button" data-action="language" aria-label="${t('Switch to Vietnamese', 'Chuyển sang tiếng Anh')}">${icon('globe')} <span>${state.lang.toUpperCase()}</span>${icon('chevron')}</button><button class="button button-small nav-cta" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button><button class="icon-button menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
+    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Teaching jobs', 'Việc giảng dạy')}</a><a href="#why-gary">${t('Why Gary', 'Vì sao chọn Gary')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="#services">${t('Our support', 'Hỗ trợ')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><div id="gary-apps-mobile" class="mobile-app-services"></div>${serviceSiteLink('housing')}${serviceSiteLink('documents')}<button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
     <main id="main">
       <section class="hero container" aria-labelledby="hero-title">
         <div class="hero-copy"><div class="eyebrow"><span class="tiny-star">✦</span>${t('A NEW CHAPTER STARTS HERE', 'MỘT CHƯƠNG MỚI BẮT ĐẦU')}</div>
@@ -172,6 +185,7 @@ function renderPage() {
     <button class="floating-contact" data-action="contact" aria-label="${t('Talk to Gary Agency', 'Trò chuyện với Gary Agency')}">${icon('chat')}<span>${t('Let’s talk', 'Trò chuyện')}</span><i></i></button>`;
   renderJobs();
   observeNavigation();
+  mountHeaderApps();
   photoGalleryMount = mountPhotoGallery($('#photo-gallery'), { locale: state.lang, onExploreRegion: openDestination });
 }
 
@@ -309,7 +323,7 @@ async function copyPreparedEmail(control){
 
 $('#detail-dialog').addEventListener('click',event=>{if(event.target===$('#detail-dialog')){const rect=event.target.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeDialog();}});
 $('#detail-dialog').addEventListener('close',()=>{document.body.classList.remove('dialog-open');if(dialogOpener?.isConnected)dialogOpener.focus({preventScroll:true});});
-document.addEventListener('keydown',event=>{if(event.key==='Escape')toggleMenu(false);});
+document.addEventListener('keydown',event=>{if(event.key==='Escape' && !event.target.closest('.gary-apps-menu[open]'))toggleMenu(false);});
 document.addEventListener('toggle',event=>{if(event.target.matches('.faq-item')&&event.target.open)$$('.faq-item[open]').filter(item=>item!==event.target).forEach(item=>item.open=false);},true);
 window.addEventListener('resize',()=>{if(window.innerWidth>1000)toggleMenu(false);},{passive:true});
 renderPage();

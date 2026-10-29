@@ -1,0 +1,6 @@
+.gary-apps-slot{display:flex;align-items:center;flex:none}
+.gary-apps-menu>summary::marker{content:none}
+.gary-apps-menu>summary,.gary-apps-menu>summary:hover,.gary-apps-menu[open]>summary{background:transparent}
+.gary-apps-menu--header>summary{min-height:40px;padding:8px 11px;font-size:11px}
+.site-header:has(.gary-apps-menu[open]){z-index:40}
+@media(max-width:1000px){#gary-apps-header{display:none}}

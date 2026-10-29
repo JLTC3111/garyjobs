@@ -32,6 +32,7 @@ for (const region of ['hagiang', 'hoian', 'hanoi']) {
   for (const file of originalFiles) if (!sources.has(file)) throw new Error(`Photo not yet included in the gallery: ${region}/${file}`);
 }
 if (!html.includes('name="description"')) throw new Error('Missing description');
+if (!js.includes('id="gary-apps-header"') || !js.includes('mountGaryApps') || !galleryJS.includes('Our Services') || !galleryCSS.includes('.gary-apps-menu')) throw new Error('Gary Apps header menu is missing');
 const files = await readdir(new URL('assets/', base));
 for (const name of files) if (!(await stat(new URL(`assets/${name}`, base))).size) throw new Error(`Empty asset: ${name}`);
 console.log(`Static site ready. JavaScript syntax, ${assets.length} asset references and all ${photos.length} supplied photos verified.`);
