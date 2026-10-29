@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:4178`. To use another port, run `npm run dev -- --port 4180`.
+Open `http://localhost:4179`. To use another port, run `npm run dev -- --port 4181`.
 
 ```sh
 npm run build
@@ -77,3 +77,27 @@ The [Flex Carousel component](https://reactbits.dev/components/flex-carousel) co
 Verified in desktop Edge and responsive Chrome: English and Vietnamese page rendering, phone navigation, keyword search, bookmarking and saved roles, role details, required form validation, and preparation of an email draft using disposable test details. No email was sent. The static build checks JavaScript syntax and asset presence.
 
 The photo carousel was also checked in Chrome on desktop and at a 390 px phone width: real local photographs, location filtering, next-photo controls, Vietnamese captions, language switching, keyboard navigation to the last photo, Enter/Escape focus, and the Hội An destination dialog. The build confirms all 58 supplied photographs are included.
+
+## Shared Gary Apps updates
+
+The header and phone navigation connect to Gary Home's shared runtime at
+`https://garyhome.vn/shared/gary-apps/v1/manifest.json`. The manifest points to
+matching, hashed JavaScript and CSS from one release. Publishing that shared
+release updates Homes, Jobs and Visa without rebuilding Jobs. Visible pages
+check once a minute and on returning to the tab; an open or focused menu finishes
+its interaction before the new release replaces it.
+
+`src/components/GaryAppsMount.jsx` keeps the locally bundled menu available until
+the remote component and its stylesheet load successfully. Network errors leave
+the current menu usable. The adapter forwards the current English/Vietnamese
+language and mobile-menu callbacks. The shared component reads no account data.
+
+The canonical component, catalogue, release builder and browser protocol adapter
+live in Gary Home's `shared/gary-apps/`. Jobs keeps a copy of `client.js` only for
+the stable loading protocol, plus its last known local component as a fallback;
+regular design, copy and link changes belong in the canonical Home component.
+Change the local protocol copy only when the loading API itself changes.
+
+Run `npm run test:shared` for manifest validation, deduplicated loading, language
+updates, deferred release replacement, retry and unmount cleanup checks. Run
+`npm run build` for the complete static-site validation.

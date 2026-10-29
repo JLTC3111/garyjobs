@@ -6,7 +6,7 @@ Run from this folder:
 npm run dev
 ```
 
-Open **http://localhost:4178**. On a fresh setup, run `npm ci --prefix gary-agency` first to install the React carousel's build dependencies.
+Open **http://localhost:4179**. On a fresh setup, run `npm ci --prefix gary-agency` first to install the React carousel's build dependencies.
 
 `npm run build` validates the deployable static site. The complete project and deployment notes are in [gary-agency/README.md](gary-agency/README.md).
 
