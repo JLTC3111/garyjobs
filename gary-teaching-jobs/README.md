@@ -1,4 +1,4 @@
-# Gary Agency — Teach. Travel. Belong.
+# Vietnam English Teaching Jobs
 
 A responsive, bilingual rebuild of [garyagency.com](https://garyagency.com/). The visual direction combines deep blue, warm cream, editorial typography, Vietnam photography, and the agency's real community photos and partner logos.
 
@@ -19,7 +19,7 @@ The photo carousel uses React, React DOM, and OGL, bundled locally with esbuild.
 
 ### Vercel
 
-Deploy this directory with the included `vercel.json`. It selects the **Other** framework preset, runs `npm run build`, and serves `dist/` as static files. If this repository contains multiple projects, set Vercel's **Root Directory** to `gary-agency`.
+Deploy this directory with the included `vercel.json`. It selects the **Other** framework preset, runs `npm run build`, and serves `dist/` as static files. If this repository contains multiple projects, set Vercel's **Root Directory** to `gary-teaching-jobs`.
 
 The website does not need a Vercel Function or a production start command. `npm start` runs the local preview server only. If an older deployment shows `500 FUNCTION_INVOCATION_FAILED`, deploy the updated configuration so Vercel serves the static build. Existing deployments keep their original configuration until a new deployment is created.
 
@@ -31,13 +31,13 @@ The Sites project is registered in `.openai/hosting.json`. Publication was not c
 - Keyword and location search, including Vietnamese accent-insensitive matching.
 - School category filters, saved roles, clear empty states, and expandable results.
 - Five sourced teaching listings with full requirement dialogs, publication dates, and original-listing links.
-- Role-specific application forms that prepare email drafts addressed to the published recruiter.
+- Role-specific candidate portal applications with durable receipts and private CV upload; honest email-draft fallback when the backend is unavailable.
 - Service and destination dialogs, contact options, FAQ disclosures, and phone navigation.
 - The life beyond the classroom section uses the actual React Bits `FlexCarousel`, with all 58 supplied photographs, location filters, captions, keyboard/arrow controls, drag/swipe, and click-to-focus. It uses `preset="liquid"`, `intro="rise"`, `cardHeight={0.5}`, `gap={12}`, and `squeeze={0.2}`. The stage is 560 px tall on desktop and adapts on phones. The four supplied videos are not part of this image carousel.
 - Direct links to [Gary Homes](https://garyhome.vn/) and [Gary Visa Service](https://visa.garyhome.vn/) in the desktop service navigation, phone menu, support cards, matching service dialogs, and footer. External service links open in a new tab.
 - Keyboard focus, native modal focus containment, reduced-motion support, larger phone controls, and local browser storage.
 
-Application forms **do not submit data to a backend**. They prepare a `mailto:` draft, show an address and copyable message as a fallback, and ask the visitor to attach their documents before sending. No application is silently sent or stored remotely. Job data is a source snapshot, not a live CMS integration; availability and final terms must be confirmed with the recruiter.
+The Jobs CMS and candidate/recruitment portal are implemented in `/portal.html`. Published backend content replaces reference listings when the reviewed schema is provisioned. Verified candidates submit applications with durable receipts and private CVs; Jobs staff roles independently control publishing and recruitment. Until the database release is installed, the site clearly labels reference listings and uses its email-draft fallback without claiming a submission. See [CMS/backend architecture, tests and rollout](docs/jobs-cms-and-recruitment.md). The database migration was applied on 16 November 2026; staff-role bootstrap and website deployment remain pending.
 
 ## Files
 
@@ -101,3 +101,7 @@ Change the local protocol copy only when the loading API itself changes.
 Run `npm run test:shared` for manifest validation, deduplicated loading, language
 updates, deferred release replacement, retry and unmount cleanup checks. Run
 `npm run build` for the complete static-site validation.
+
+## CMS and backend development
+
+`npm test` runs shared, DOM and isolated database checks. `npm run test:db` uses ephemeral PGlite only. `npm run build` bundles the pinned Supabase client and the existing gallery. Review the Jobs migration and operator-only staff bootstrap before rollout; Home and Agency memberships never grant Jobs permissions.

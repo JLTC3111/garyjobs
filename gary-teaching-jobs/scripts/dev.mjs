@@ -1,3 +1,4 @@
+await import('./bundle-backend.mjs');
 import { buildGallery } from './gallery-build.mjs';
 const builder = await buildGallery({ watch: true });
 await import('../server.mjs');

@@ -1,0 +1,8 @@
+// Pure, escaped view model: CMS-authored text never becomes executable markup.
+export const escapeText=(value='')=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}}
+export function vacancyCard(row,index,records,language='en'){
+ const data=row.data||{},find=(kind,slug)=>records.find(r=>r.kind===kind&&r.slug===slug),location=find('location',data.location_slug),category=find('category',data.category_slug);
+ const pair=(en,vi)=>[escapeText(en||''),escapeText(vi||'')],requirementsEn=String(data.requirements_en||'').split('\n').filter(Boolean),requirementsVi=String(data.requirements_vi||'').split('\n').filter(Boolean);
+ return {id:row.id,persistent:true,location:escapeText(location?.[language==='vi'?'title_vi':'title_en']||data.location_slug||''),region:data.location_slug||'',category:data.category_slug||'',type:pair(category?.title_en,category?.title_vi),title:pair(row.title_en,row.title_vi),salary:pair(data.salary_en,data.salary_vi),hours:Number(data.hours)||0,age:escapeText(data.ages||''),date:String(row.published_at||'').slice(0,10),email:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contact_email||'')?data.contact_email:'',color:['peach','sage','lavender'][index%3],icon:'school',benefit:pair(data.benefits_en,data.benefits_vi),intro:pair(row.summary_en,row.summary_vi),requirements:Array.from({length:Math.max(requirementsEn.length,requirementsVi.length)},(_,i)=>pair(requirementsEn[i],requirementsVi[i])),notes:pair(row.body_en,row.body_vi),source:safeLink(data.source_url)||'#opportunities'};
+}
