@@ -19,6 +19,19 @@ test('published vacancies replace reference cards and managed categories/locatio
 test('missing backend remains an honest email fallback without a fake application receipt',async()=>{
  const dom=await publicPage(new Error('not provisioned'));try{const d=dom.window.document;assert.equal(d.querySelectorAll('.jobs-live-note').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/not available yet/);d.querySelector('[data-action="apply"]').click();assert.match(d.querySelector('#application-form').textContent,/Nothing is submitted/);assert.equal(d.querySelector('[data-action="copy-email"]'),null);}finally{dom.window.close();}
 });
+test('public desktop and mobile navigation distinguish candidate and staff login in both languages',async()=>{
+ const dom=await publicPage(records);
+ try{
+  const d=dom.window.document;
+  for(const [language,candidate,staff] of [['en','Candidate login','Staff login'],['vi','Đăng nhập ứng viên','Đăng nhập nhân viên']]){
+   if(language==='vi')d.querySelector('[data-action="language"]').click();
+   for(const root of [d.querySelector('.jobs-login-menu'),d.querySelector('#mobile-nav')]){
+    assert.equal(root.querySelector('a[href="portal.html?access=candidate"]').textContent,candidate);
+    assert.equal(root.querySelector('a[href="portal.html?access=staff"]').textContent,staff);
+   }
+  }
+ }finally{dom.window.close();}
+});
 test('CMS text cannot inject markup or unsafe source protocols into public vacancy cards',()=>{
  const card=vacancyCard({...records[3],title_en:'<img src=x onerror=alert(1)>',data:{...records[3].data,source_url:'javascript:alert(1)',requirements_en:'<script>bad()</script>'}},0,records,'en');
  assert.ok(card.title[0].startsWith('&lt;img'));assert.equal(card.source,'#opportunities');assert.ok(card.requirements[0][0].includes('&lt;script&gt;'));assert.equal(safeLink('https://example.org/jobs'),'https://example.org/jobs');assert.equal(safeLink('data:text/html,bad'),'');

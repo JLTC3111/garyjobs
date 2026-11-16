@@ -49,8 +49,9 @@ export function createCmsAdapter(){return {
 export function validateCv(file){if(!file||!['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)||file.size<1||file.size>jobsConfig.maxCvBytes)throw new Error('jobs.cv_invalid');}
 export async function uploadCv(application,file){validateCv(file);const ext=file.type==='application/pdf'?'pdf':'docx',path=`${application.candidate_id}/${application.id}/${crypto.randomUUID()}.${ext}`;unwrap(await db.storage.from(jobsConfig.cvBucket).upload(path,file,{contentType:file.type,upsert:false}));return unwrap(await db.from('jobs_application_documents').insert({application_id:application.id,candidate_id:application.candidate_id,object_path:path,file_name:file.name.slice(0,200),mime_type:file.type,size_bytes:file.size}).select().single());}
 export async function submitApplication({vacancyId=null,profile,message,requestId}){return unwrap(await db.rpc('jobs_submit_application',{p_vacancy_id:vacancyId,p_profile:profile,p_message:message,p_client_request_id:requestId}));}
-export async function applicationList({page=1,stage='',assignee='',query=''}={}){
+export async function applicationList({page=1,stage='',assignee='',query='',candidateId=null}={}){
  let q=db.from('jobs_applications').select('*,jobs_candidates(full_name,email,phone,current_location)',{count:'exact'}).order('created_at',{ascending:false}).order('id').range((page-1)*20,page*20-1);
+ if(candidateId)q=q.eq('candidate_id',candidateId);
  if(stage)q=q.eq('stage',stage);if(assignee==='unassigned')q=q.is('assigned_staff_id',null);else if(assignee)q=q.eq('assigned_staff_id',assignee);
  if(query)q=q.ilike('vacancy_title','%'+query.replace(/[%_]/g,'').slice(0,80)+'%');const r=await q;unwrap(r);return {records:r.data,total:r.count||0};
 }

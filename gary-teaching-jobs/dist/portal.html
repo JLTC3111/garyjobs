@@ -1,2 +1,22 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Teaching Jobs Portal</title><link rel="icon" type="image/png" href="assets/favicon-32.png"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="cms-foundation/styles.css"><link rel="stylesheet" href="jobs-portal.css"><script type="module" src="jobs-portal.js"></script></head><body><a class="skip-link" href="#portal-main">Skip to content</a><header class="jobs-portal-header"><a href="./">Vietnam English Teaching Jobs</a><div><button id="portal-language" type="button">Tiếng Việt</button><button id="sign-out" type="button" hidden>Sign out</button></div></header><main id="portal-main" class="jobs-workspace"><div id="portal-status" role="status" aria-live="polite"></div><section id="auth-panel"></section><section id="signed-panel" hidden><nav id="workspace-nav" aria-label="Workspace"></nav><div id="workspace-view"></div></section></main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>Teaching Jobs Portal</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32.png">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="cms-foundation/styles.css"><link rel="stylesheet" href="jobs-portal.css">
+  <script type="module" src="jobs-portal.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#portal-main">Skip to content</a>
+  <header class="jobs-portal-header"><a href="./">Vietnam English Teaching Jobs</a><div><button id="portal-language" type="button">Tiếng Việt</button><button id="sign-out" type="button" hidden>Sign out</button></div></header>
+  <main id="portal-main" class="jobs-workspace">
+    <nav id="portal-access" aria-label="Choose your portal"><a href="portal.html?access=candidate">Candidate portal</a><a href="portal.html?access=staff">Staff portal</a></nav>
+    <div id="portal-status" role="status" aria-live="polite"></div>
+    <div id="portal-loading" class="jobs-empty" role="status" aria-live="polite">Checking your session…</div>
+    <noscript><p class="jobs-alert">Enable JavaScript to sign in. / Bật JavaScript để đăng nhập.</p></noscript>
+    <section id="auth-panel" hidden></section>
+    <section id="signed-panel" hidden><p id="account-summary" class="jobs-meta"></p><nav id="workspace-nav" aria-label="Workspace"></nav><div id="workspace-view"></div></section>
+  </main>
+</body>
+</html>

@@ -20,6 +20,20 @@ Roles:
 
 Only active Jobs memberships with verified Auth email are accepted. Staff grant/revocation is operator-controlled through the app-specific membership table. It does not reset/delete global Auth credentials.
 
+## Candidate and staff sign-in
+
+The public Sign in menu and mobile navigation offer separate Candidate login and Staff login links. The portal also keeps both choices visible, like Home and Agency:
+
+- `/portal.html?access=candidate` opens candidate sign-in and My applications. An empty account explains where submissions will appear and offers Find vacancies and Introduce yourself actions.
+- `/portal.html?access=staff` opens staff sign-in without candidate registration. An assigned editor/publisher opens content management; a recruiter opens recruitment; an admin can use both.
+- Existing `?view=cms` and `?view=applications` links select staff entry. Explicit `access=candidate` keeps the candidate area and lists only that account's applications, including when its owner also has a staff role.
+- Both entries use the same existing Gary Auth credentials. Sign-in accepts existing passwords; the 12-character minimum applies to new candidate passwords and password recovery. Staff entry does not grant membership or reuse another site's roles.
+- An account without Jobs membership sees Staff access not assigned. A permission-check failure has its own retry state and never grants access. Session validation has a visible loading state, a 12-second request timeout, and a retry action.
+- Role switching preserves the vacancy, other query parameters and fragment. Browser history respects unsaved CMS drafts.
+- Auth changes synchronize outside the Supabase callback. Same-user tab-focus/token events preserve the CMS draft; sign-out immediately removes private workspace content and invalidates pending responses.
+
+The English and Vietnamese interface uses the same flow. These UI changes require a frontend deployment. They do not alter database policies or assign any staff accounts. The hosted capability RPC was checked with an unassigned authenticated role and correctly returned no staff permissions; the membership count was zero at verification.
+
 ## Implemented content collections
 
 - Vacancies: bilingual title, summary, body, requirements, benefits, salary; monthly hours, learner ages, recruiter email, source, closing date, employer/category/location references.
