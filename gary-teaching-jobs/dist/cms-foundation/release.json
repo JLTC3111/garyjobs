@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "sha256": "e61f28b141bd303bc235a4e8ebde67613a61cfa74758af43028a877eb527b337",
+  "sha256": "92d3c7cbf4de613555569aa8b6148714da80b9d2dfcbfda8c9327611f43ee923",
   "source": "gary-home/shared/cms-foundation",
   "files": [
     "index.js",

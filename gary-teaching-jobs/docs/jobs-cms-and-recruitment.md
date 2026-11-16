@@ -36,6 +36,12 @@ The English and Vietnamese interface uses the same flow. These UI changes requir
 
 ## Implemented content collections
 
+Vacancies generate their URL automatically from the English job title, falling back to the Vietnamese title. There is no Page Address input. Vietnamese accents and punctuation are normalized, and repeated titles receive an automatic numeric suffix. The adapter checks saved drafts and visible published snapshots, then retries the database's specific URL uniqueness conflict if two editors save the same title concurrently. Other errors retain their original permission/version handling.
+
+The assigned URL is fixed after the first save, including subsequent title edits. Published cards link to `/jobs/<saved-title-slug>`, which can be opened directly or refreshed through the Vercel rewrite and local server. Closing the detail view returns to listings; browser back/forward and interface-language changes preserve the vacancy context. Drafts and unavailable vacancies are never substituted with old reference listings at that URL. An unavailable route displays an unavailable/noindex state after its published-data check.
+
+The public page still serves the static HTML shell; vacancy-specific title, description and canonical metadata are applied in the browser. This change does not add server-rendered vacancy SEO or HTTP 404 responses for unpublished/unknown slugs. The new frontend and rewrite require deployment; no database migration or existing content changes are needed.
+
 - Vacancies: bilingual title, summary, body, requirements, benefits, salary; monthly hours, learner ages, recruiter email, source, closing date, employer/category/location references.
 - Employer profiles: bilingual profile content and optional website/logo.
 - Job categories and locations: independently managed bilingual taxonomy.

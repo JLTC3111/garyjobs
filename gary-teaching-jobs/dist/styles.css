@@ -173,7 +173,7 @@ h1 em{white-space:nowrap}
 .job-location .icon{width:12px;height:12px}
 .job-card h3{font-size:18px;line-height:1.4;margin-bottom:4px;color:#2d4665}
 .job-card h3 button{background:none;text-align:left;padding:0;font:inherit;line-height:inherit}
-.job-card h3 button:hover{color:var(--blue)}
+.job-card h3 button:hover,.job-card h3 a:hover{color:var(--blue)}
 .job-type{color:#8a9299;font-size:11px;line-height:1.8;min-height:20px}
 .job-tags{display:flex;gap:8px;flex-wrap:wrap;margin:17px 0 12px}
 .job-tags>span{display:flex;align-items:center;gap:4px;font-size:9px;padding:5px 8px;border-radius:3px;background:#f5f6f7;color:#71808b;line-height:1.5}

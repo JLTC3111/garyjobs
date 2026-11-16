@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
-import {vacancyCard,escapeText,safeLink} from '../dist/jobs-public-content.js';
+import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function publicPage(result){
- const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/',runScripts:'outside-only',pretendToBeVisual:true});
- const w=dom.window;w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
- w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.vacancyCard=vacancyCard;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
+async function publicPage(result,{url='https://jobs.garyhome.vn/'}={}){
+ const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
+ const w=dom.window;w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
+ w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());await settle();return dom;
 }
@@ -57,4 +57,184 @@ test('employer links and logos reject executable and credential-bearing addresse
  const content=structuredClone(records);content[0].data={website:'javascript:alert(1)',logo_url:'https://name:password@images.example.test/school.png'};
  const dom=await publicPage(content);
  try{assert.equal(dom.window.document.querySelector('#published-guides a'),null);assert.equal(dom.window.document.querySelector('#published-guides img'),null);assert.equal(safeLink('https://name:password@example.test/'),'');}finally{dom.window.close();}
+});
+
+test('published vacancies have stable real links derived from the stored title slug',async()=>{
+ const content=structuredClone(records);content[3].slug='english-teacher-hanoi-2';content[3].title_en='English teacher: Hanoi / Full-time!';
+ const card=vacancyCard(content[3],0,content);
+ assert.equal(card.url,'/jobs/english-teacher-hanoi-2');
+ assert.equal(vacancyCard({...content[3],title_en:'An edited published title'},0,content).url,card.url);
+ assert.equal(vacancyPath('../portal.html'),'');assert.equal(vacancyPath('javascript:alert(1)'),'');assert.equal(vacancyPath('a'.repeat(181)),'');
+ assert.equal(vacancySlug('/jobs/english-teacher-hanoi-2'),'english-teacher-hanoi-2');assert.equal(vacancySlug('/jobs/foo/bar'),null);
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document,link=d.querySelector('#job-grid h3 a');
+  assert.equal(link.href,'https://jobs.garyhome.vn/jobs/english-teacher-hanoi-2');
+  assert.equal(d.querySelector('#job-grid .round-arrow').getAttribute('href'),'/jobs/english-teacher-hanoi-2');
+  link.click();assert.equal(dom.window.location.pathname,'/jobs/english-teacher-hanoi-2');assert.equal(d.querySelector('#detail-dialog').open,true);
+  assert.match(d.querySelector('#dialog-title').textContent,/English teacher: Hanoi \/ Full-time!/);
+ }finally{dom.window.close();}
+});
+
+test('direct vacancy URLs wait for published data and reopen on refresh with root assets',async()=>{
+ let resolveContent;const pending=new Promise(resolve=>{resolveContent=resolve;});
+ const dom=await publicPage(pending,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
+ try{
+  const d=dom.window.document;
+  assert.match(d.querySelector('#dialog-title').textContent,/Loading vacancy/);
+  assert.equal(d.querySelector('script[src="app.js"]').src,'https://jobs.garyhome.vn/app.js');
+  assert.equal(d.querySelector('link[rel="stylesheet"]').href,'https://jobs.garyhome.vn/styles.css');
+  assert.equal(d.querySelector('.jobs-login-options a').href,'https://jobs.garyhome.vn/portal.html?access=candidate');
+  resolveContent(records);await settle();
+  assert.match(d.querySelector('#dialog-title').textContent,/New teacher vacancy/);
+  assert.equal(dom.window.location.pathname,'/jobs/teacher');
+  assert.match(d.title,/New teacher vacancy/);
+  assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/jobs/teacher');
+  assert.equal(d.querySelector('meta[name="description"]').content,'A current teaching vacancy');
+ }finally{dom.window.close();}
+ const refreshed=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{assert.match(refreshed.window.document.querySelector('#dialog-title').textContent,/New teacher vacancy/);}finally{refreshed.window.close();}
+});
+
+test('vacancy browser back, forward and close restore listings and selected role',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/?utm_source=test#opportunities'});
+ try{
+  const w=dom.window,d=w.document;
+  d.querySelector('#job-grid h3 a').click();
+  assert.equal(w.location.pathname,'/jobs/teacher');assert.equal(w.location.search,'?utm_source=test');
+  w.history.back();await settle();await settle();
+  assert.equal(w.location.pathname,'/');assert.equal(w.location.hash,'#opportunities');assert.equal(d.querySelector('#detail-dialog').open,false);
+  w.history.forward();await settle();await settle();
+  assert.equal(w.location.pathname,'/jobs/teacher');assert.match(d.querySelector('#dialog-title').textContent,/New teacher vacancy/);
+  d.querySelector('.dialog-close').click();await settle();await settle();
+  assert.equal(w.location.pathname,'/');assert.equal(w.location.hash,'#opportunities');assert.equal(d.querySelector('#detail-dialog').open,false);
+ }finally{dom.window.close();}
+});
+
+test('closing a directly opened vacancy returns to current listings without leaving the website',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
+ try{
+  const w=dom.window,d=w.document;d.querySelector('.dialog-close').click();
+  assert.equal(w.location.pathname,'/');assert.equal(w.location.search,'?utm_source=test');assert.equal(w.location.hash,'#opportunities');
+  assert.equal(d.querySelector('#detail-dialog').open,false);
+ }finally{dom.window.close();}
+});
+
+test('language switching keeps the vacancy URL and translates its open detail',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
+ try{
+  const w=dom.window,d=w.document;d.querySelector('.dialog-job-language').click();
+  assert.equal(w.location.pathname,'/jobs/teacher');assert.equal(w.location.search,'?utm_source=test');
+  assert.equal(d.querySelector('#detail-dialog').open,true);
+  assert.match(d.querySelector('#dialog-title').textContent,/Tuyển giáo viên mới/);
+  assert.match(d.title,/Tuyển giáo viên mới/);
+  assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/jobs/teacher');
+ }finally{dom.window.close();}
+});
+
+test('unknown or unpublished vacancy URLs show unavailable state instead of reference job details',async()=>{
+ for(const content of [records,[]]){
+  const dom=await publicPage(content,{url:'https://jobs.garyhome.vn/jobs/not-published'});
+  try{
+   const d=dom.window.document;
+   assert.match(d.querySelector('#dialog-title').textContent,/Vacancy unavailable/);
+   assert.equal(d.querySelector('#detail-dialog [data-action="apply"]'),null);
+   assert.equal(d.querySelector('meta[name="robots"]').content,'noindex,follow');
+   d.querySelector('[data-action="vacancy-listings"]').click();
+   assert.equal(dom.window.location.pathname,'/');
+  }finally{dom.window.close();}
+ }
+});
+
+test('backend failure on a vacancy URL offers a retry without opening a reference vacancy',async()=>{
+ const dom=await publicPage(new Error('offline'),{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{
+  const d=dom.window.document;
+  assert.match(d.querySelector('#dialog-title').textContent,/Vacancy could not be loaded/);
+  assert.ok(d.querySelector('[data-action="retry-vacancy"]'));
+  assert.equal(d.querySelector('#detail-dialog [data-action="apply"]'),null);
+ }finally{dom.window.close();}
+});
+
+test('modified vacancy link clicks retain native open-in-new-tab behavior',async()=>{
+ const dom=await publicPage(records);
+ try{
+  const w=dom.window,d=w.document,link=d.querySelector('#job-grid h3 a'),event=new w.MouseEvent('click',{bubbles:true,cancelable:true,ctrlKey:true});
+  link.dispatchEvent(event);
+  assert.equal(event.defaultPrevented,false);assert.equal(w.location.pathname,'/');
+ }finally{dom.window.close();}
+});
+
+test('Vercel rewrites only the public job route and the HTML supplies a root asset base',async()=>{
+ const config=JSON.parse(await readFile(new URL('../vercel.json',import.meta.url),'utf8'));
+ assert.deepEqual(config.rewrites,[{source:'/jobs/:slug',destination:'/index.html'}]);
+ const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
+ assert.match(html,/<base href="\/">/);
+});
+
+test('Apply from a nested vacancy URL links to the root candidate portal with vacancy identity',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{
+  const link=dom.window.document.querySelector('#detail-dialog a[href^="/portal.html"]');
+  assert.ok(link);const target=new URL(link.href);
+  assert.equal(target.pathname,'/portal.html');assert.equal(target.searchParams.get('access'),'candidate');assert.equal(target.searchParams.get('view'),'apply');assert.equal(target.searchParams.get('vacancy'),records[3].id);
+ }finally{dom.window.close();}
+});
+
+test('native Escape/dialog close restores listings from a vacancy route',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{
+  dom.window.document.querySelector('#detail-dialog').close();
+  assert.equal(dom.window.location.pathname,'/');
+  assert.equal(dom.window.document.querySelector('#detail-dialog').open,false);
+ }finally{dom.window.close();}
+});
+
+test('local static request handler serves a direct vacancy URL and preserves staff/assets routing',async()=>{
+ const {readFile:read,stat}=await import('node:fs/promises'),{resolve,extname,sep}=await import('node:path'),{fileURLToPath}=await import('node:url');
+ const source=(await readFile(new URL('../server.mjs',import.meta.url),'utf8')).split('\n').filter(line=>!line.startsWith('import ')).join('\n').replaceAll('import.meta.url',JSON.stringify(new URL('../server.mjs',import.meta.url).href));
+ let handler;
+ vm.runInNewContext(source,{createServer:fn=>{handler=fn;return {listen(){},close(){}};},readFile:read,stat,resolve,extname,sep,fileURLToPath,URL,process:{argv:[],env:{},on(){}}});
+ async function request(url){const res={status:null,body:null,writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;return this;}};await handler({url},res);return res;}
+ const vacancy=await request('/jobs/teacher?utm_source=test');assert.equal(vacancy.status,200);assert.match(vacancy.headers['Content-Type'],/text\/html/);assert.match(vacancy.body.toString(),/<base href="\/">/);
+ assert.equal((await request('/portal.html')).status,200);assert.equal((await request('/app.js')).status,200);assert.equal((await request('/assets/favicon-32.png')).status,200);
+ assert.equal((await request('/jobs/teacher/private')).status,404);assert.equal((await request('/api/nonexistent')).status,404);
+});
+
+test('archived or expired vacancies missing from the published catalogue cannot open via their old URL',async()=>{
+ const published=records.filter(record=>record.kind!=='vacancy');
+ const dom=await publicPage(published,{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{
+  const d=dom.window.document;
+  assert.match(d.querySelector('#dialog-title').textContent,/Vacancy unavailable/);
+  assert.equal(d.querySelector('#detail-dialog a[href^="/portal.html"]'),null);
+  assert.equal(d.querySelector('meta[name="robots"]').content,'noindex,follow');
+  assert.equal(d.querySelectorAll('#job-grid [data-action="job"]').length,0);
+ }finally{dom.window.close();}
+});
+
+test('malformed Vercel job paths show unavailable rather than an indexable duplicate homepage',async()=>{
+ for(const slug of ['not_valid','%E6%95%99%E5%B8%88','a'.repeat(181)]){
+  const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/'+slug});
+  try{
+   const w=dom.window,d=w.document;
+   assert.match(d.querySelector('#dialog-title').textContent,/Vacancy unavailable/);
+   assert.equal(d.querySelector('meta[name="robots"]').content,'noindex,follow');
+   d.querySelector('.dialog-close').click();
+   assert.equal(w.location.pathname,'/');assert.equal(d.querySelector('meta[name="robots"]'),null);
+   assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/');
+  }finally{dom.window.close();}
+ }
+});
+
+test('section navigation on nested job routes resolves to homepage anchors and close restores home metadata',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher'});
+ try{
+  const w=dom.window,d=w.document;
+  assert.equal(d.querySelector('.desktop-nav a[href="#opportunities"]').href,'https://jobs.garyhome.vn/#opportunities');
+  d.querySelector('.dialog-close').click();
+  assert.match(d.title,/Teach\. Travel\. Belong/);
+  assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/');
+  assert.equal(d.querySelector('.desktop-nav a[href="#opportunities"]').href,w.location.origin+'/#opportunities');
+ }finally{dom.window.close();}
 });

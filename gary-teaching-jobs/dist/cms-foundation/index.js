@@ -1,7 +1,7 @@
-import { CMS_VERSION, LOCALES, emptyEntry, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
+import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
 import { cmsText, validationText } from './copy.js';
 import { localizeFinding } from './seo-findings.js';
-export { CMS_VERSION, validateEntry, contentSeoFindings, safeMediaUrl } from './content.js';
+export { CMS_VERSION, titleSlug, validateEntry, contentSeoFindings, safeMediaUrl } from './content.js';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 let serial = 0;
@@ -18,6 +18,7 @@ export function mountCms(root, options) {
   const t = key => cmsText(key, language);
   const label = value => typeof value === 'object' ? value?.[language] || value?.en || '' : value || '';
   const collection = () => options.collections.find(item => item.kind === kind);
+  const syncAutomaticSlug = () => { if (draft && collection().automaticSlug && !draft.id) draft.slug = titleSlug(draft); };
   const dirty = () => !!draft && JSON.stringify(draft) !== baseline;
   const date = value => { try { return value ? new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—'; } catch { return '—'; } };
   const disabled = value => value ? ' disabled' : '';
@@ -85,13 +86,16 @@ export function mountCms(root, options) {
     const dialog = root.querySelector('.cms-dialog');
     if (!dialog || !draft) return;
     const extraFields = fieldsFor(collection());
-    dialog.innerHTML = `<header><div><p class="cms-eyebrow">${escape(label(collection().label))}</p><h2 id="${id}-editor-heading">${escape(draft.id ? t('edit') : t('add'))}</h2></div>${button('close', t('close'))}</header><form data-cms-editor novalidate><div class="cms-editor-meta">${field('slug', t('slug'))}<p><span class="cms-badge cms-badge-${escape(draft.status)}">${t(draft.status)}</span> · <span data-cms-dirty>${t('clean')}</span></p></div><p class="cms-hint">${t('snapshot')}</p><div class="cms-language-columns">${LOCALES.map(locale => `<section lang="${locale}" aria-label="${locale === 'en' ? 'English' : 'Tiếng Việt'}"><h3>${locale === 'en' ? 'English' : 'Tiếng Việt'}</h3>${field(`title_${locale}`, t('title'), 'text', { locale })}${field(`summary_${locale}`, t('summary'), 'textarea', { locale })}${field(`body_${locale}`, t('body'), 'textarea', { locale })}${extraFields.filter(item => item.locale === locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details><summary>${t('seo')}</summary>${field(`seo_title_${locale}`, t('seoTitle'), 'text', { locale })}${field(`seo_description_${locale}`, t('seoDescription'), 'textarea', { locale })}</details></section>`).join('')}</div>${extraFields.filter(item => !item.locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details class="cms-seo"><summary>${t('seo')}</summary><p class="cms-hint">${t('advisory')}</p><div data-cms-checks></div></details><details class="cms-preview"><summary>${t('preview')}</summary><div class="cms-language-columns" data-cms-preview></div></details><details data-cms-revisions><summary>${t('revision')}</summary><div data-cms-history><p>${t('loadingRevisions')}</p></div></details><p class="cms-dialog-notice" data-editor-notice role="status" aria-live="polite"></p><footer class="cms-editor-actions">${capabilities.edit ? `<button type="submit" class="cms-primary"${disabled(busy)}>${t('save')}</button>${button('review', t('submit'), '', !draft.id)}` : ''}${capabilities.publish ? `${button('publish', t('publish'), '', !draft.id || draft.status !== 'review')}${button('archive', t('archive'), '', !draft.id || draft.status === 'archived')}` : ''}${button('close', t('cancel'))}</footer></form>`;
+    dialog.innerHTML = `<header><div><p class="cms-eyebrow">${escape(label(collection().label))}</p><h2 id="${id}-editor-heading">${escape(draft.id ? t('edit') : t('add'))}</h2></div>${button('close', t('close'))}</header><form data-cms-editor novalidate><div class="cms-editor-meta">${collection().automaticSlug ? '<p class="cms-hint" data-cms-auto-url></p>' : field('slug', t('slug'))}<p><span class="cms-badge cms-badge-${escape(draft.status)}">${t(draft.status)}</span> · <span data-cms-dirty>${t('clean')}</span></p></div><p class="cms-hint">${t('snapshot')}</p><div class="cms-language-columns">${LOCALES.map(locale => `<section lang="${locale}" aria-label="${locale === 'en' ? 'English' : 'Tiếng Việt'}"><h3>${locale === 'en' ? 'English' : 'Tiếng Việt'}</h3>${field(`title_${locale}`, t('title'), 'text', { locale })}${field(`summary_${locale}`, t('summary'), 'textarea', { locale })}${field(`body_${locale}`, t('body'), 'textarea', { locale })}${extraFields.filter(item => item.locale === locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details><summary>${t('seo')}</summary>${field(`seo_title_${locale}`, t('seoTitle'), 'text', { locale })}${field(`seo_description_${locale}`, t('seoDescription'), 'textarea', { locale })}</details></section>`).join('')}</div>${extraFields.filter(item => !item.locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details class="cms-seo"><summary>${t('seo')}</summary><p class="cms-hint">${t('advisory')}</p><div data-cms-checks></div></details><details class="cms-preview"><summary>${t('preview')}</summary><div class="cms-language-columns" data-cms-preview></div></details><details data-cms-revisions><summary>${t('revision')}</summary><div data-cms-history><p>${t('loadingRevisions')}</p></div></details><p class="cms-dialog-notice" data-editor-notice role="status" aria-live="polite"></p><footer class="cms-editor-actions">${capabilities.edit ? `<button type="submit" class="cms-primary"${disabled(busy)}>${t('save')}</button>${button('review', t('submit'), '', !draft.id)}` : ''}${capabilities.publish ? `${button('publish', t('publish'), '', !draft.id || draft.status !== 'review')}${button('archive', t('archive'), '', !draft.id || draft.status === 'archived')}` : ''}${button('close', t('cancel'))}</footer></form>`;
     updateEditorChecks(); renderHistory();
     if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); } else dialog.setAttribute('open', '');
     dialog.querySelector('input')?.focus();
   }
   function updateEditorChecks() {
     if (!draft) return;
+    syncAutomaticSlug();
+    const automaticUrl = root.querySelector('[data-cms-auto-url]');
+    if (automaticUrl) automaticUrl.textContent = draft.slug ? `${t('automaticUrl')}: ${collection().publicPath || '/'}${draft.slug}` : t('automaticUrlPending');
     const target = root.querySelector('[data-cms-checks]');
     if (target) target.innerHTML = contentSeoFindings(draft, collection()).map(finding => { const translated = localizeFinding(finding, language); return `<article class="cms-finding cms-${finding.severity}"><strong>${escape(t(finding.severity))}: ${escape(translated.title)}</strong><p>${escape(translated.recommendation || translated.explanation)}</p></article>`; }).join('');
     const preview = root.querySelector('[data-cms-preview]');
@@ -100,7 +104,7 @@ export function mountCms(root, options) {
   }
   async function openEditor(record) {
     if (!canLeave()) return;
-    draft = structuredClone(record || emptyEntry(kind)); draft.data ||= {};
+    draft = structuredClone(record || emptyEntry(kind)); draft.data ||= {}; syncAutomaticSlug();
     baseline = JSON.stringify(draft); revisions = []; editor();
     if (draft.id && adapter.revisions) {
       const selected = draft.id;
@@ -180,7 +184,9 @@ export function mountCms(root, options) {
   async function onSubmit(event) {
     if (event.target.matches('[data-cms-editor]')) {
       event.preventDefault(); event.stopPropagation();
-      if (!draft || !capabilities.edit || showIssues(validateEntry(draft, collection()))) return;
+      if (!draft || !capabilities.edit) return;
+      syncAutomaticSlug();
+      if (showIssues(validateEntry(draft, collection()))) return;
       const payload = structuredClone(draft); return mutate(() => adapter.save(payload, { expectedVersion: draft.version }), t('saved'));
     }
     if (event.target.matches('[data-cms-upload]')) {
