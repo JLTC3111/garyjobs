@@ -77,3 +77,25 @@ test('portal semantic pairs and actual public vacancy metadata meet AA contrast 
  }
  assert.match(cmsCss,/\.cms-dialog\{background:var\(--cms-surface\)/);assert.match(cmsCss,/\.cms-badge-published\{background:var\(--cms-success-bg\);color:var\(--cms-success\)/);
 });
+const successCss=await readFile(new URL('cms-foundation/success-notification.css',root),'utf8');
+function specificity(selector){
+ const plain=selector.replace(/::[a-z-]+/g,'').replace(/:[a-z-]+(\([^)]*\))?/g,'.p');
+ return [(plain.match(/#[\w-]+/g)||[]).length,(plain.match(/\.[\w-]+|\[[^\]]+\]/g)||[]).length,(plain.match(/[a-z][\w-]*/g)||[]).length];
+}
+function beats(winner,loser){const a=specificity(winner),b=specificity(loser);for(let i=0;i<3;i++)if(a[i]!==b[i])return a[i]>b[i];return false;}
+test('publication confirmation actions keep paired ink above the portal link color',()=>{
+ const sheet=new JSDOM(`<style>${successCss}</style>`,{url:'https://jobs.garyhome.vn/portal.html'}).window.document.styleSheets[0];
+ const declared=[...sheet.cssRules].flatMap(rule=>rule.selectorText?[{selector:rule.selectorText,color:rule.style.getPropertyValue('color'),background:rule.style.getPropertyValue('background')}]:[]);
+ const link=declared.find(rule=>rule.selector.includes('.cms-success-actions a')&&rule.color.includes('--cms-action-ink'));
+ const close=declared.find(rule=>rule.selector.trimEnd().endsWith('.cms-success-actions button')&&rule.color.includes('--cms-ink'));
+ assert.ok(link);assert.ok(close);
+ const portalLink='.jobs-portal-body :is(a,.jobs-link-button)';
+ for(const selector of link.selector.split(','))assert.ok(beats(selector.trim(),portalLink),selector);
+ assert.match(link.background,/var\(--cms-action/);
+ assert.match(close.background,/var\(--cms-surface/);
+ for(const dark of [false,true]){
+  const p=palette(dark),color=name=>resolve(p[name],p),mode=dark?'dark':'light';
+  assert.ok(contrast(color('--jobs-action-ink'),color('--jobs-portal-action'))>=4.5,mode);
+  assert.ok(contrast(color('--jobs-portal-ink'),color('--jobs-portal-surface'))>=4.5,`${mode} close`);
+ }
+});

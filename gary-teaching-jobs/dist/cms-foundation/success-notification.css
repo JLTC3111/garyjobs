@@ -7,7 +7,13 @@
 .cms-success-dialog .cms-success-title{font-weight:650;color:var(--cms-ink,#18384b);margin-bottom:22px}
 .cms-success-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:20px 0}
 .cms-success-actions a,.gary-cms .cms-success-actions button{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;border-radius:30px;padding:11px 20px;font:inherit;text-decoration:none}
-.cms-success-actions a{background:var(--cms-action,#18384b);color:var(--cms-action-ink,#fff);border:1px solid transparent}
+/* Beat the portal link color so action text stays the paired ink, including dark text on the light action fill. */
+.gary-cms.cms-success-dialog .cms-success-actions a,
+.gary-cms.cms-success-dialog .cms-success-actions a:link,
+.gary-cms.cms-success-dialog .cms-success-actions a:visited,
+.gary-cms.cms-success-dialog .cms-success-actions a:hover,
+.gary-cms.cms-success-dialog .cms-success-actions a:focus{background:var(--cms-action,#18384b);color:var(--cms-action-ink,#fff);border:1px solid transparent}
+.gary-cms.cms-success-dialog .cms-success-actions button{color:var(--cms-ink,#18384b);background:var(--cms-surface,#fff);border-color:var(--cms-line,#d9e3e6)}
 .cms-success-actions svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .cms-success-dialog [data-success-timer]{display:block;font-size:13px;color:var(--cms-muted,#526978)}
 .cms-success-dialog [hidden]{display:none!important}
