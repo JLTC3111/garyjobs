@@ -119,8 +119,11 @@ for(const language of ['en','vi'])test(`end-to-end ${language}: one Publish crea
     await h.click('new');
     const dialog=h.root.querySelector('dialog');
     for(const selector of ['[data-reference-search]','[data-action="reference-refresh"]','[data-reference-create]'])assert.equal(dialog.querySelector(selector),null,selector);
-    for(const key of ['title_en','body_en','data.employer_name_en','data.category_slug','data.location_slug','data.contact_email','data.closes_on'])assert.ok(dialog.querySelector(`[name="${key}"]`).closest('label').querySelector('span small'),key+' required label');
-    for(const key of ['title_vi','body_vi','summary_en','summary_vi','data.employer_name_vi','data.workplace_name','data.street_address'])assert.equal(dialog.querySelector(`[name="${key}"]`).closest('label').querySelector('span small'),null,key+' must stay optional');
+    const marker=key=>dialog.querySelector(`[name="${key}"]`).closest('label').querySelector('span small')?.textContent||'';
+    const requiredMark=language==='vi'?'(Bắt buộc)':'(Required)',optionalMark=language==='vi'?'(Không bắt buộc)':'(Optional)';
+    for(const key of ['title_en','body_en','data.employer_name_en','data.category_slug','data.location_slug','data.contact_email','data.closes_on'])assert.equal(marker(key),requiredMark,key+' required label');
+    for(const key of ['title_vi','body_vi','summary_en','summary_vi'])assert.equal(marker(key),optionalMark,key+' optional label');
+    for(const key of ['data.employer_name_vi','data.workplace_name','data.street_address'])assert.equal(marker(key),'',key+' must stay optional');
     h.fill();h.input('data.workplace_name','West branch');h.input('data.street_address','123 Example Street');
     await h.click('publish');
     await until(async()=>(await h.one("select count(*)::int n from public.jobs_public_content where kind='vacancy'")).n===1,dialog.textContent);

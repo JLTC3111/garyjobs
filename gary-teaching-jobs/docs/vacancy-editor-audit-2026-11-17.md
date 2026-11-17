@@ -4,7 +4,7 @@
 
 A publisher can complete a vacancy and click **Publish** once. The editor validates the vacancy, saves it when needed, then publishes it directly. No employer, category, or location record is created or published as part of this action. Save draft remains available; editors without publishing permission can still submit for review.
 
-Implementation and end-to-end verification are local. The new migration has **not** been applied to production, and the website has **not** been deployed. Apply the new migration before deploying the updated website. Existing production records were inspected read-only and were not changed, corrected, published, archived, or deleted.
+Implementation and end-to-end verification are local. The user has confirmed that the new migration was successfully applied to production. Website deployment remains pending. Existing production records were inspected read-only during the audit and were not changed, corrected, published, archived, or deleted by the audit.
 
 ## Root causes
 
@@ -72,5 +72,6 @@ Final verification results:
 | `npm run build` in Teaching Jobs | Passed; JavaScript syntax, 76 asset references and all 58 photos verified |
 | `node --test tests/cms-foundation.test.mjs` in Gary Home | **3 passed**, confirming default shared validation behavior remains unchanged |
 | `git diff --check` in both affected repositories | Passed |
-| Production migration / website deployment | Not performed |
+| Production migration | Successfully applied, confirmed by the user |
+| Website deployment | Pending |
 | Browser visual QA | Unavailable: preview server bind denied by environment |

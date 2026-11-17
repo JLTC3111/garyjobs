@@ -80,12 +80,15 @@ test('real CMS retains field errors, dirty guard and submission through maximize
  const settle=async()=>{for(let i=0;i<8;i++)await new Promise(resolve=>setImmediate(resolve));};
  try{
   await cms.ready;root.querySelector('[data-action=new]').click();await settle();
+  const marker=name=>root.querySelector(`[name="${name}"]`).closest('label').querySelector('span small').textContent;
+  assert.equal(marker('title_en'),'(Required)');assert.equal(marker('title_vi'),'(Optional)');
+  assert.equal(marker('summary_en'),'(Optional)');assert.equal(marker('body_en'),'(Required)');assert.equal(marker('body_vi'),'(Optional)');
   const input=root.querySelector('[name=title_en]');input.value='An unsaved vacancy';input.dispatchEvent(new win.Event('input',{bubbles:true}));assert.equal(cms.isDirty(),true);
   root.querySelector('[data-action=publish]').click();await settle();const error=root.querySelector('[data-error-for=body_en]');assert.ok(error.textContent);assert.equal(root.querySelector('[name=body_en]').getAttribute('aria-invalid'),'true');
   const form=root.querySelector('form'),toggle=root.querySelector('[data-gw-toggle]');toggle.click();assert.equal(root.querySelector('form'),form);assert.equal(root.querySelector('[name=title_en]'),input);assert.ok(error.textContent);assert.equal(cms.isDirty(),true);
   root.querySelector('[data-action=close]').click();await settle();assert.ok(root.querySelector('dialog').open,'declining the leave warning keeps the editor open');assert.equal(input.value,'An unsaved vacancy');
   toggle.click();root.querySelector('[data-gw-edge=e]').dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));toggle.click();
-  cms.setLanguage('vi');assert.equal(root.querySelector('[name=title_en]').value,'An unsaved vacancy');assert.ok(root.querySelector('[data-error-for=body_en]').textContent);assert.ok(root.querySelector('dialog').classList.contains('gw-maximized'));
+  cms.setLanguage('vi');assert.equal(marker('title_en'),'(Bắt buộc)');assert.equal(marker('title_vi'),'(Không bắt buộc)');assert.equal(root.querySelector('[name=title_en]').value,'An unsaved vacancy');assert.ok(root.querySelector('[data-error-for=body_en]').textContent);assert.ok(root.querySelector('dialog').classList.contains('gw-maximized'));
   const body=root.querySelector('[name=body_en]');body.value='Vacancy details';body.dispatchEvent(new win.Event('input',{bubbles:true}));root.querySelector('form').dispatchEvent(new win.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(saved.length,1);assert.equal(saved[0].title_en,'An unsaved vacancy');assert.equal(saved[0].body_en,'Vacancy details');assert.equal(cms.isDirty(),false);
   root.querySelector('[data-action=close]').click();await settle();assert.equal(win.document.activeElement,root.querySelector('[data-action=new]'),'closing restores keyboard focus to the workspace');root.querySelector('[data-action=new]').click();await settle();assert.ok(root.querySelector('dialog').classList.contains('gw-maximized'),'the next vacancy uses the remembered maximized state');assert.equal(root.querySelector('[name=title_en]').value,'');
  }finally{cms.destroy({force:true});dom.window.close();}
