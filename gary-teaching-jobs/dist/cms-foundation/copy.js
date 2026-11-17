@@ -12,6 +12,7 @@ const additional = {
   optional: ['Optional', 'Không bắt buộc'],
   previousValue: ['previous value', 'giá trị trước đây'],
   vacancyPublished: ['Vacancy published.', 'Đã đăng tin tuyển dụng.'],
+  searchAction: ['Search', 'Tìm'],
   referenceSearch: ['Search options', 'Tìm lựa chọn'],
   referenceChoose: ['Choose a published entry', 'Chọn mục đã đăng'],
   referenceLoading: ['Loading choices…', 'Đang tải lựa chọn…'],
