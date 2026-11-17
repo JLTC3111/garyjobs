@@ -1,0 +1,19 @@
+/* Workspace support is scoped to the actual email application composer. The
+   same dialog's read-only vacancy, destination and contact views stay intact. */
+#detail-dialog.jobs-application-editor{--gw-surface:var(--jobs-surface,var(--cream,#fff));--gw-ink:var(--jobs-ink,var(--ink,#243649));--gw-line:var(--jobs-line,var(--line,#dedfd9));--gw-accent:var(--jobs-focus,#7966a5)}
+#detail-dialog.jobs-application-editor>.dialog-shell{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;padding:0;overflow:hidden}
+#detail-dialog.jobs-application-editor .gw-editor-header{padding:20px 24px;gap:16px;align-items:center}
+#detail-dialog.jobs-application-editor .gw-editor-title{flex:1;min-width:0}
+#detail-dialog.jobs-application-editor #dialog-title{font-size:clamp(26px,3vw,36px);padding:0;line-height:1.2}
+#detail-dialog.jobs-application-editor .gw-editor-title>.eyebrow{font-size:11px;margin:0 0 8px}
+#detail-dialog.jobs-application-editor .dialog-close{position:static;inset:auto;width:42px;height:42px;min-height:42px;transform:none;margin:0}
+#detail-dialog.jobs-application-editor .gw-public-content,#detail-dialog.jobs-application-editor .gw-editor-form{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;margin:0;padding:0}
+#detail-dialog.jobs-application-editor .gw-editor-body{padding:24px}
+#detail-dialog.jobs-application-editor .gw-editor-actions{padding:16px 24px;margin:0;flex:none;gap:10px;background:var(--gw-surface)}
+#detail-dialog.jobs-application-editor .gw-editor-actions .form-submit{width:auto;margin:0;min-width:190px}
+#detail-dialog.jobs-application-editor .gw-editor-actions>.dialog-small{margin:0;flex:1;font-size:12px}
+#detail-dialog.jobs-application-editor .gw-editor-actions>.email-fallback{flex-basis:100%;max-height:22dvh;overflow:auto;margin:0}
+#detail-dialog.jobs-application-editor .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#detail-dialog.jobs-application-editor textarea{max-height:45dvh}
+@container(max-width:650px){#detail-dialog.jobs-application-editor .form-grid{grid-template-columns:1fr}}
+@media(max-width:720px){#detail-dialog.jobs-application-editor .gw-editor-header{padding:14px 16px}#detail-dialog.jobs-application-editor .gw-editor-body{padding:18px 16px}#detail-dialog.jobs-application-editor .gw-editor-actions{padding:12px 16px}#detail-dialog.jobs-application-editor .gw-editor-actions .form-submit{width:100%}#detail-dialog.jobs-application-editor .gw-editor-actions>.dialog-small{flex-basis:100%}#detail-dialog.jobs-application-editor .form-grid input,#detail-dialog.jobs-application-editor .form-grid select,#detail-dialog.jobs-application-editor .form-message textarea{font-size:16px}}

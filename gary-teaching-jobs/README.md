@@ -105,3 +105,7 @@ updates, deferred release replacement, retry and unmount cleanup checks. Run
 ## CMS and backend development
 
 `npm test` runs shared, DOM and isolated database checks. `npm run test:db` uses ephemeral PGlite only. `npm run build` bundles the pinned Supabase client and the existing gallery. Review the Jobs migration and operator-only staff bootstrap before rollout; Home and Agency memberships never grant Jobs permissions.
+
+## Vacancy editor simplification — 17 November 2026
+
+The vacancy editor now saves and publishes from one Publish action with direct employer names and predefined bilingual category/city choices. Vietnamese translations and summaries are optional. The function-only database migration must precede deploying these assets. See [audit findings, changed files, compatibility, and end-to-end verification](docs/vacancy-editor-audit-2026-11-17.md). This change has been verified locally; production rollout is pending.

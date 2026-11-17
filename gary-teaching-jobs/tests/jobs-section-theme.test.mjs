@@ -391,3 +391,55 @@ test('contact focus and boundary remain visible over both pale and deep page sec
     } finally { h.dom.window.close(); }
   }
 });
+
+
+test('recruitment journey has four ordered accessible stages and retains all three benefits', async () => {
+ const h=await page();try{
+  const section=h.d.querySelector('#why-gary'),journey=section.querySelector('ol.recruitment-journey');
+  assert.ok(journey.getAttribute('aria-label'));assert.equal(journey.querySelectorAll(':scope > li').length,4);
+  assert.deepEqual([...journey.querySelectorAll('h3')].map(node=>node.textContent),['Connect','Get Guidance','Find Your Fit','Move Forward']);
+  assert.equal(journey.querySelectorAll('.journey-connector[aria-hidden="true"]').length,3);
+  assert.equal(journey.querySelectorAll('button,a,input').length,0,'Informational stages do not pretend to be controls');
+  assert.equal(section.querySelector('img'),null);assert.equal(section.querySelector('.photo-footnote'),null);
+  assert.deepEqual([...section.querySelectorAll('.benefit-row h3')].map(node=>node.textContent),['Your next role, without the fees','A local team who gets it','More places. More possibilities.']);
+  h.d.querySelector('[data-language="vi"]').click();
+  assert.deepEqual([...h.d.querySelectorAll('.journey-card h3')].map(node=>node.textContent),['Kết nối','Nhận hướng dẫn','Tìm nơi phù hợp','Tiến bước']);
+ }finally{h.dom.window.close();}
+});
+
+test('theme switches preserve exact headlines and eyebrows in both languages without replacing content nodes', async () => {
+ const h=await page();try{
+  const fallback=new JSDOM(html);assert.equal(fallback.window.document.querySelector('#app h1').textContent,'Build your career.Explore a new culture.');assert.equal(fallback.window.document.querySelector('#app .eyebrow').textContent,'VIETNAM ENGLISH TEACHING JOBS');fallback.window.close();
+  const expected={en:{hero:'Build your career. Explore a new culture.',eyebrow:'VIETNAM ENGLISH TEACHING JOBS',section:'A recruitment team.In your corner.',sectionEyebrow:'A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY'},vi:{hero:'Phát triển sự nghiệp. Khám phá nền văn hóa mới.',eyebrow:'VIỆC LÀM GIẢNG DẠY TIẾNG ANH TẠI VIỆT NAM',section:'Đội ngũ tuyển dụng.Luôn đồng hành.',sectionEyebrow:'HIỂU ĐỊA PHƯƠNG, ĐỒNG HÀNH LÂU DÀI'}};
+  for(const locale of ['en','vi']){
+   h.d.querySelector(`[data-language="${locale}"]`).click();
+   const title=h.d.querySelector('#hero-title'),section=h.d.querySelector('#why-gary h2'),eyebrow=h.d.querySelector('.hero-copy>.eyebrow'),sectionEyebrow=h.d.querySelector('.why-copy>.eyebrow');
+   for(const mode of ['light','dark','system','dark','light']){
+    h.w.setGaryJobsTheme(mode);
+    assert.equal(h.d.querySelector('#hero-title'),title);assert.equal(h.d.querySelector('#why-gary h2'),section);
+    assert.equal(title.textContent,expected[locale].hero);assert.equal(eyebrow.textContent,expected[locale].eyebrow);
+    assert.equal(section.textContent,expected[locale].section);assert.equal(sectionEyebrow.textContent,expected[locale].sectionEyebrow);
+   }
+  }
+ }finally{h.dom.window.close();}
+});
+
+test('recruitment text contrast and stacked layout survive desktop/mobile and light/dark palettes', async () => {
+ for(const dark of [false,true]){
+  const h=await page({dark});try{
+   for(const width of [360,390,720,1000,1440]){
+    const paint=cascade(h.d,width),grid=h.d.querySelector('.why-grid');
+    assert.equal(paint.value(grid,'grid-template-columns'),width<=720?'1fr':'1fr 1fr');
+    for(const selector of ['.why-copy h2','.why-copy h2 em','.why-copy>.eyebrow','.why-copy>.body-copy','.benefit-row h3','.benefit-row p','.journey-card h3','.journey-card p']){
+     for(const node of h.d.querySelectorAll(selector)){
+      const ink=rgba(paint.value(node,'color'));
+      for(const surface of backgrounds(node,paint))assert.ok(contrast(ink,surface)>=4.5,`${dark?'dark':'light'} ${width} ${selector}: ${contrast(ink,surface).toFixed(2)}`);
+     }
+    }
+    for(const card of h.d.querySelectorAll('.journey-card')){
+     assert.equal(paint.value(card,'min-width'),'0');assert.equal(paint.value(card,'display'),'flex');
+    }
+   }
+  }finally{h.dom.window.close();}
+ }
+});

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "sha256": "438b72baa217826aa7956e8101c0ee05013cc779c3f7a1cdcc1341da53bb72ce",
+  "sha256": "bedab5ceca07249238f837890d2ce1f461bdf40784f0989b1aa91e8bfb4e0882",
   "source": "gary-home/shared/cms-foundation",
   "files": [
     "index.js",
@@ -11,5 +11,6 @@
     "seo-findings.js",
     "seo-findings.d.ts"
   ],
-  "applicationPatch": "jobs-reference-publishing-2026-11-16"
+  "applicationPatch": "jobs-reference-publishing-2026-11-16 + vacancy-simplification-2026-11-17 + persistent-editor-workspace-2026-11-17",
+  "hashScope": "vendored-files"
 }

@@ -78,6 +78,9 @@ test('staff entry opens content management for an authorized editor',async()=>{
  try{
   await h.settle();
   assert.equal(h.calls.cms,1);
+  assert.equal(h.w.document.querySelector('[data-view="cms"]').textContent,'Content manager');
+  h.w.document.querySelector('#portal-language').click();
+  assert.equal(h.w.document.querySelector('[data-view="cms"]').textContent,'Quản lý nội dung');
   assert.match(h.w.document.querySelector('#workspace-view').textContent,/Private CMS workspace/);
   assert.ok(visible(h.w.document.querySelector('#portal-access')));
   assert.equal(h.calls.applications,0);
@@ -89,10 +92,15 @@ test('staff entry opens recruitment for a recruiter without CMS permission',asyn
  const h=await portal({access:'staff',caps:{recruit:true,role:'recruiter'}});
  try{
   await h.settle();
+  assert.equal(h.w.document.querySelector('[data-view="applications"]').textContent,'Recruitment');
   assert.match(h.w.document.querySelector('#workspace-view').textContent,/Recruitment workspace/);
   assert.equal(h.calls.cms,0);
   assert.equal(h.calls.applications,1);
   assert.ok(h.calls.rpc.includes('jobs_staff_directory'));
+  h.w.document.querySelector('#portal-language').click();
+  await h.settle();
+  assert.equal(h.w.document.querySelector('[data-view="applications"]').textContent,'Tuyển dụng');
+  assert.match(h.w.document.querySelector('#workspace-view').textContent,/Không gian tuyển dụng/);
  }finally{h.dom.window.close();}
 });
 

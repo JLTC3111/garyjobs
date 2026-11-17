@@ -20,7 +20,7 @@ test('career discovery keeps one working search form in the hero through languag
   assert.equal(d.querySelectorAll('#job-grid .job-card').length,0);assert.match(d.querySelector('#job-grid').textContent,/No roles match/);
   d.querySelector('[data-language="vi"]').click();
   assert.equal(d.querySelectorAll('#job-search').length,1);assert.equal(d.querySelector('#keyword').value,'unmatched subject');
-  assert.match(d.querySelector('#hero-title').textContent,/Dạy tiếng Anh/);assert.match(d.querySelector('.search-button').textContent,/Tìm việc giảng dạy/);
+  assert.match(d.querySelector('#hero-title').textContent,/Phát triển sự nghiệp/);assert.match(d.querySelector('.search-button').textContent,/Tìm việc giảng dạy/);
   d.querySelector('[data-action="reset-jobs"]').click();assert.equal(d.querySelectorAll('#job-grid .job-card').length,1);
  }finally{dom.window.close();}
 });
@@ -42,8 +42,8 @@ test('English and Vietnamese hero phrases balance independently in both themes w
   assert.ok(d.querySelector('link[href="jobs-hero-layout.css"]'));
   const keyword=d.querySelector('#keyword');keyword.value='science';
   const phrases={
-   en:{light:['Teach English.','Live the adventure.'],dark:['Build your career.','Explore a new culture.']},
-   vi:{light:['Dạy tiếng Anh.','Khám phá hành trình mới.'],dark:['Phát triển sự nghiệp.','Khám phá nền văn hóa mới.']}
+   en:{light:['Build your career.','Explore a new culture.'],dark:['Build your career.','Explore a new culture.']},
+   vi:{light:['Phát triển sự nghiệp.','Khám phá nền văn hóa mới.'],dark:['Phát triển sự nghiệp.','Khám phá nền văn hóa mới.']}
   };
   for(const locale of ['en','vi'])for(const theme of ['light','dark']){
    d.querySelector(`[data-language="${locale}"]`).click();

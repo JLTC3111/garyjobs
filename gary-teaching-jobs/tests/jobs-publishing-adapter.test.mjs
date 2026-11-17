@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile, readdir} from 'node:fs/promises';
+import * as vacancyOptions from '../dist/jobs-vacancy-options.js';
 import vm from 'node:vm';
 import {PGlite} from '@electric-sql/pglite';
 import {createJobsPublishingAdapter} from '../dist/jobs-publishing-adapter.js';
-import {emptyEntry, titleSlug} from '../dist/cms-foundation/content.js';
+import {emptyEntry} from '../dist/cms-foundation/content.js';
 
 const ids = {admin:'40000000-0000-4000-8000-000000000001',publisher:'40000000-0000-4000-8000-000000000002',editor:'40000000-0000-4000-8000-000000000003'};
 const source = (await readFile(new URL('../dist/jobs-backend.js',import.meta.url),'utf8')).replace(/^import .*$/gm,'').replace(/^export /gm,'');
-const context = vm.createContext({createClient:()=>({}),jobsConfig:{}});
+const context = vm.createContext({createClient:()=>({}),jobsConfig:{},...vacancyOptions});
 vm.runInContext(source+'\nglobalThis.testCollections = collections;',context);
 const collections = context.testCollections;
 
@@ -70,7 +71,7 @@ async function setup({intercept,interceptRead}={}) {
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
     alter table storage.objects enable row level security;grant select,insert,update,delete on storage.objects to anon,authenticated;`);
   for(const [role,id]of Object.entries(ids))await pg.query('insert into auth.users values($1,$2,now())',[id,role+'@example.test']);
-  await pg.exec(await readFile(new URL('../supabase/migrations/20261116043122_teaching_jobs_cms_and_recruitment.sql',import.meta.url),'utf8'));
+  for(const filename of (await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(file=>file.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../supabase/migrations/'+filename,import.meta.url),'utf8'));
   for(const [role,id]of Object.entries(ids))await pg.query('insert into jobs_private.staff_members(user_id,role) values($1,$2)',[id,role]);
   const as=async role=>{await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[ids[role]||'']);await pg.exec('set role '+(role?'authenticated':'anon'));};
   await as('admin');
@@ -80,95 +81,97 @@ async function setup({intercept,interceptRead}={}) {
 }
 
 const referenceInput=kind=>({...emptyEntry(kind),title_en:kind==='employer'?'ABC School':kind==='category'?'Public schools':'Hanoi',title_vi:kind==='employer'?'Trường ABC':kind==='category'?'Trường công lập':'Hà Nội',summary_en:'A complete description for this recruitment reference.',summary_vi:'Mô tả đầy đủ cho thông tin tuyển dụng này.'});
-const vacancyInput=(refs={})=>({...emptyEntry('vacancy'),title_en:'English Teacher in Hanoi',title_vi:'Tuyển giáo viên tiếng Anh tại Hà Nội',summary_en:'A full-time teaching opportunity with a supportive school.',summary_vi:'Cơ hội giảng dạy toàn thời gian tại trường với nhiều hỗ trợ.',body_en:'Complete details about teaching duties, requirements and application support.',body_vi:'Thông tin đầy đủ về công việc giảng dạy, yêu cầu và hỗ trợ ứng tuyển.',data:{closes_on:'2099-12-31',contact_email:'recruiter@example.test',...refs}});
+const vacancyInput=(refs={})=>({...emptyEntry('vacancy'),title_en:'English Teacher in Hanoi',title_vi:'Tuyển giáo viên tiếng Anh tại Hà Nội',summary_en:'A full-time teaching opportunity with a supportive school.',summary_vi:'Cơ hội giảng dạy toàn thời gian tại trường với nhiều hỗ trợ.',body_en:'Complete details about teaching duties, requirements and application support.',body_vi:'Thông tin đầy đủ về công việc giảng dạy, yêu cầu và hỗ trợ ứng tuyển.',data:{employer_name_en:'Independent School',category_slug:'public',location_slug:'hanoi',closes_on:'2099-12-31',contact_email:'recruiter@example.test',...refs}});
 async function publishedReferences(h){const records={};for(const kind of ['employer','category','location'])records[kind]=await h.adapter.createReference(kind,referenceInput(kind));return records;}
-const referenceValues=refs=>Object.fromEntries(Object.entries(refs).map(([kind,record])=>[kind+'_slug',record.slug]));
 async function publishVacancy(h,input){let record=await h.adapter.save(input,{expectedVersion:0});record=await h.adapter.transition(record.id,'review',{expectedVersion:record.version});return h.adapter.transition(record.id,'published',{expectedVersion:record.version});}
 
-test('real database: inline reference creation then vacancy review/publication needs no manual address',async()=>{
+test('real database: a vacancy publishes directly without independent reference records',async()=>{
   const h=await setup();try{
-    const refs=await publishedReferences(h);
-    for(const [kind,record]of Object.entries(refs)){assert.equal(record.status,'published');assert.equal(record.slug,titleSlug(referenceInput(kind)));}
-    const input=vacancyInput(referenceValues(refs)),published=await publishVacancy(h,input);
+    const input=vacancyInput(),saved=await h.adapter.save(input,{expectedVersion:0});
+    const published=await h.adapter.transition(saved.id,'published',{expectedVersion:saved.version});
     assert.equal(published.status,'published');assert.equal(published.slug,'english-teacher-in-hanoi');assert.equal(input.slug,'');
     const live=await h.one('select * from public.jobs_public_content where id=$1',[published.id]);
     assert.equal(live.title_en,input.title_en);assert.deepEqual(live.data,input.data);
+    assert.equal((await h.one("select count(*)::int n from public.jobs_cms_entries where kind<>'vacancy'")).n,0);
   }finally{await h.close();}
 });
 
-test('real database: edited and renamed working references keep their live snapshot usable',async()=>{
+test('real database: English-only text publishes without bilingual summaries or minimum length padding',async()=>{
+  const h=await setup();try{
+    const input={...vacancyInput(),title_en:'T',title_vi:'',summary_en:'',summary_vi:'',body_en:'D',body_vi:''};
+    assert.deepEqual(await h.adapter.validatePublication(input),[]);
+    const published=await publishVacancy(h,input);assert.equal(published.status,'published');
+    const live=await h.one('select * from public.jobs_public_content where id=$1',[published.id]);
+    assert.equal(live.body_en,'D');assert.equal(live.summary_vi,'');assert.equal(live.title_vi,'');
+  }finally{await h.close();}
+});
+
+test('real database: optional reference API retains live snapshot names for legacy data',async()=>{
   const h=await setup();try{
     const refs=await publishedReferences(h),original=refs.employer;
     const result=await h.db.rpc('jobs_cms_save',{p_record:{...original,slug:'renamed-private-school',title_en:'A changed private school title'},p_expected_version:original.version});
     assert.equal(result.error,undefined);assert.equal(result.data.status,'draft');
     const options=await h.adapter.referenceOptions('employer'),option=options.find(item=>item.id===original.id);
     assert.equal(option.value,original.slug);assert.equal(option.label.en,original.title_en);assert.equal(option.published,true);
-    const published=await publishVacancy(h,vacancyInput(referenceValues(refs)));
-    assert.equal(published.status,'published');assert.equal(published.data.employer_slug,original.slug);
   }finally{await h.close();}
 });
 
-test('real database: legacy human names normalize on save while original form data remains intact',async()=>{
+test('real database: invalid required vacancy fields fail with exact fields and preserve saved content',async()=>{
   const h=await setup();try{
-    const refs=await publishedReferences(h),input=vacancyInput({employer_slug:'  abc   SCHOOL ',category_slug:'Trường công lập',location_slug:'Hà Nội'}),before=structuredClone(input);
-    const issues=await h.adapter.validatePublication(input);
-    assert.equal(issues.filter(issue=>issue.code==='jobs-reference-selection-required').length,3);
-    const saved=await h.adapter.save(input,{expectedVersion:0});
-    assert.deepEqual(saved.data,{...input.data,...referenceValues(refs)});assert.deepEqual(input,before);
-    assert.deepEqual(await h.adapter.validatePublication(saved),[]);
-    const reviewed=await h.adapter.transition(saved.id,'review',{expectedVersion:saved.version});
-    assert.equal((await h.adapter.transition(reviewed.id,'published',{expectedVersion:reviewed.version})).status,'published');
-  }finally{await h.close();}
-});
-
-test('real database: filled free-text references fail with exact fields and preserve saved content',async()=>{
-  const h=await setup();try{
-    const input=vacancyInput({employer_slug:'A school that has no profile',category_slug:'A typed category',location_slug:'A typed location'}),saved=await h.adapter.save(input,{expectedVersion:0});
+    const input=vacancyInput({employer_name_en:'',category_slug:'british-council',location_slug:'A typed location',contact_email:'invalid',closes_on:'2000-01-01'}),saved=await h.adapter.save(input,{expectedVersion:0});
     const issues=await h.adapter.validatePublication(saved);
-    assert.deepEqual(issues.filter(issue=>issue.code==='jobs-reference-unavailable').map(issue=>issue.field),['data.employer_slug','data.category_slug','data.location_slug']);
+    for(const field of ['data.employer_name_en','data.category_slug','data.location_slug','data.contact_email','data.closes_on'])assert.ok(issues.some(issue=>issue.field===field),field);
     const transitionsBefore=h.calls.filter(call=>call.name==='jobs_cms_transition').length;
-    await assert.rejects(()=>h.adapter.transition(saved.id,'review',{expectedVersion:saved.version}),error=>error.code==='JOBS_VALIDATION'&&error.issues.length>=3);
+    await assert.rejects(()=>h.adapter.transition(saved.id,'published',{expectedVersion:saved.version}),error=>error.code==='JOBS_VALIDATION'&&error.issues.length>=5);
     assert.equal(h.calls.filter(call=>call.name==='jobs_cms_transition').length,transitionsBefore);
     const unchanged=await h.one('select * from public.jobs_cms_entries where id=$1',[saved.id]);
     assert.equal(unchanged.version,saved.version);assert.equal(unchanged.body_vi,input.body_vi);assert.deepEqual(unchanged.data,input.data);
-    const missing=await h.adapter.validatePublication({...saved,data:{...saved.data,employer_slug:''}});
-    assert.ok(missing.some(issue=>issue.code==='jobs-reference-required'&&issue.field==='data.employer_slug'));
   }finally{await h.close();}
 });
 
-test('real database: editors cannot create-and-publish inline references or publish vacancies',async()=>{
+test('real database: editors can save vacancies while publisher authorization remains enforced',async()=>{
   const h=await setup();try{
     await h.as('editor');
     await assert.rejects(()=>h.adapter.createReference('employer',referenceInput('employer')),error=>error.code==='42501');
-    assert.equal((await h.one('select count(*)::int n from public.jobs_cms_entries')).n,0);
-    await h.as('admin');const refs=await publishedReferences(h);
-    await h.as('editor');let record=await h.adapter.save(vacancyInput(referenceValues(refs)),{expectedVersion:0});
-    record=await h.adapter.transition(record.id,'review',{expectedVersion:record.version});
+    let record=await h.adapter.save(vacancyInput(),{expectedVersion:0});
     await assert.rejects(()=>h.adapter.transition(record.id,'published',{expectedVersion:record.version}),error=>error.code==='42501');
     assert.equal((await h.one("select count(*)::int n from public.jobs_public_content where kind='vacancy'")).n,0);
     await h.as('publisher');record=await h.adapter.transition(record.id,'published',{expectedVersion:record.version});assert.equal(record.status,'published');
   }finally{await h.close();}
 });
 
-test('real database: a stale version cannot issue publication or overwrite a newer draft',async()=>{
+test('real database: a stale version cannot publish or overwrite a newer draft',async()=>{
   const h=await setup();try{
-    const refs=await publishedReferences(h),saved=await h.adapter.save(vacancyInput(referenceValues(refs)),{expectedVersion:0});
-    const updated=await h.adapter.save({...saved,body_en:'A changed and newer set of teaching details with required length.'},{expectedVersion:saved.version});
+    const saved=await h.adapter.save(vacancyInput(),{expectedVersion:0});
+    const updated=await h.adapter.save({...saved,body_en:'A changed and newer set of teaching details.'},{expectedVersion:saved.version});
     const transitionsBefore=h.calls.filter(call=>call.name==='jobs_cms_transition').length;
-    await assert.rejects(()=>h.adapter.transition(saved.id,'review',{expectedVersion:saved.version}),error=>error.code==='40001');
+    await assert.rejects(()=>h.adapter.transition(saved.id,'published',{expectedVersion:saved.version}),error=>error.code==='40001');
     assert.equal(h.calls.filter(call=>call.name==='jobs_cms_transition').length,transitionsBefore);
     assert.equal((await h.one('select version from public.jobs_cms_entries where id=$1',[saved.id])).version,updated.version);
   }finally{await h.close();}
 });
 
-test('real database: a partial inline publish failure can retry the same saved reference without duplicates',async()=>{
+test('real database: independent profile lookup failures cannot block a complete vacancy',async()=>{
+  let taxonomyReads=0;
+  const h=await setup({interceptRead(table,filters){
+    if(filters.some(([field,,value])=>field==='kind'&&['employer','category','location'].includes(value))){taxonomyReads++;return {error:{code:'503',message:'Reference lookup temporarily unavailable'}};}
+  }});
+  try{
+    const input=vacancyInput(),saved=await h.adapter.save(input,{expectedVersion:0});
+    assert.deepEqual(await h.adapter.validatePublication(saved),[]);
+    const published=await h.adapter.transition(saved.id,'published',{expectedVersion:saved.version});
+    assert.equal(published.status,'published');assert.equal(taxonomyReads,0);
+    assert.deepEqual((await h.one('select data from public.jobs_public_content where id=$1',[published.id])).data,input.data);
+  }finally{await h.close();}
+});
+
+test('real database: optional legacy reference publish retry preserves its saved identity',async()=>{
   let failOnce=true;
   const h=await setup({intercept(name,args){if(failOnce&&name==='jobs_cms_transition'&&args.p_status==='published'){failOnce=false;return {error:{code:'503',message:'Temporary connection failure'}};}}});
   try{
     let failed;
     try{await h.adapter.createReference('employer',referenceInput('employer'));}catch(error){failed=error;}
     assert.ok(failed?.partialRecord?.id);assert.equal(failed.partialRecord.status,'review');
-    assert.equal((await h.one('select count(*)::int n from public.jobs_cms_entries')).n,1);
     const retried=await h.adapter.createReference('employer',failed.partialRecord);
     assert.equal(retried.id,failed.partialRecord.id);assert.equal(retried.status,'published');
     assert.equal((await h.one('select count(*)::int n from public.jobs_cms_entries')).n,1);
@@ -176,20 +179,12 @@ test('real database: a partial inline publish failure can retry the same saved r
   }finally{await h.close();}
 });
 
-test('real database: unavailable reference lookups allow draft preservation but block review and publication',async()=>{
-  const h=await setup({interceptRead(table,filters){
-    if(table==='jobs_public_content'&&filters.some(([field,,value])=>field==='kind'&&value==='employer'))return {error:{code:'503',message:'Reference lookup temporarily unavailable'}};
-  }});
-  try{
-    const input=vacancyInput({employer_slug:'Keep this employer text',category_slug:'Keep this category text',location_slug:'Keep this location text'});
-    const saved=await h.adapter.save(input,{expectedVersion:0});
-    assert.ok(saved.id);assert.equal(saved.status,'draft');assert.deepEqual(saved.data,input.data);
-    const transitionsBefore=h.calls.filter(call=>call.name==='jobs_cms_transition').length;
-    for(const status of ['review','published']){
-      await assert.rejects(()=>h.adapter.transition(saved.id,status,{expectedVersion:saved.version}),error=>error.code==='JOBS_VALIDATION'&&error.issues.some(issue=>issue.code==='jobs-reference-lookup-failed'&&issue.field==='data.employer_slug'));
-    }
-    assert.equal(h.calls.filter(call=>call.name==='jobs_cms_transition').length,transitionsBefore);
-    const stored=await h.one('select * from public.jobs_cms_entries where id=$1',[saved.id]);
-    assert.equal(stored.version,saved.version);assert.equal(stored.body_vi,input.body_vi);assert.deepEqual(stored.data,input.data);
+
+test('real database: blank optional fields and trimmed recruiter details introduce no publication blockers',async()=>{
+  const h=await setup();try{
+    const input={...vacancyInput({employer_name_en:'  A school  ',employer_name_vi:'   ',source_url:'   ',workplace_name:' ',street_address:' ',contact_email:' recruiter@example.test ' }),title_vi:'   ',summary_en:' ',summary_vi:' ',body_vi:' '};
+    assert.deepEqual(await h.adapter.validatePublication(input),[]);
+    const published=await publishVacancy(h,input);assert.equal(published.status,'published');
+    assert.equal(published.data.employer_name_en,'A school');assert.equal(published.data.contact_email,'recruiter@example.test');
   }finally{await h.close();}
 });

@@ -118,7 +118,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-hub-fallback a:is(:hover,:focus-visible)>span { opacity:1; }
 .jobs-public .hero-waves { position:absolute;bottom:0;left:0;width:100%;height:130px;z-index:0;pointer-events:none; }
 .jobs-public .hero-waves path:first-child { fill:var(--jobs-waves-1); }.jobs-public .hero-waves path:last-child { fill:var(--jobs-waves-2); }
-.jobs-public :is(.body-copy,.section-intro,.job-count,.job-type,.job-card-bottom>div>span,.listing-note,.benefit-row p,.process-step p,.life-bottom p,.community-bottom,.faq-item p,.footer-brand>p,.footer-column>a,.footer-link,.office-note,.footer-office p,.footer-bottom,.dialog-intro,.dialog-location>span,.role-facts>div>span,.check-list>li,.dialog-small,.application-note,.contact-options small,.photo-footnote,.partner-caption) { color:var(--jobs-muted); }
+.jobs-public :is(.body-copy,.section-intro,.job-count,.job-type,.job-card-bottom>div>span,.listing-note,.benefit-row p,.process-step p,.life-bottom p,.community-bottom,.faq-item p,.footer-brand>p,.footer-column>a,.footer-link,.office-note,.footer-office p,.footer-bottom,.dialog-intro,.dialog-location>span,.role-facts>div>span,.check-list>li,.dialog-small,.application-note,.contact-options small,.partner-caption) { color:var(--jobs-muted); }
 .jobs-public .opportunities,.jobs-public .life-section,.jobs-public .faq-section,.jobs-public .managed-public-content { background:var(--jobs-bg); }
 .jobs-public :is(.job-card,.role-facts,.contact-options>a,.contact-options>button,.role-note,.email-fallback,.form-notice) { background:var(--jobs-surface);border-color:var(--jobs-line);color:var(--jobs-ink); }
 .jobs-public .job-card:hover { border-color:var(--jobs-accent); }
@@ -134,7 +134,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .button-secondary { background:transparent;color:var(--jobs-action);border-color:var(--jobs-line); }.jobs-public .button-secondary:hover { background:var(--jobs-raised);color:var(--jobs-ink); }
 .jobs-public .text-button,.jobs-public .inline-link,.jobs-public .service-site-link { color:var(--jobs-action); }
 .jobs-public .why-section,.jobs-public .process-section,.jobs-public .community-section { background:var(--jobs-soft); }
-.jobs-public .zero-card { background:var(--jobs-surface);border:1px solid var(--jobs-line); }.jobs-public .zero-card p { color:var(--jobs-muted); }
+
 .jobs-public .faq-item summary { color:var(--jobs-ink); }.jobs-public .faq-item summary:hover { color:var(--jobs-accent); }
 .jobs-public .site-footer { background:var(--jobs-soft);color:var(--jobs-ink); }.jobs-public .site-footer h3 { color:var(--jobs-ink); }
 /* Contextual controls consume their paired role, above generic button rules. */
@@ -180,3 +180,15 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 @media(max-width:360px){.jobs-public .nav-actions .jobs-login-menu{display:none;}}
 
 @media(min-width:721px) and (max-width:1000px){.jobs-public .nav-actions #gary-apps-header{display:flex;}}
+
+/* Separate palettes, shared recruitment content. Lavender is a quiet visual accent. */
+html{--journey-frame:radial-gradient(ellipse at 100% 10%,#e8ddf68a,transparent 65%),#f3f3fa;--journey-frame-line:#ddd6e9;--journey-card:#ffffffd9;--journey-card-line:#d8cfe7;--journey-icon-bg:#eee7f7;--journey-icon-line:#d7cbe9;--journey-detail:#70578f;--journey-ink:#0b2457;--journey-muted:#435575}
+html[data-jobs-theme=dark]{--journey-frame:radial-gradient(ellipse at 100% 10%,#71609a24,transparent 70%),#151a2c;--journey-frame-line:#3e3654;--journey-card:#202439e8;--journey-card-line:#504361;--journey-icon-bg:#342c49;--journey-icon-line:#65517f;--journey-detail:#c8b2e5;--journey-ink:#f7f5fb;--journey-muted:#c8c9db}
+.jobs-public .why-copy h2,.jobs-public .benefit-row h3{color:var(--jobs-ink)}
+.jobs-public .why-copy h2 em{color:var(--jobs-accent)}
+.jobs-public .why-copy>.eyebrow{color:var(--jobs-action);font-size:11px;line-height:1.6;letter-spacing:.12em}
+html[data-jobs-theme=dark] .jobs-public .why-copy>.eyebrow{color:var(--jobs-accent)}
+.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{color:var(--jobs-muted);font-size:14px;line-height:1.8}
+.jobs-public .benefit-row h3{font-size:16px;line-height:1.5;margin-bottom:5px}
+.jobs-public .benefit-icon{border-color:var(--jobs-line);background:var(--journey-icon-bg);color:var(--journey-detail)}
+@media(max-width:720px){.jobs-public .why-copy>.eyebrow{font-size:10px}.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{font-size:14px}.jobs-public .benefit-row h3{font-size:16px}}

@@ -238,3 +238,67 @@ test('section navigation on nested job routes resolves to homepage anchors and c
   assert.equal(d.querySelector('.desktop-nav a[href="#opportunities"]').href,w.location.origin+'/#opportunities');
  }finally{dom.window.close();}
 });
+
+
+test('standalone vacancies render employer, predefined bilingual filters and optional workplace without published references',async()=>{
+ const vacancy={...structuredClone(records[3]),title_vi:'',summary_en:'',summary_vi:'',body_vi:'',data:{employer_name_en:'Independent Teaching Team',category_slug:'centers',location_slug:'hanoi',workplace_name:'West Lake branch',street_address:'12 Example Street',contact_email:'jobs@example.test'}};
+ const dom=await publicPage([vacancy]);
+ try{
+  const d=dom.window.document;
+  assert.match(d.querySelector('#job-grid').textContent,/Independent Teaching Team/);
+  assert.match(d.querySelector('#job-tabs').textContent,/Language centers/);
+  assert.ok(d.querySelector('#location option[value="hanoi"]'));
+  d.querySelector('[data-action="filter"][data-id="centers"]').click();
+  assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);
+  for(const query of ['Independent Teaching Team','West Lake','12 Example Street']){
+   d.querySelector('#keyword').value=query;
+   d.querySelector('#job-search').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+   assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/,'Direct vacancy details remain searchable: '+query);
+  }
+  d.querySelector('#job-grid h3 a').click();
+  assert.match(d.querySelector('#detail-dialog').textContent,/Independent Teaching Team/);
+  assert.match(d.querySelector('#detail-dialog').textContent,/West Lake branch · 12 Example Street/);
+  d.querySelector('.dialog-job-language').click();
+  assert.match(d.querySelector('#dialog-title').textContent,/New teacher vacancy/,'English remains readable when Vietnamese is not supplied');
+  assert.match(d.querySelector('#detail-dialog').textContent,/Details of this current role/);
+  assert.match(d.querySelector('#job-tabs').textContent,/Trung tâm/);
+  assert.match(d.querySelector('#location option[value="hanoi"]').textContent,/Hà Nội/);
+ }finally{dom.window.close();}
+});
+
+test('unrelated misclassified taxonomy never appears as a public category filter and fixed labels take precedence',async()=>{
+ const content=structuredClone(records);
+ content.push({kind:'category',slug:'british-council',title_en:'british council',title_vi:'british coucil'});
+ content[2].title_en='Wrong employer name';content[2].title_vi='Tên nhà tuyển dụng sai';
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document;
+  assert.equal(d.querySelector('[data-action="filter"][data-id="british-council"]'),null);
+  assert.match(d.querySelector('[data-action="filter"][data-id="public"]').textContent,/Public schools/);
+  assert.doesNotMatch(d.querySelector('#job-tabs').textContent,/Wrong employer/);
+ }finally{dom.window.close();}
+});
+
+test('legacy custom category, location and employer snapshots remain readable and filterable',async()=>{
+ const content=structuredClone(records);
+ content[2].slug='legacy-university';content[2].title_en='Legacy university role';content[2].title_vi='Vị trí đại học cũ';
+ content[1].slug='legacy-campus';content[1].title_en='Legacy campus';content[1].title_vi='Cơ sở cũ';
+ Object.assign(content[3].data,{category_slug:'legacy-university',location_slug:'legacy-campus'});
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document;
+  assert.match(d.querySelector('#job-grid').textContent,/School/);
+  d.querySelector('[data-action="filter"][data-id="legacy-university"]').click();
+  assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);
+  assert.equal(d.querySelector('#location option[value="legacy-campus"]').textContent,'Legacy campus');
+  d.querySelector('[data-language="vi"]').click();
+  assert.match(d.querySelector('#job-grid').textContent,/Trường/);
+  assert.match(d.querySelector('#job-tabs').textContent,/Vị trí đại học cũ/);
+ }finally{dom.window.close();}
+});
+
+test('direct employer, workplace and address text is escaped before reaching public markup',()=>{
+ const data={...records[3].data,employer_name_en:'<img src=x onerror=bad()>',workplace_name:'<svg onload=bad()>',street_address:'<script>bad()</script>'};
+ const card=vacancyCard({...records[3],data},0,records);
+ assert.match(card.employer[0],/^&lt;img/);assert.match(card.workplace,/^&lt;svg/);assert.match(card.streetAddress,/^&lt;script&gt;/);
+});
