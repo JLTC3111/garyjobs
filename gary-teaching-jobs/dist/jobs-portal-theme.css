@@ -1,0 +1,44 @@
+/* Portal adapters consume the shared public/portal semantic palette. */
+html:has(.jobs-portal-body){scrollbar-color:var(--jobs-scrollbar) var(--jobs-portal-bg);scrollbar-width:thin}
+.jobs-portal-body {
+  --ink:var(--jobs-portal-ink);--muted:var(--jobs-portal-muted);
+  --blue:var(--jobs-portal-action);--blue-dark:var(--jobs-portal-ink);
+  --cream:var(--jobs-portal-bg);--white:var(--jobs-portal-surface);--line:var(--jobs-portal-line);
+  margin:0;background:var(--jobs-portal-bg);color:var(--jobs-portal-ink);
+  scrollbar-color:var(--jobs-scrollbar) var(--jobs-portal-bg);scrollbar-width:thin;
+}
+.jobs-portal-body * {scrollbar-color:var(--jobs-scrollbar) var(--jobs-portal-soft);scrollbar-width:thin}
+.jobs-portal-body ::-webkit-scrollbar{width:9px;height:9px}
+.jobs-portal-body ::-webkit-scrollbar-track{background:var(--jobs-portal-soft)}
+.jobs-portal-body ::-webkit-scrollbar-thumb{background:var(--jobs-scrollbar);border:2px solid var(--jobs-portal-soft);border-radius:9px}
+.jobs-portal-body ::selection{color:var(--jobs-portal-ink);background:var(--jobs-portal-selected)}
+.jobs-portal-body input::placeholder,.jobs-portal-body textarea::placeholder{color:var(--jobs-portal-muted);opacity:1}
+.jobs-portal-body option{color:var(--jobs-portal-ink);background:var(--jobs-portal-surface)}
+.jobs-portal-body :is(a,.jobs-link-button){color:var(--jobs-portal-action)}
+.jobs-portal-body :is(button,input,select,textarea){accent-color:var(--jobs-portal-accent)}
+.jobs-portal-body input:disabled{background:var(--jobs-portal-soft);color:var(--jobs-portal-muted);opacity:1}
+.jobs-portal-body .gary-cms {
+  --cms-ink:var(--jobs-portal-ink);--cms-muted:var(--jobs-portal-muted);
+  --cms-line:var(--jobs-portal-line);--cms-soft:var(--jobs-portal-soft);
+  --cms-surface:var(--jobs-portal-surface);--cms-control:var(--jobs-portal-surface);
+  --cms-control-line:var(--jobs-control-line);--cms-focus:var(--jobs-focus);
+  --cms-action:var(--jobs-portal-action);--cms-action-ink:var(--jobs-action-ink);
+  --cms-accent:var(--jobs-error);--cms-error:var(--jobs-error);--cms-error-bg:var(--jobs-error-bg);
+  --cms-success:var(--jobs-success);--cms-success-bg:var(--jobs-success-bg);
+  --cms-warning:var(--jobs-warning);--cms-warning-bg:var(--jobs-warning-bg);
+  --cms-backdrop:var(--jobs-backdrop);--cms-shadow:var(--jobs-overlay-shadow);
+}
+.jobs-portal-body .gw-editor{--gw-accent:var(--jobs-portal-accent)}
+.jobs-portal-header .jobs-portal-brand{display:block;flex:none;line-height:0;background:transparent;max-width:none}
+.jobs-portal-brand img{display:block;width:135px;height:auto;max-height:69px;object-fit:contain}
+.jobs-portal-brand .jobs-logo-dark{display:none}
+html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-light{display:none}
+html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-dark{display:block}
+.jobs-portal-header .jobs-portal-tools{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;flex:1}
+.jobs-portal-appearance{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--jobs-portal-muted)}
+.jobs-portal-appearance select{min-height:44px;max-width:145px;padding:.5rem .7rem;border:1px solid var(--jobs-control-line);border-radius:8px;background:var(--jobs-portal-surface);color:var(--jobs-portal-ink);font:inherit;cursor:pointer}
+.jobs-staff-active .jobs-staff-sidebar{top:calc(var(--jobs-portal-header-height,84px) + 16px);height:calc(100dvh - var(--jobs-portal-header-height,84px) - 40px)}
+.jobs-staff-active .jobs-sidebar-overlay .jobs-staff-sidebar{top:calc(var(--jobs-portal-header-height,84px) + 12px);max-height:calc(100dvh - var(--jobs-portal-header-height,84px) - 28px);height:auto}
+@media(max-width:760px){.jobs-portal-header{padding:.65rem 1rem;align-items:center;gap:.5rem}.jobs-portal-brand img{width:105px;max-height:54px}.jobs-portal-appearance>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.jobs-portal-appearance select{max-width:118px}.jobs-portal-header .jobs-portal-tools{gap:.35rem}.jobs-portal-header button{padding:.45rem .6rem}}
+@media(max-width:520px){.jobs-staff-active .jobs-staff-sidebar{top:0;height:auto}.jobs-portal-appearance select{max-width:96px;padding-inline:.35rem}.jobs-portal-header .jobs-portal-tools{font-size:.75rem}.jobs-portal-header button{padding-inline:.45rem}}
+@media(max-width:390px){.jobs-portal-header .jobs-portal-tools{flex-basis:100%;justify-content:flex-start}.jobs-portal-brand img{width:110px}}

@@ -1,6 +1,53 @@
-/* One public-site structure; semantic tokens select the two palettes. */
+/* Shared Jobs palette; public and portal components consume the same resolved theme. */
 html { --jobs-bg:#ffffff;--jobs-soft:#f0f6ff;--jobs-surface:#ffffff;--jobs-raised:#e7effc;--jobs-ink:#0b2457;--jobs-muted:#435575;--jobs-accent:#0565e7;--jobs-action:#083d91;--jobs-action-ink:#ffffff;--jobs-line:#cddaf0;--jobs-focus:#075dc9;--jobs-hero-bg:#f8fbff;--jobs-hero-weight:600;--jobs-glass-light:transparent;--jobs-waves-1:#e6f0ff;--jobs-waves-2:#eef5ff; }
 html[data-jobs-theme=dark] { --jobs-bg:#090b16;--jobs-soft:#101727;--jobs-surface:#151d30;--jobs-raised:#202c45;--jobs-ink:#f7f5fb;--jobs-muted:#bfc2d5;--jobs-accent:#c2a0f5;--jobs-action:#b3bfff;--jobs-action-ink:#111c37;--jobs-line:#30394f;--jobs-focus:#ccb2ff;--jobs-hero-bg:#0c0b15;--jobs-hero-weight:400;--jobs-glass-light:#7770cf19;--jobs-waves-1:transparent;--jobs-waves-2:transparent; }
+/* Portal roles preserve the established light surfaces and share the dark palette. */
+html {
+  --jobs-portal-bg:#f5f7fb;
+  --jobs-portal-surface:#ffffff;
+  --jobs-portal-soft:#f0f3f8;
+  --jobs-portal-raised:#e4ecf9;
+  --jobs-portal-ink:#18384b;
+  --jobs-portal-muted:#475569;
+  --jobs-portal-line:#cbd5e1;
+  --jobs-control-line:#8293ac;
+  --jobs-portal-action:#244a83;
+  --jobs-portal-accent:#594b85;
+  --jobs-portal-selected:#e9e5f4;
+  --jobs-success:#1e5b3b;
+  --jobs-success-bg:#e4f3e9;
+  --jobs-warning:#624619;
+  --jobs-warning-bg:#fff4d4;
+  --jobs-error:#8b2727;
+  --jobs-error-bg:#fde8e7;
+  --jobs-scrollbar:#71829b;
+  --jobs-backdrop:#10283eaa;
+  --jobs-overlay-shadow:0 15px 60px #08132455;
+  --jobs-popover-shadow:0 10px 25px #172f501a;
+}
+html[data-jobs-theme=dark] {
+  --jobs-portal-bg:var(--jobs-bg);
+  --jobs-portal-surface:var(--jobs-surface);
+  --jobs-portal-soft:var(--jobs-soft);
+  --jobs-portal-raised:var(--jobs-raised);
+  --jobs-portal-ink:var(--jobs-ink);
+  --jobs-portal-muted:var(--jobs-muted);
+  --jobs-portal-line:#536079;
+  --jobs-control-line:#7888a4;
+  --jobs-portal-action:var(--jobs-action);
+  --jobs-portal-accent:var(--jobs-accent);
+  --jobs-portal-selected:#36334f;
+  --jobs-success:#a1e1ba;
+  --jobs-success-bg:#17382e;
+  --jobs-warning:#f3d596;
+  --jobs-warning-bg:#3c301b;
+  --jobs-error:#ffb9b5;
+  --jobs-error-bg:#452528;
+  --jobs-scrollbar:#64718b;
+  --jobs-backdrop:#030713cc;
+  --jobs-overlay-shadow:0 15px 60px #00000066;
+  --jobs-popover-shadow:0 10px 25px #00000055;
+}
 /* Paired content roles: a surface never borrows an interactive action color. */
 html {
  --jobs-support-bg:#edf2f6;--jobs-support-card:var(--jobs-surface);--jobs-support-ink:var(--jobs-ink);
@@ -122,6 +169,9 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .opportunities,.jobs-public .life-section,.jobs-public .faq-section,.jobs-public .managed-public-content { background:var(--jobs-bg); }
 .jobs-public :is(.job-card,.role-facts,.contact-options>a,.contact-options>button,.role-note,.email-fallback,.form-notice) { background:var(--jobs-surface);border-color:var(--jobs-line);color:var(--jobs-ink); }
 .jobs-public .job-card:hover { border-color:var(--jobs-accent); }
+.jobs-public :is(.job-location,.job-employer,.job-workplace,.job-benefit) { color:var(--jobs-muted); }
+.jobs-public .job-tags>span { color:var(--jobs-muted);background:var(--jobs-soft); }
+.jobs-public .job-card-bottom strong,.jobs-public .job-card h3 :is(a,button) { color:var(--jobs-ink); }
 .jobs-public .job-tab { color:var(--jobs-muted); }.jobs-public .job-tab.is-active { background:var(--jobs-raised);color:var(--jobs-ink);border-color:var(--jobs-line); }
 .jobs-public .job-tab:hover { color:var(--jobs-ink);background:var(--jobs-soft); }
 .jobs-public .job-card-top .job-type,.jobs-public .job-card h3,.jobs-public .role-salary,.jobs-public .dialog-location,.jobs-public .role-facts strong { color:var(--jobs-ink); }

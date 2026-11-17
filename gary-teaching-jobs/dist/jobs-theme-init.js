@@ -1,4 +1,4 @@
-/* Before styles: independent public-site theme, without a React hydration phase. */
+/* Before styles on public, candidate and staff pages; one preference, no hydration phase. */
 (() => {
   const valid = value => ['light', 'dark', 'system'].includes(value) ? value : 'system';
   const read = () => { try { return valid(localStorage.getItem('gary-jobs-theme')); } catch { return 'system'; } };

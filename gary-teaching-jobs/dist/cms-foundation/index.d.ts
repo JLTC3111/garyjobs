@@ -23,6 +23,8 @@ export type CmsAdapter = {
   uploadMedia?(file: File, metadata: {alt_en: string; alt_vi: string}): Promise<unknown>;
 };
 export declare const CMS_VERSION: string;
+export type CmsSuccessContent = {heading?: string | Record<CmsLanguage, string>; message?: string | Record<CmsLanguage, string>; title?: string | Record<CmsLanguage, string>; href?: string; linkLabel?: string | Record<CmsLanguage, string>};
+export declare function createSuccessNotification(host: HTMLElement, options?: {language?: CmsLanguage | (() => CmsLanguage); returnFocus?: () => void; duration?: number}): {show(content: CmsSuccessContent): void; setLanguage(): void; dismiss(options?: {restoreFocus?: boolean}): void; destroy(): void};
 export declare function mountCms(root: HTMLElement, options: {appId: string; appName?: string; language?: CmsLanguage; collections: CmsCollection[]; adapter: CmsAdapter; mediaPolicy?: {mimeTypes: string[];maxBytes: number}; onNotice?: (message: string) => void; navigation?: boolean; onNavigationChange?: (state: {kind:string;view:string;capabilities:CmsCapabilities}) => void}): {ready: Promise<void>; isDirty(): boolean; canLeave(): boolean; navigate(destination:string):Promise<boolean>; navigationState():{kind:string;view:string;capabilities:CmsCapabilities}; refresh(): Promise<boolean>; setLanguage(language: CmsLanguage): void; destroy(options?: {force?: boolean}): boolean};
 export declare function validateEntry(record: CmsEntry, collection: CmsCollection, publish?: boolean): Array<{code: string; field: string; params: Record<string, unknown>; severity: string}>;
 export declare function contentSeoFindings(record: CmsEntry, collection: CmsCollection): Array<Record<string, unknown>>;

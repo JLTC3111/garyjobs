@@ -2,6 +2,8 @@ import { attachEditorWorkspace } from '../editor-workspace/index.js';
 import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
 import { cmsText, validationText } from './copy.js';
 import { localizeFinding } from './seo-findings.js';
+import { createSuccessNotification } from './success-notification.js';
+export { createSuccessNotification } from './success-notification.js';
 export { CMS_VERSION, titleSlug, validateEntry, contentSeoFindings, safeMediaUrl } from './content.js';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
@@ -19,6 +21,7 @@ export function mountCms(root, options) {
   let editorIssues = [], editorEpoch = 0, editorWorkspace = null;
   const references = new Map(), referenceQueries = new Map(), referenceDrafts = new Map(), referenceCreates = new Map();
   let editorReturnId = null;
+  const successNotification = createSuccessNotification(root, {language: () => language, returnFocus: restoreEditorFocus});
   const t = key => cmsText(key, language);
   const label = value => typeof value === 'object' ? value?.[language] || value?.en || '' : value || '';
   const collection = () => options.collections.find(item => item.kind === kind);
@@ -184,7 +187,7 @@ export function mountCms(root, options) {
     const requirement = extra.required ? t('required') : extra.optional ? t('optional') : '';
     return `<label class="cms-field" for="${controlId}"><span>${escape(text)}${requirement ? ` <small>(${requirement})</small>` : ''}</span>${control}<small id="${controlId}-error" class="cms-field-error" data-error-for="${escape(key)}" aria-live="polite"></small></label>`;
   }
-  function editor() {
+  function editor({focus = false} = {}) {
     const dialog = root.querySelector('.cms-dialog');
     if (!dialog || !draft) return;
     const extraFields = fieldsFor(collection());
@@ -196,7 +199,7 @@ export function mountCms(root, options) {
     for (const control of dialog.querySelectorAll('input[data-reference-create-field]')) control.value = referenceDrafts.get(control.dataset.referenceCreateKey)?.[control.dataset.referenceCreateField] || '';
     updateEditorChecks(); renderHistory(); showIssues(editorIssues, {focus: false});
     if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); } else dialog.setAttribute('open', '');
-    dialog.querySelector('input')?.focus();
+    if (focus) dialog.querySelector('input')?.focus({preventScroll: true});
   }
   function updateEditorChecks() {
     if (!draft) return;
@@ -224,14 +227,14 @@ export function mountCms(root, options) {
       draft = prepared;
     }
     syncAutomaticSlug();
-    baseline = JSON.stringify(draft); revisions = []; editor(); void loadReferences(true);
+    baseline = JSON.stringify(draft); revisions = []; editor({focus: true}); void loadReferences(true);
     if (draft.id && adapter.revisions) {
       const selected = draft.id;
       try { const result = await adapter.revisions(selected); if (!disposed && draft?.id === selected) { revisions = Array.isArray(result) ? result : result.records || []; renderHistory(); } }
       catch (error) { if (draft?.id === selected) editorNotice(errorText(error)); }
     }
   }
-  function editorNotice(text) { const target = root.querySelector('[data-editor-notice]'); if (target) { target.textContent = text; target.setAttribute('role', 'alert'); } }
+  function editorNotice(text, failed = true) { const target = root.querySelector('[data-editor-notice]'); if (target) { target.textContent = text; target.setAttribute('role', failed ? 'alert' : 'status'); } }
   function renderHistory() {
     const target = root.querySelector('[data-cms-history]'); if (!target) return;
     target.innerHTML = revisions.length ? revisions.map((revision, index) => `<div class="cms-revision"><span>${escape(date(revision.created_at))} · v${escape(revision.version || index + 1)} · ${escape(t(revision.status || 'draft'))}</span>${capabilities.edit ? button('restore', t('restore'), `data-index="${index}"`) : ''}</div>`).join('') : `<p>${t('revisionsEmpty')}</p>`;
@@ -264,9 +267,36 @@ export function mountCms(root, options) {
     if (editorIssues.length) { editorNotice(t('invalid')); if (focus) focusField(editorIssues[0].field); }
     return editorIssues.length > 0;
   }
-  async function mutate(operation, success) {
+  function preserveScroll() {
+    const win = root.ownerDocument.defaultView, x = win.scrollX, y = win.scrollY;
+    const containers = []; for (let node = root; node; node = node.parentElement) containers.push([node, node.scrollLeft, node.scrollTop]);
+    return () => { for (const [node, left, top] of containers) { node.scrollLeft = left; node.scrollTop = top; } if (win.scrollX !== x || win.scrollY !== y) win.scrollTo({left: x, top: y, behavior: 'auto'}); };
+  }
+  async function publicationComplete(record) {
+    const restoreScroll = preserveScroll(), publishedCollection = collection();
+    ++editorEpoch; draft = null; baseline = ''; editorIssues = []; revisions = [];
+    referenceQueries.clear(); referenceDrafts.clear(); referenceCreates.clear();
+    root.querySelector('.cms-dialog')?.close?.();
+    announce('');
+    // List read failures are independent from the already committed publication.
+    await refresh();
+    if (disposed) return;
+    restoreScroll();
+    const vacancy = record.kind === 'vacancy' || publishedCollection.kind === 'vacancy';
+    const title = {en: record.title_en || record.title_vi || record.slug, vi: record.title_vi || record.title_en || record.slug};
+    const publicPath = publishedCollection.publicPath;
+    const href = publicPath && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(record.slug || '') ? publicPath + record.slug : '';
+    successNotification.show({
+      heading: vacancy ? {en: 'Vacancy published!', vi: 'Đã đăng tin tuyển dụng!'} : {en: 'Content published!', vi: 'Đã đăng nội dung!'},
+      message: vacancy ? {en: 'Your vacancy is now published and ready for applicants.', vi: 'Tin tuyển dụng đã được đăng và sẵn sàng nhận hồ sơ.'} : {en: 'Your content is now published.', vi: 'Nội dung của bạn đã được đăng.'},
+      title, href, linkLabel: vacancy ? {en: 'View vacancy', vi: 'Xem tin tuyển dụng'} : {en: 'View content', vi: 'Xem nội dung'}
+    });
+    restoreScroll();
+  }
+  async function mutate(operation, success, {published = false, expectedStatus} = {}) {
     if (busy || !draft) return;
     busy = true;
+    root.querySelector('[data-cms-editor]')?.setAttribute('aria-busy', 'true');
     const controls = [...root.querySelectorAll('.cms-dialog button, .cms-dialog input, .cms-dialog textarea, .cms-dialog select')].map(control => [control, control.disabled]);
     for (const [control] of controls) control.disabled = true;
     let failedIssues = null, failureMessage = '';
@@ -274,12 +304,24 @@ export function mountCms(root, options) {
       const next = await operation();
       if (disposed) return;
       if (!next?.id || !Number.isFinite(Number(next.version))) throw new Error('Invalid content response');
+      if (expectedStatus && next.status !== expectedStatus) throw Object.assign(new Error('Requested content status was not confirmed'), {partialRecord: next});
+      if (published) { await publicationComplete(next); return; }
       draft = structuredClone(next); draft.data ||= {}; baseline = JSON.stringify(draft); editorIssues = [];
-      announce(success); busy = false; editor(); editorNotice(success);
-      if (adapter.revisions) { const selected = draft.id; const result = await adapter.revisions(selected); if (draft?.id === selected) { revisions = Array.isArray(result) ? result : result.records || []; renderHistory(); } }
-    } catch (error) { if (!disposed) { if (error.partialRecord?.id) { draft = structuredClone(error.partialRecord); baseline = JSON.stringify(draft); busy = false; editor(); } failedIssues = Array.isArray(error.issues) ? error.issues : null; failureMessage = errorText(error); editorNotice(failureMessage); options.onNotice?.(failureMessage); } }
+      announce(success); busy = false; editor(); editorNotice(success, false);
+      if (adapter.revisions) { const selected = draft.id; try { const result = await adapter.revisions(selected); if (!disposed && draft?.id === selected) { revisions = Array.isArray(result) ? result : result.records || []; renderHistory(); } } catch { /* A history read cannot undo a committed save. */ } }
+    } catch (error) { if (!disposed) {
+      if (error.partialRecord?.id && draft) {
+        // Keep authored values and mounted fields, but retain the committed
+        // draft identity/version so retrying cannot create another record.
+        const saved = error.partialRecord;
+        draft = {...draft, id: saved.id, version: saved.version, slug: saved.slug, status: saved.status, updated_at: saved.updated_at, published_at: saved.published_at};
+        baseline = JSON.stringify(saved); updateEditorChecks();
+      }
+      failedIssues = Array.isArray(error.issues) ? error.issues : null; failureMessage = errorText(error); editorNotice(failureMessage); options.onNotice?.(failureMessage);
+    } }
     finally { if (!disposed) {
       busy = false;
+      root.querySelector('[data-cms-editor]')?.removeAttribute('aria-busy');
       // Locale changes rebuild the form while a request is pending. Restore the
       // current controls as well as any original nodes that are still mounted.
       if (failureMessage && controls.some(([control]) => !control.isConnected)) { editor(); editorNotice(failureMessage); }
@@ -295,7 +337,7 @@ export function mountCms(root, options) {
   function restoreEditorFocus() {
     const index = records.findIndex(record => record.id === editorReturnId);
     const target = index >= 0 ? root.querySelector(`[data-action="edit"][data-index="${index}"]`) : root.querySelector('[data-action="new"]');
-    (target || root.querySelector('[data-action="refresh"]'))?.focus();
+    (target || root.querySelector('[data-action="refresh"]'))?.focus({preventScroll: true});
   }
   async function onClick(event) {
     const target = event.target.closest('[data-action]'); if (!target || !root.contains(target) || target.disabled || busy) return;
@@ -323,9 +365,11 @@ export function mountCms(root, options) {
         let saved = payload;
         try {
           if (needsSave) saved = await adapter.save(payload, {expectedVersion: payload.version});
-          return await adapter.transition(saved.id, 'published', {expectedVersion: saved.version});
+          const published = await adapter.transition(saved.id, 'published', {expectedVersion: saved.version});
+          if (!published?.id || !Number.isFinite(Number(published.version)) || published.status !== 'published') throw new Error('Publication was not confirmed');
+          return published;
         } catch (error) { if (saved.id && saved !== payload) error.partialRecord = saved; throw error; }
-      }, t('vacancyPublished'));
+      }, t('vacancyPublished'), {published: true, expectedStatus: 'published'});
     }
     if (['publish', 'archive', 'review'].includes(action)) {
       if (!draft?.id || !(action === 'review' ? capabilities.edit : capabilities.publish)) return;
@@ -343,7 +387,7 @@ export function mountCms(root, options) {
         }
         if (disposed || publicationEpoch !== editorEpoch || !draft || draft.id !== publicationRecord.id) throw new Error('Editor changed before publication');
         return adapter.transition(publicationRecord.id, action === 'publish' ? 'published' : action === 'archive' ? 'archived' : 'review', { expectedVersion: publicationRecord.version });
-      }, t('transitioned'));
+      }, t('transitioned'), {published: action === 'publish', expectedStatus: action === 'publish' ? 'published' : action === 'archive' ? 'archived' : 'review'});
     }
     if (action === 'restore') {
       if (!capabilities.edit || !canLeave() || !root.ownerDocument.defaultView.confirm(t('restoreConfirm'))) return;
@@ -404,10 +448,11 @@ export function mountCms(root, options) {
   return {
     ready, isDirty: dirty, canLeave, navigate, navigationState,
     async refresh() { if (!canLeave()) return false; ++editorEpoch; draft = null; baseline = ''; await refresh(true); return true; },
-    setLanguage(value) { language = value === 'vi' ? 'vi' : 'en'; if (draft) { const previous = draft; shell(); draft = previous; editor(); } else shell(); },
+    setLanguage(value) { language = value === 'vi' ? 'vi' : 'en'; if (draft) { const previous = draft; shell(); draft = previous; editor(); } else shell(); successNotification.setLanguage(); },
     destroy({ force = false } = {}) {
       if (!force && !canLeave()) return false;
       editorWorkspace?.destroy(); editorWorkspace = null;
+      successNotification.destroy();
       disposed = true; ++epoch; ++editorEpoch; draft = null; records = []; media = []; references.clear(); referenceQueries.clear(); referenceDrafts.clear(); referenceCreates.clear(); editorIssues = [];
       root.removeEventListener('click', onClick); root.removeEventListener('submit', onSubmit); root.removeEventListener('input', onInput); root.removeEventListener('change', onChange); root.removeEventListener('keydown', onKey); root.removeEventListener('cancel', onCancel, true); root.removeEventListener('toggle', onToggle, true); root.ownerDocument.defaultView.removeEventListener('beforeunload', beforeUnload);
       root.replaceChildren(); root.classList.remove('gary-cms'); delete root.dataset.cmsApp; return true;
