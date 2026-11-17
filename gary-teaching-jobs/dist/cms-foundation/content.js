@@ -40,7 +40,9 @@ export function validateEntry(record, collection, publish = false) {
   for (const locale of LOCALES) {
     if (publish) {
       for (const field of ['title', 'summary', ...(collection.requireBody === false ? [] : ['body'])]) {
-        if (!String(record[`${field}_${locale}`] || '').trim()) issue(`cms-${field}-missing`, `${field}_${locale}`, { language: locale });
+        const value = String(record[`${field}_${locale}`] || '').trim(), minimum = collection.publishMinimums?.[field] || 1;
+        if (!value) issue(`cms-${field}-missing`, `${field}_${locale}`, { language: locale });
+        else if ([...value].length < minimum) issue('cms-text-too-short', `${field}_${locale}`, { minimum, count: [...value].length, language: locale });
       }
     }
   }
@@ -48,10 +50,18 @@ export function validateEntry(record, collection, publish = false) {
     const value = getValue(record, field.key);
     if (publish && field.required && (value === '' || value === null || value === undefined || Array.isArray(value) && !value.length)) issue('cms-field-required', field.key, { field: field.label?.en || field.key, language: field.locale || '' });
     if (value !== '' && value !== undefined && value !== null) {
+      const text = String(value).trim();
+      if (publish && field.minLength !== undefined && [...text].length < field.minLength) issue('cms-text-too-short', field.key, {minimum: field.minLength, count: [...text].length, language: field.locale || ''});
+      if (field.maxLength !== undefined && [...text].length > field.maxLength) issue('cms-text-too-long', field.key, {maximum: field.maxLength, count: [...text].length, language: field.locale || ''});
+      if (publish && field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) issue('cms-email-invalid', field.key);
       if (field.type === 'url' && !safeMediaUrl(String(value))) issue('cms-url-invalid', field.key);
       if (field.type === 'number' && (!Number.isFinite(Number(value)) || field.min !== undefined && Number(value) < field.min || field.max !== undefined && Number(value) > field.max)) issue('cms-number-invalid', field.key);
       if (field.type === 'select' && !field.options?.some(option => String(typeof option === 'object' ? option.value : option) === String(value))) issue('cms-option-invalid', field.key);
-      if (field.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) issue('cms-date-invalid', field.key);
+      if (field.type === 'date') {
+        const parsed = new Date(text + 'T00:00:00Z'), valid = /^\d{4}-\d{2}-\d{2}$/.test(text) && Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === text;
+        if (!valid) issue('cms-date-invalid', field.key);
+        else if (publish && field.minDate && text < (field.minDate === 'today' ? new Date().toISOString().slice(0, 10) : field.minDate)) issue('cms-date-past', field.key, {minimum: field.minDate});
+      }
     }
   }
   return issues;

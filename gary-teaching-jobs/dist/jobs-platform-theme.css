@@ -1,0 +1,27 @@
+/* The active Jobs site owns the palette. Shared releases inherit semantic roles. */
+body.jobs-public { --jobs-platform-home:#315d40;--jobs-platform-jobs:#294969;--jobs-platform-visa:#994b32;--jobs-platform-outline:#6c7f9b;--jobs-platform-shadow:0 16px 45px #102a4a1f; }
+html[data-jobs-theme=dark] body.jobs-public { --jobs-platform-home:#b0d0a9;--jobs-platform-jobs:#b7d9f5;--jobs-platform-visa:#e5c4a2;--jobs-platform-outline:#7d8eaa;--jobs-platform-shadow:0 16px 45px #0000004d; }
+body.jobs-public .gary-apps-menu { --gary-app-ink:var(--jobs-ink);--gary-app-muted:var(--jobs-muted);--gary-app-line:var(--jobs-line);--gary-app-surface:var(--jobs-surface);--gary-app-raised:var(--jobs-raised);--gary-app-hover:var(--jobs-soft);--gary-app-action:var(--jobs-action);--gary-app-focus:var(--jobs-focus);--gary-app-control-border:var(--jobs-platform-outline);--gary-app-shadow:var(--jobs-platform-shadow);--gary-platform-home:var(--jobs-platform-home);--gary-platform-jobs:var(--jobs-platform-jobs);--gary-platform-visa:var(--jobs-platform-visa);color:var(--gary-app-ink); }
+body.jobs-public .gary-apps-menu .gary-app-home { --gary-app-accent:var(--gary-platform-home);--gary-app-tint:var(--gary-app-hover); }
+body.jobs-public .gary-apps-menu .gary-app-jobs { --gary-app-accent:var(--gary-platform-jobs);--gary-app-tint:var(--gary-app-hover); }
+body.jobs-public .gary-apps-menu .gary-app-visa { --gary-app-accent:var(--gary-platform-visa);--gary-app-tint:var(--gary-app-hover); }
+body.jobs-public .gary-apps-menu>summary { color:var(--gary-app-ink);border-color:var(--gary-app-control-border);background:transparent; }
+body.jobs-public .gary-apps-menu>summary:hover,body.jobs-public .gary-apps-menu[open]>summary { background:var(--gary-app-hover);border-color:var(--gary-app-control-border); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel { background:var(--gary-app-surface);border-color:var(--gary-app-control-border);color:var(--gary-app-ink);box-shadow:var(--gary-app-shadow); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-heading { border-color:var(--gary-app-line); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-heading>strong { color:var(--gary-app-ink); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-heading>p { color:var(--gary-app-muted); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel .gary-app-menu-item { color:var(--gary-app-ink);border-color:var(--gary-app-line); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel .gary-app-menu-item:is(:hover,:focus-visible) { background:var(--gary-app-hover); }
+body.jobs-public .gary-apps-menu .gary-app-menu-item>.gary-app-mark { background:var(--gary-app-surface);border-color:var(--gary-app-control-border);color:var(--gary-app-accent); }
+body.jobs-public .gary-apps-menu .gary-app-menu-item .gary-app-sector { color:var(--gary-app-muted)!important; }
+body.jobs-public .gary-apps-menu .gary-app-menu-item strong { color:var(--gary-app-ink); }
+body.jobs-public .gary-apps-menu .gary-app-menu-item strong>small { color:var(--gary-app-action);background:var(--gary-app-raised);border:1px solid var(--gary-app-control-border); }
+body.jobs-public .gary-apps-menu .gary-app-menu-item>span:nth-child(2)>span:not(.gary-app-sector) { color:var(--gary-app-muted); }
+body.jobs-public .gary-apps-menu .gary-app-menu-host { color:var(--gary-app-muted); }
+body.jobs-public .gary-apps-menu .gary-app-menu-item>svg { color:var(--gary-app-muted); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-travel { border-color:var(--gary-app-line);color:var(--gary-app-muted); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel .gary-apps-menu-travel>a { color:var(--gary-app-action); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel .gary-apps-menu-all { color:var(--gary-app-action);background:var(--gary-app-raised);border:1px solid var(--gary-app-control-border); }
+body.jobs-public .gary-apps-menu .gary-apps-menu-panel :is(.gary-apps-menu-travel>a,.gary-apps-menu-all):hover { color:var(--gary-app-ink);background:var(--gary-app-hover); }
+body.jobs-public .gary-apps-menu summary:focus-visible,body.jobs-public .gary-apps-menu a:focus-visible { outline:3px solid var(--gary-app-focus);outline-offset:3px; }

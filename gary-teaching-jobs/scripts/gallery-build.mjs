@@ -1,5 +1,6 @@
 import { context, build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
+import { copyFile } from 'node:fs/promises';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export async function buildGallery({ watch = false } = {}) {
@@ -16,7 +17,7 @@ export async function buildGallery({ watch = false } = {}) {
     define: { 'process.env.NODE_ENV': '"production"' },
     logLevel: 'info',
   };
-  if (!watch) return build(options);
+  if (!watch) { const result = await build(options); await copyFile(new URL('../src/components/react-bits/LICENSE.md', import.meta.url), new URL('../dist/REACT-BITS-LICENSE.txt', import.meta.url)); return result; }
   const builder = await context(options);
   await builder.rebuild();
   await builder.watch();

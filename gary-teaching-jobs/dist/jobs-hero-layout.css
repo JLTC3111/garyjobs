@@ -1,0 +1,72 @@
+/* Hero-only composition. Glass geometry/optics remain in React Bits. */
+.jobs-public .hero.jobs-final-hero {
+  max-width:1680px;
+  grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
+  column-gap:clamp(28px,3.6vw,64px);
+  padding:clamp(36px,4.5svh,68px) clamp(24px,4.6vw,88px) clamp(88px,9svh,130px);
+  align-items:center;
+}
+.jobs-public .jobs-final-hero .hero-copy { container-type:inline-size;max-width:none; }
+.jobs-public .jobs-final-hero #hero-title {
+  max-width:100%;font-size:clamp(40px,4vw,68px);font-size:clamp(40px,9.6cqi,68px);
+  line-height:1.1;letter-spacing:-.035em;word-break:normal;overflow-wrap:normal;hyphens:none;
+}
+.jobs-public .jobs-final-hero #hero-title :is(.hero-title-line,em) {
+  display:block;max-width:100%;white-space:normal;text-wrap:balance;
+}
+.jobs-public .jobs-final-hero #hero-title em {
+  font-size:clamp(42px,4.3vw,73px);font-size:clamp(42px,10.2cqi,73px);line-height:1.12;
+}
+html:lang(vi) .jobs-public .jobs-final-hero #hero-title {
+  font-size:clamp(36px,3.65vw,62px);font-size:clamp(36px,8.8cqi,62px);line-height:1.16;letter-spacing:-.025em;
+}
+html:lang(vi) .jobs-public .jobs-final-hero #hero-title em {
+  font-size:clamp(38px,3.9vw,66px);font-size:clamp(38px,9.4cqi,66px);line-height:1.16;letter-spacing:-.025em;
+}
+.jobs-public .jobs-final-hero .hero-description { max-width:54ch;margin-top:clamp(22px,2.2vw,30px); }
+.jobs-public .jobs-final-hero .career-discovery { margin-top:clamp(26px,2.4vw,34px); }
+.jobs-public .jobs-final-hero .jobs-hub {
+  position:relative;align-self:stretch;min-width:0;min-block-size:clamp(480px,calc(100svh - 270px),690px);
+  padding:0;overflow:visible;container-type:inline-size;
+}
+.jobs-public .jobs-final-hero #jobs-glass-hero { position:absolute;inset:0;inline-size:100%;block-size:100%;min-height:0;overflow:visible; }
+.jobs-public .jobs-final-hero .jobs-hub:before { inset:0 -5%; }
+.jobs-public .jobs-final-hero .jobs-glass-layout { inline-size:100%;block-size:100%; }
+.jobs-public .jobs-final-hero .jobs-glass-frame { flex:none; }
+.jobs-public .jobs-final-hero .jobs-glass-hub { flex:none;overflow:visible; }
+.jobs-public .jobs-final-hero .jobs-glass-hub .glass-icon-label {
+  inline-size:max-content;max-inline-size:var(--jobs-glass-label-width,148px);
+  top:calc(100% + var(--jobs-glass-label-offset,13px));
+  white-space:normal;overflow-wrap:anywhere;text-wrap:balance;text-align:center;
+  font-size:11px;line-height:1.25;padding:5px 8px;border-radius:12px;
+}
+/* The existing no-WebGL/no-island links also use the available hero space. */
+.jobs-public .jobs-final-hero .jobs-hub-fallback {
+  --hub-fallback-size:clamp(54px,7.4vw,112px);--hub-fallback-size:clamp(54px,18cqi,112px);
+  inline-size:100%;block-size:100%;width:100%;display:grid;
+  grid-template-columns:repeat(3,var(--hub-fallback-size));grid-template-rows:repeat(2,var(--hub-fallback-size));
+  justify-content:space-evenly;align-content:space-evenly;gap:70px 20px;padding:40px 20px 56px;
+}
+.jobs-public .jobs-final-hero .jobs-hub-fallback a { inline-size:var(--hub-fallback-size);block-size:var(--hub-fallback-size); }
+.jobs-public .jobs-final-hero .jobs-hub-fallback a>span { top:calc(100% + 12px);inline-size:max-content;max-inline-size:calc(var(--hub-fallback-size) + 14px);max-width:calc(var(--hub-fallback-size) + 14px);font-size:11px;line-height:1.25;text-align:center;white-space:normal;overflow-wrap:anywhere;text-wrap:balance; }
+@media(max-width:1000px) {
+  .jobs-public .hero.jobs-final-hero { grid-template-columns:minmax(0,1fr);min-height:0;padding-top:40px;padding-bottom:100px;row-gap:34px; }
+  .jobs-public .jobs-final-hero .hero-copy { inline-size:100%;max-width:700px;justify-self:center; }
+  .jobs-public .jobs-final-hero #hero-title { font-size:clamp(42px,8.2cqi,64px); }
+  .jobs-public .jobs-final-hero #hero-title em { font-size:clamp(44px,8.8cqi,68px); }
+  html:lang(vi) .jobs-public .jobs-final-hero #hero-title { font-size:clamp(36px,7.9cqi,58px); }
+  html:lang(vi) .jobs-public .jobs-final-hero #hero-title em { font-size:clamp(38px,8.6cqi,62px); }
+  .jobs-public .jobs-final-hero .jobs-hub { min-block-size:0;block-size:clamp(420px,64vw,560px);inline-size:100%;max-inline-size:760px;justify-self:center; }
+}
+@media(max-width:600px) {
+  .jobs-public .hero.jobs-final-hero { padding-top:30px;padding-inline:24px;padding-bottom:90px;row-gap:24px; }
+  .jobs-public .jobs-final-hero #hero-title { font-size:clamp(36px,10.8cqi,54px); }
+  .jobs-public .jobs-final-hero #hero-title em { font-size:clamp(38px,11.4cqi,58px); }
+  html:lang(vi) .jobs-public .jobs-final-hero #hero-title { font-size:clamp(31px,9.4cqi,48px); }
+  html:lang(vi) .jobs-public .jobs-final-hero #hero-title em { font-size:clamp(33px,10.2cqi,52px); }
+  .jobs-public .jobs-final-hero .hero-description { font-size:15px;line-height:1.75; }
+  .jobs-public .jobs-final-hero .jobs-hub { block-size:clamp(440px,calc(100vw + 96px),560px); }
+}
+@container(max-width:419px) {
+  .jobs-public .jobs-final-hero .jobs-hub-fallback { --hub-fallback-size:clamp(54px,22cqi,88px);grid-template-columns:repeat(2,var(--hub-fallback-size));grid-template-rows:repeat(3,var(--hub-fallback-size));gap:70px 26px;padding:26px 18px 54px; }
+}

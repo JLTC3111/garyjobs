@@ -1,3 +1,5 @@
+/*! React Bits GlassIcons. Copyright David Haz. Full license: /REACT-BITS-LICENSE.txt */
+
 Bundled license information:
 
 react/cjs/react.production.js:
@@ -66,12 +68,17 @@ lucide-react/dist/esm/Icon.mjs:
 lucide-react/dist/esm/createLucideIcon.mjs:
 lucide-react/dist/esm/icons/arrow-right.mjs:
 lucide-react/dist/esm/icons/arrow-up-right.mjs:
+lucide-react/dist/esm/icons/book-open.mjs:
 lucide-react/dist/esm/icons/briefcase-business.mjs:
 lucide-react/dist/esm/icons/chevron-down.mjs:
 lucide-react/dist/esm/icons/compass.mjs:
+lucide-react/dist/esm/icons/heart.mjs:
 lucide-react/dist/esm/icons/house.mjs:
 lucide-react/dist/esm/icons/layout-grid.mjs:
+lucide-react/dist/esm/icons/map-pin.mjs:
+lucide-react/dist/esm/icons/message-circle.mjs:
 lucide-react/dist/esm/icons/plane-takeoff.mjs:
+lucide-react/dist/esm/icons/plane.mjs:
 lucide-react/dist/esm/lucide-react.mjs:
   /**
    * @license lucide-react v1.31.0 - ISC

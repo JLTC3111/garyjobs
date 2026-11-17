@@ -1,0 +1,18 @@
+{
+  "source": "gary-agency-logo.png",
+  "sha256": "45c189dd80b7d21f0f5ffe83d668f95332672b57a28753d9a09da680162cc9bd",
+  "format": "Derived SVG paths, not an original vector master",
+  "viewBox": [
+    0,
+    0,
+    772,
+    394
+  ],
+  "method": "Blue/cyan ink and alpha cell-contour tracing, excluding white raster matte/counters; four artwork color regions; unchanged lettering geometry across themes",
+  "letteringBounds": [
+    190,
+    208,
+    772,
+    304
+  ]
+}

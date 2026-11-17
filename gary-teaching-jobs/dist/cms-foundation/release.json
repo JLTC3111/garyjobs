@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "sha256": "92d3c7cbf4de613555569aa8b6148714da80b9d2dfcbfda8c9327611f43ee923",
+  "sha256": "438b72baa217826aa7956e8101c0ee05013cc779c3f7a1cdcc1341da53bb72ce",
   "source": "gary-home/shared/cms-foundation",
   "files": [
     "index.js",
@@ -10,5 +10,6 @@
     "styles.css",
     "seo-findings.js",
     "seo-findings.d.ts"
-  ]
+  ],
+  "applicationPatch": "jobs-reference-publishing-2026-11-16"
 }

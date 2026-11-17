@@ -9,7 +9,7 @@ const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
 async function publicPage(result,{url='https://jobs.garyhome.vn/'}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
- w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
+ w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());await settle();return dom;
 }
@@ -24,7 +24,7 @@ test('public desktop and mobile navigation distinguish candidate and staff login
  try{
   const d=dom.window.document;
   for(const [language,candidate,staff] of [['en','Candidate login','Staff login'],['vi','Đăng nhập ứng viên','Đăng nhập nhân viên']]){
-   if(language==='vi')d.querySelector('[data-action="language"]').click();
+   if(language==='vi')d.querySelector('[data-language="vi"]').click();
    for(const root of [d.querySelector('.jobs-login-menu'),d.querySelector('#mobile-nav')]){
     assert.equal(root.querySelector('a[href="portal.html?access=candidate"]').textContent,candidate);
     assert.equal(root.querySelector('a[href="portal.html?access=staff"]').textContent,staff);
@@ -48,7 +48,7 @@ test('published salary and employer profile fields are visible and translate on 
   assert.match(d.querySelector('#published-guides').textContent,/Our teaching team supports new colleagues/);
   assert.equal(d.querySelector('#published-guides a').href,'https://employer.example.test/');
   assert.equal(d.querySelector('#published-guides img').alt,'School');
-  d.querySelector('[data-action="language"]').click();
+  d.querySelector('[data-language="vi"]').click();
   assert.match(d.querySelector('#job-grid').textContent,/2\.000 USD mỗi tháng/);
   assert.match(d.querySelector('#published-guides').textContent,/Đội ngũ giảng dạy hỗ trợ đồng nghiệp mới/);
  }finally{dom.window.close();}
@@ -233,7 +233,7 @@ test('section navigation on nested job routes resolves to homepage anchors and c
   const w=dom.window,d=w.document;
   assert.equal(d.querySelector('.desktop-nav a[href="#opportunities"]').href,'https://jobs.garyhome.vn/#opportunities');
   d.querySelector('.dialog-close').click();
-  assert.match(d.title,/Teach\. Travel\. Belong/);
+  assert.match(d.title,/English Teaching Jobs in Vietnam/);
   assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/');
   assert.equal(d.querySelector('.desktop-nav a[href="#opportunities"]').href,w.location.origin+'/#opportunities');
  }finally{dom.window.close();}

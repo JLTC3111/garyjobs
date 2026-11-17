@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { GaryAppsMenu } from '../gary-apps/gary-apps';
 import { connectGaryApps } from '../gary-apps/client';
+import { enhanceGaryApps } from '../gary-apps/brand-adapter';
 import '../gary-apps/styles.css';
 import './GaryAppsHeader.css';
 
@@ -14,6 +15,7 @@ export function mountGaryApps(element, { language, className = '', onFollow, onO
   element.append(fallback, remote);
   let fallbackRoot = createRoot(fallback);
   let props = { kind: 'menu', language: language === 'vi' ? 'vi' : 'en', currentApp: 'jobs', className, onFollow, onOpen };
+  const branding = enhanceGaryApps(element, () => props.language);
   const renderFallback = () => fallbackRoot?.render(<GaryAppsMenu {...props} />);
   renderFallback();
   const connection = connectGaryApps(remote, props, {
@@ -30,8 +32,10 @@ export function mountGaryApps(element, { language, className = '', onFollow, onO
       props = { ...props, ...nextProps };
       renderFallback();
       connection.update(nextProps);
+      branding.refresh();
     },
     unmount() {
+      branding.disconnect();
       connection.unmount();
       fallbackRoot?.unmount();
       fallbackRoot = null;

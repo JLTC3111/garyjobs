@@ -14,3 +14,31 @@
 @media(max-width:900px){.gary-apps-heading{grid-template-columns:1fr;gap:18px}.gary-apps-heading>p{max-width:60ch}.gary-apps-grid{grid-template-columns:1fr}.gary-app-card{display:grid;grid-template-columns:1fr 1fr;column-gap:30px;padding:25px}.gary-app-card-top,.gary-app-name,.gary-app-card h3,.gary-app-description{grid-column:1}.gary-app-card-top{margin-bottom:17px}.gary-app-card ul{grid-column:2;grid-row:1/5;align-self:center;margin:0 0 18px}.gary-app-visit{grid-column:2;grid-row:5;align-self:end}.gary-app-description{grid-row:4/6;margin-bottom:0}.gary-app-card h3{font-size:22px}.gary-app-card ul li>a{font-size:12px;min-height:49px}}
 @media(max-width:560px){.gary-apps-heading{gap:15px}.gary-apps-heading h2{font-size:31px}.gary-apps-heading>p{font-size:12px}.gary-apps-goals{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gary-apps-goals>a{padding:10px;font-size:10px;gap:6px;justify-content:center;white-space:normal}.gary-apps-goals>a>svg:last-of-type{display:none}.gary-app-card{display:flex;padding:24px}.gary-app-card-top{margin-bottom:20px}.gary-app-card ul{margin:22px 0}.gary-app-card h3{font-size:23px}.gary-app-description{font-size:13px}.gary-app-visit{font-size:12px}.gary-apps-menu--studio .gary-apps-menu-panel{position:fixed;top:68px;left:12px;right:12px;width:auto;max-height:calc(100dvh - 84px)}.about-section-page>.gary-apps-directory{margin-top:55px}}
 @media(prefers-reduced-motion:reduce){.gary-app-card,.gary-apps-goals>a,.gary-apps-chevron,.gary-app-menu-item{transition:none}.gary-app-card:hover{transform:none}}
+
+/* Host branding adapter applies to pinned fallback and connected shared releases. */
+body .gary-apps-menu{--gary-app-ink:#253d4d;--gary-app-muted:#516674;--gary-app-line:#cad5da;font-synthesis:none}
+body .gary-apps-menu>summary,body #gary-apps-header .gary-apps-menu>summary{min-height:44px;font-size:13px;line-height:1.4;padding:9px 11px;border-color:#bdcbd1;border-radius:5px;color:#2b4658}
+body .gary-apps-menu-panel{width:min(440px,calc(100vw - 28px));padding:16px;border-radius:10px;border-color:#bdcbd1;background:#fff;box-shadow:0 16px 45px #17374b24}
+body .gary-apps-menu-heading>strong{font-size:16px;line-height:1.5;color:#243e4d}
+body .gary-apps-menu-heading>p{font-size:13px;line-height:1.65;color:#516674}
+body .gary-apps-menu-panel .gary-app-menu-item{min-height:104px;padding:14px 10px;border-radius:6px;gap:14px;border-bottom:1px solid #e1e7e9;color:#243e4d}
+body .gary-apps-menu-panel .gary-app-menu-item:hover{background:#f3f6f7}
+body .gary-app-menu-item>.gary-app-mark{width:50px;height:50px;flex:none;background:#fff;border:1px solid #c2cfd4;box-shadow:none}
+body .gary-app-menu-item.gary-app-home>.gary-app-mark{border-radius:4px 14px 4px 4px;color:#2f5940}
+body .gary-app-menu-item.gary-app-jobs>.gary-app-mark{border-radius:2px;border-bottom-width:3px;color:#244a6a}
+body .gary-app-menu-item.gary-app-visa>.gary-app-mark{border-radius:11px 3px 11px 3px;border-style:double;border-width:3px;color:#8b442d}
+body .gary-app-menu-item .gary-app-mark>[data-gary-brand-mark]{display:grid;place-items:center;width:100%;height:100%}
+body .gary-app-menu-item[data-gary-brand] .gary-app-mark>svg{display:none}
+body .gary-app-menu-item [data-gary-brand-mark]>svg{display:block;fill:none;stroke:currentColor;stroke-width:1.7;width:36px;height:36px}
+body .gary-app-menu-item .gary-app-sector{font-family:var(--sans,var(--font,system-ui,sans-serif));font-size:11px!important;font-weight:600;letter-spacing:.075em;line-height:1.5;text-transform:uppercase;color:#536b79!important}
+body .gary-app-menu-item strong{line-height:1.4;gap:8px;font-weight:600;color:#203d50}
+body .gary-app-menu-item.gary-app-home strong{font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:400;letter-spacing:-.025em}
+body .gary-app-menu-item.gary-app-jobs strong{font-family:var(--sans,var(--font,system-ui,sans-serif));font-size:16px;font-weight:600;letter-spacing:.045em;text-transform:uppercase}
+body .gary-app-menu-item.gary-app-visa strong{font-family:var(--sans,var(--font,system-ui,sans-serif));font-size:17px;font-weight:600;letter-spacing:-.02em}
+body .gary-app-menu-item strong>small{font-family:var(--sans,var(--font,system-ui,sans-serif));font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;padding:3px 6px;background:#eef2f4;color:#385369}
+body .gary-app-menu-item>span:nth-child(2)>span:not(.gary-app-sector){font-size:13px;line-height:1.6;color:#516674}
+body .gary-app-menu-host{font-size:11px;line-height:1.6;color:#637580}
+body .gary-apps-menu-travel,body .gary-apps-menu-panel .gary-apps-menu-travel>a,body .gary-apps-menu-panel .gary-apps-menu-all{font-size:13px;line-height:1.6;min-height:46px;color:#304e62}
+body .gary-apps-menu-panel .gary-apps-menu-all{background:#edf2f5;border-radius:5px}
+body .gary-apps-menu summary:focus-visible,body .gary-apps-menu a:focus-visible{outline:3px solid #ac5b31;outline-offset:3px}
+@media(max-width:560px){body .gary-apps-menu-panel .gary-app-menu-item{gap:12px;padding:13px 8px}body .gary-app-menu-item>.gary-app-mark{width:45px;height:48px}body .gary-app-menu-item .gary-app-sector{font-size:11px!important}body .gary-app-menu-item>span:nth-child(2)>span:not(.gary-app-sector){font-size:12px}}
