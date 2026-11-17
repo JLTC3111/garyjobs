@@ -93,3 +93,17 @@ test('real CMS retains field errors, dirty guard and submission through maximize
   root.querySelector('[data-action=close]').click();await settle();assert.equal(win.document.activeElement,root.querySelector('[data-action=new]'),'closing restores keyboard focus to the workspace');root.querySelector('[data-action=new]').click();await settle();assert.ok(root.querySelector('dialog').classList.contains('gw-maximized'),'the next vacancy uses the remembered maximized state');assert.equal(root.querySelector('[name=title_en]').value,'');
  }finally{cms.destroy({force:true});dom.window.close();}
 });
+
+test('Home drawer presentation stays attached right and full height while modal geometry remains independent',()=>{
+ const h=harness({key:'home:drawer'});try{
+  h.controller.destroy();const input=h.dialog.querySelector('[name=title]');input.value='A retained Home draft';
+  const drawer=attachEditorWorkspace(h.dialog,{...h.options,key:'home:drawer',presentation:'drawer',resizeEdges:['w'],defaultWidth:740});
+  assert.deepEqual(drawer.getState().box,{left:700,top:0,width:740,height:960});assert.equal(h.dialog.querySelectorAll('[data-gw-edge]').length,1);assert.equal(h.dialog.querySelector('[data-gw-edge]').dataset.gwEdge,'w');
+  h.keyboard('w','ArrowLeft');assert.deepEqual(drawer.getState().box,{left:684,top:0,width:756,height:960});
+  h.keyboard('w','End');assert.deepEqual(drawer.getState().box,{left:24,top:0,width:1416,height:960});
+  h.dialog.querySelector('[data-gw-toggle]').click();assert.deepEqual(drawer.getState().box,{left:0,top:0,width:1440,height:960});
+  h.dialog.querySelector('[data-gw-toggle]').click();assert.equal(drawer.getState().box.width,1416);assert.equal(h.dialog.querySelector('[name=title]'),input);assert.equal(input.value,'A retained Home draft');
+  h.win.innerWidth=390;h.win.innerHeight=844;h.win.dispatchEvent(new h.win.Event('resize'));assert.deepEqual(drawer.getState().box,{left:0,top:0,width:390,height:844});drawer.destroy();
+  h.win.innerWidth=1440;h.win.innerHeight=960;const modal=attachEditorWorkspace(h.dialog,{...h.options,key:'visa:unchanged-modal'});assert.deepEqual(modal.getState().box,{left:160,top:70,width:1120,height:820});assert.equal(h.dialog.querySelectorAll('[data-gw-edge]').length,8);modal.destroy();
+ }finally{h.dom.window.close();}
+});

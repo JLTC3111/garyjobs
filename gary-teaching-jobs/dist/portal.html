@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="jobs-theme-init.js"></script>
   <meta name="robots" content="noindex,nofollow"><title>Teaching Jobs Portal</title>
   <link rel="icon" type="image/png" href="assets/favicon-32.png">
   <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="cms-foundation/styles.css"><link rel="stylesheet" href="jobs-portal.css">
+  <link rel="stylesheet" href="jobs-staff-sidebar.css"><script type="module" src="jobs-staff-sidebar.js"></script>
   <script type="module" src="jobs-portal.js"></script>
 </head>
-<body>
+<body class="jobs-portal-body">
   <a class="skip-link" href="#portal-main">Skip to content</a>
   <header class="jobs-portal-header"><a href="./">Vietnam English Teaching Jobs</a><div><button id="portal-language" type="button">Tiếng Việt</button><button id="sign-out" type="button" hidden>Sign out</button></div></header>
   <main id="portal-main" class="jobs-workspace">
@@ -16,7 +18,7 @@
     <div id="portal-loading" class="jobs-empty" role="status" aria-live="polite">Checking your session…</div>
     <noscript><p class="jobs-alert">Enable JavaScript to sign in. / Bật JavaScript để đăng nhập.</p></noscript>
     <section id="auth-panel" hidden></section>
-    <section id="signed-panel" hidden><p id="account-summary" class="jobs-meta"></p><nav id="workspace-nav" aria-label="Workspace"></nav><div id="workspace-view"></div></section>
+    <section id="signed-panel" hidden><p id="account-summary" class="jobs-meta"></p><div class="jobs-staff-layout"><aside id="jobs-staff-sidebar" class="jobs-staff-sidebar" aria-label="Staff navigation"><header class="jobs-sidebar-heading"><div><span class="jobs-sidebar-brand">TEACHING JOBS</span><strong data-jobs-sidebar-title>Staff workspace</strong></div><button type="button" data-jobs-sidebar-toggle aria-controls="workspace-nav" aria-expanded="true" title="Collapse navigation"><span aria-hidden="true">☰</span><span class="jobs-sidebar-toggle-label">Collapse navigation</span></button></header><nav id="workspace-nav" aria-label="Workspace"></nav><button type="button" class="jobs-sidebar-resize" data-jobs-sidebar-resize role="separator" aria-orientation="vertical" aria-label="Resize staff navigation"></button></aside><div id="workspace-view"></div></div></section>
   </main>
 </body>
 </html>

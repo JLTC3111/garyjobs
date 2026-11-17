@@ -6,12 +6,13 @@ const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
 const accessFromUrl=url=>url.searchParams.get('access')==='staff'||(!url.searchParams.has('access')&&['cms','applications'].includes(url.searchParams.get('view')))?'staff':'candidate';
 let language=locale(),user=null,caps={},view=new URL(location.href).searchParams.get('view')||'',access=accessFromUrl(new URL(location.href)),page=1,selected=null,cms=null,recovery=false,roster=[],generation=0,loading=true,capabilityError=false;
-let currentViewUrl=location.href;
+let currentViewUrl=location.href, cmsDestination='vacancy', cmsNavigation='content';
 const t=(en,vi)=>language==='vi'?vi:en;
 const stageLabel=s=>STAGE_LABELS[s]?.[language==='vi'?1:0]||s;
 function status(message,error=false,retry=false){$('#portal-status').innerHTML=message?`<div class="jobs-alert ${error?'error':''}"><p>${esc(message)}</p>${retry?`<button id="portal-retry" type="button" data-action="retry">${t('Try again','Thử lại')}</button>`:''}</div>`:'';}
 function renderChrome(){
  document.documentElement.lang=language;
+ document.body.dataset.jobsStaff=String(!!user&&access==='staff'&&!loading&&!recovery&&(caps.read||caps.recruit));
  document.title=`${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')} | Vietnam English Teaching Jobs`;
  $('.skip-link').textContent=t('Skip to content','Chuyển đến nội dung');
  $('#portal-language').textContent=language==='vi'?'English':'Tiếng Việt';
@@ -22,6 +23,7 @@ function renderChrome(){
  $('#auth-panel').hidden=loading||!!user&&!recovery;$('#signed-panel').hidden=loading||!user||recovery;
  $('#account-summary').textContent=user?`${t('Signed in as','Đã đăng nhập bằng')} ${user.email||''} · ${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')}`:'';
  $('#workspace-nav').setAttribute('aria-label',t('Workspace','Không gian làm việc'));
+ document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
 }
 function deadline(promise){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('portal_timeout')),12000);})]).finally(()=>clearTimeout(timer));}
 function clearWorkspace(){cms?.destroy?.({force:true});cms=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();}
@@ -34,10 +36,39 @@ function renderAuth(){
  const staff=access==='staff';
  $('#auth-panel').innerHTML=`<div class="jobs-auth-card"><p class="jobs-meta">${staff?t('FOR ASSIGNED TEAM MEMBERS','DÀNH CHO NHÂN VIÊN ĐƯỢC CẤP QUYỀN'):t('YOUR TEACHING JOURNEY','HÀNH TRÌNH GIẢNG DẠY CỦA BẠN')}</p><h1>${recovery?t('Set your new password','Đặt mật khẩu mới'):staff?t('Staff sign in','Đăng nhập nhân viên'):t('Candidate sign in','Đăng nhập ứng viên')}</h1><p>${staff?t('Use your existing Gary account to open your assigned Jobs content or recruitment workspace.','Dùng tài khoản Gary hiện có để mở không gian nội dung hoặc tuyển dụng Jobs được cấp quyền.'):t('Submit applications, keep your receipts and follow your recruitment progress.','Nộp hồ sơ, lưu mã tiếp nhận và theo dõi tiến độ tuyển dụng.')}</p><form id="auth-form">${!recovery?`<label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label>`:''}<label>${t('Password','Mật khẩu')}<input name="password" type="password" autocomplete="${recovery?'new-password':'current-password'}" ${recovery?'minlength="12"':''} maxlength="128" required></label><div class="jobs-row-actions"><button type="submit" class="primary">${recovery?t('Save password','Lưu mật khẩu'):staff?t('Sign in to staff portal','Đăng nhập cổng nhân viên'):t('Sign in','Đăng nhập')}</button>${!recovery?`${!staff?`<button type="button" data-action="register">${t('Create candidate account','Tạo tài khoản ứng viên')}</button>`:''}<button type="button" data-action="reset">${t('Forgot password','Quên mật khẩu')}</button>`:''}</div></form><p class="jobs-meta">${staff?t('Staff access is assigned by your Jobs administrator. Creating a candidate account does not grant staff access.','Quản trị viên Jobs cấp quyền nhân viên. Tạo tài khoản ứng viên không cấp quyền nhân viên.'):t('New accounts must confirm their email before applying. Already part of the team? Choose Staff portal above.','Tài khoản mới cần xác minh email trước khi ứng tuyển. Nếu là nhân viên, hãy chọn Cổng nhân viên ở trên.')}</p></div>`;
 }
+function updateCmsNavigation(next){
+ if(next){cmsDestination=next.kind;cmsNavigation=next.view;}
+ for(const button of document.querySelectorAll('[data-action="staff-collection"]'))button.setAttribute('aria-current',view==='cms'&&(cmsNavigation==='media'?button.dataset.collection==='media':button.dataset.collection===cmsDestination)?'page':'false');
+ for(const button of document.querySelectorAll('#workspace-nav [data-action="view"]'))button.setAttribute('aria-current',button.dataset.view===view?'page':'false');
+ document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
+}
 function nav(){
- const options=access==='staff'?[...(caps.read?[['cms',t('Content manager','Quản lý nội dung')]]:[]),...(caps.recruit?[['applications',t('Recruitment','Tuyển dụng')]]:[])]:[['mine',t('My applications','Hồ sơ của tôi')]];
- if(!options.some(([id])=>id===view)&&!(access==='candidate'&&view==='apply'))view=options[0]?.[0]||'';
- $('#workspace-nav').innerHTML=options.map(([id,label])=>`<button type="button" data-action="view" data-view="${id}" aria-current="${view===id?'page':'false'}">${label}</button>`).join('');
+ const permitted=access==='staff'?[...(caps.read?['cms']:[]),...(caps.recruit?['applications']:[])]:['mine'];
+ if(!permitted.includes(view)&&!(access==='candidate'&&view==='apply'))view=permitted[0]||'';
+ $('#signed-panel').classList.toggle('jobs-staff-active',access==='staff'&&!!user&&(caps.read||caps.recruit));
+ if(access!=='staff'){
+  $('#workspace-nav').innerHTML=`<button type="button" data-action="view" data-view="mine" aria-current="${view==='mine'?'page':'false'}">${t('My applications','Hồ sơ của tôi')}</button>`;
+ }else{
+  const labels={vacancy:['Vacancies','Tin tuyển dụng'],employer:['Employers','Nhà tuyển dụng'],category:['Job Categories','Danh mục việc làm'],location:['Locations','Địa điểm'],guide:['Guides','Cẩm nang'],faq:['FAQs','Câu hỏi thường gặp'],media:['Media Library','Thư viện tư liệu']};
+  const glyphs={vacancy:'◈',employer:'▤',category:'▦',location:'⌖',guide:'▧',faq:'?',media:'▣'};
+  const collectionButton=kind=>{const pair=labels[kind]||[kind,kind],label=t(...pair);return `<button type="button" data-action="staff-collection" data-collection="${esc(kind)}" aria-label="${esc(label)}" title="${esc(label)}" aria-current="false"><span class="jobs-nav-symbol" aria-hidden="true">${glyphs[kind]||'·'}</span><span class="jobs-nav-label">${esc(label)}</span></button>`;};
+  const available=kind=>kind==='media'||collections.some(item=>item.kind===kind);
+  const group=(key,en,vi,content)=>content?`<details data-jobs-nav-group="${key}" open><summary>${t(en,vi)}</summary><div class="jobs-nav-items">${content}</div></details>`:'';
+  const recruitment=(caps.read&&available('vacancy')?collectionButton('vacancy'):'')+(caps.recruit?`<button type="button" data-action="view" data-view="applications" aria-label="${t('Recruitment','Tuyển dụng')}" title="${t('Recruitment','Tuyển dụng')}"><span class="jobs-nav-symbol" aria-hidden="true">↗</span><span class="jobs-nav-label">${t('Recruitment','Tuyển dụng')}</span></button>`:'');
+  const directory=caps.read?['employer','category','location'].filter(available).map(collectionButton).join(''):'';
+  const knowledge=caps.read?['guide','faq'].filter(available).map(collectionButton).join(''):'';
+  $('#workspace-nav').innerHTML=group('recruitment','Recruitment','Tuyển dụng',recruitment)+group('directory','Directories','Danh mục',directory)+group('knowledge','Guides & answers','Cẩm nang & giải đáp',knowledge)+group('media','Content & media','Nội dung & tư liệu',caps.read?collectionButton('media'):'');
+ }
+ updateCmsNavigation();
+}
+async function openStaffCollection(destination){
+ if(access!=='staff'||!caps.read||destination!=='media'&&!collections.some(item=>item.kind===destination))return;
+ if(view!=='cms'){
+  if(cms?.canLeave&&!cms.canLeave())return;
+  cmsDestination=destination==='media'?cmsDestination:destination;cmsNavigation=destination==='media'?'media':'content';setView('cms');return;
+ }
+ await cms?.ready;
+ if(await cms?.navigate?.(destination))updateCmsNavigation(cms.navigationState?.());
 }
 function setView(next){if(cms?.canLeave&&!cms.canLeave())return;generation++;clearWorkspace();view=next;const u=new URL(location.href);u.searchParams.set('view',view);u.searchParams.set('access',access);history.pushState({},'',u);currentViewUrl=u.href;void renderView().catch(e=>status(errorText(e,language),true,true));}
 function setAccess(next){
@@ -52,7 +83,9 @@ async function renderView(){
  }
  if(view==='cms'){
   if(!caps.read){target.textContent=t('Jobs content access is not assigned to this account.','Tài khoản này chưa được cấp quyền nội dung Jobs.');return;}
-  cms=mountCms(target,{appId:'jobs',appName:'Vietnam English Teaching Jobs',language,collections,adapter:createCmsAdapter(),onNotice:m=>status(m)});return;
+  const destination=cmsNavigation==='media'?'media':cmsDestination;
+  cms=mountCms(target,{appId:'jobs',appName:'Vietnam English Teaching Jobs',language,collections,adapter:createCmsAdapter(),navigation:false,onNavigationChange:updateCmsNavigation,onNotice:m=>status(m)});
+  const mounted=cms;await mounted.ready;if(cms===mounted&&destination!==(mounted.navigationState?.().kind||collections[0]?.kind))await mounted.navigate?.(destination);return;
  }
  if(view==='apply'){await renderApplicationForm();return;}
  if(view==='applications'&&!caps.recruit){setView('mine');return;}
@@ -110,6 +143,7 @@ document.addEventListener('click',event=>{
  if(action==='access')setAccess(b.dataset.access);
  if(action==='retry')void authenticate();
  if(action==='view')setView(b.dataset.view);
+ if(action==='staff-collection')void openStaffCollection(b.dataset.collection).catch(e=>status(errorText(e,language),true));
  if(action==='previous'&&page>1){page--;void guarded(loadApplications).catch(()=>{});}
  if(action==='next'&&page*20<total){page++;void guarded(loadApplications).catch(()=>{});}
  if(action==='open-application')void guarded(()=>openApplication(b.dataset.id)).catch(()=>{});
