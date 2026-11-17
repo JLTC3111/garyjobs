@@ -18,7 +18,7 @@ Roles:
 | admin | Yes | Yes | Yes |
 | candidate | No | No | Own applications/documents only |
 
-Only active Jobs memberships with verified Auth email are accepted. Staff grant/revocation is operator-controlled through the app-specific membership table. It does not reset/delete global Auth credentials.
+Only active Jobs memberships with verified Auth email are accepted. Jobs admins grant, change, suspend and restore memberships in Staff management (below); the operator script bootstraps the first owner. Neither path resets or deletes global Auth credentials.
 
 ## Candidate and staff sign-in
 
@@ -33,6 +33,18 @@ The public Sign in menu and mobile navigation offer separate Candidate login and
 - Auth changes synchronize outside the Supabase callback. Same-user tab-focus/token events preserve the CMS draft; sign-out immediately removes private workspace content and invalidates pending responses.
 
 The English and Vietnamese interface uses the same flow. These UI changes require a frontend deployment. They do not alter database policies or assign any staff accounts. The hosted capability RPC was checked with an unassigned authenticated role and correctly returned no staff permissions; the membership count was zero at verification.
+
+## Staff management
+
+Active Jobs admins see **Administration → Staff management** (`/portal.html?view=staff`). It lists every Jobs membership with name, email, role and access state, explains each role, and shows the latest 50 access changes in English or Vietnamese.
+
+- **Assign:** enter the email of an existing Auth account with a verified email. Unknown, unverified and ambiguous addresses return the same message, so the form cannot be used to discover accounts. It never creates or invites Auth users; existing members are changed in the list instead.
+- **Change, suspend, restore:** choose Editor, Publisher, Recruiter, Admin or No access. No access suspends the membership but keeps its role, history and recruitment assignments; suspended staff leave the assignee list. Suspension and any Admin change ask for confirmation. Each save sends the row version, so a stale screen gets a conflict instead of overwriting a newer change.
+- **Database guards (checked against current rows, not the browser):** only active verified Jobs admins can call the staff RPCs; nobody can change their own access; **protected** memberships cannot be changed in the app; only a protected admin (a reviewed Jobs owner) can grant, change or remove Admin access; the last active verified admin cannot be suspended or demoted, including by direct SQL updates. Staff changes take a transaction lock so concurrent changes are checked one at a time.
+- **Audit:** every membership insert, change and deletion, from the app or SQL, appends to `jobs_private.staff_audit_events` with the actor (none for database operators), a target email snapshot, and the before/after role, access and protection. Audit rows cannot be updated or deleted. Rejected attempts are not recorded.
+- **Protected owners** are set only by an operator with `supabase/setup-jobs-staff.sql` (`make_protected`). Nothing is inferred from email addresses, labels or Home/Agency roles.
+
+Role changes apply to database permissions immediately. Another person's open portal keeps its previous navigation until they reload or sign in again; their requests already use the new role.
 
 ## Implemented content collections
 
@@ -76,17 +88,18 @@ Once provisioned, an empty published catalogue is shown honestly as empty; it do
 
 1. Review `supabase/migrations/20261116043122_teaching_jobs_cms_and_recruitment.sql` against the intended shared project. It creates only `jobs_*`/`jobs_private` objects and app bucket guards. No Home/Agency roles are reused.
 2. The reviewed migration was applied on 16 November 2026; do not rerun it. Hosted grants/RLS, Storage MIME/size rules and security advisors were checked afterward. No Jobs content or staff membership was seeded automatically.
-3. Choose an existing verified Auth account. Edit the placeholder email and role in `supabase/setup-jobs-staff.sql`; grant explicit Jobs membership. No staff account is auto-promoted.
-4. Configure permitted Auth callback/recovery URL `https://jobs.garyhome.vn/portal.html` and any intended localhost test URL. Existing email delivery/confirmation settings belong to the shared Auth project and must be checked before launch.
-5. Sign in as a Jobs publisher/admin; create and publish employer/category/location profiles before vacancies. Import draft reference content only if editorial owners want it. Verify current eligibility, terms, closing dates and employer identity before publication.
-6. Deploy the built `dist/` only after cross-role tests in the target environment. Verify candidate signup/confirmation, receipt/idempotency, CV upload/download isolation, editorial review, publication snapshots, recruiter assignment/stages, and role revocation.
-7. Define retention/deletion, mail notifications, malware scanning, employer portal access, and operational monitoring before broader recruitment rollout. These integrations are not silently claimed by this release.
+3. Staff management needs `supabase/migrations/20261117195500_jobs_staff_role_management.sql`, which is **not applied**. Apply it only with approval. It changes only Jobs objects: new `staff_members` columns with safe defaults (existing memberships and assignments are kept), staff triggers, the audit table, the staff RPCs and two new `jobs_capabilities()` keys.
+4. Choose an existing verified Auth account. Edit the placeholder email and role in `supabase/setup-jobs-staff.sql`; grant explicit Jobs membership. Set `make_protected` to true only for the reviewed Jobs owner. Until one admin is protected, admins can manage non-admin roles but nobody can grant Admin in the app. No staff account is auto-promoted.
+5. Configure permitted Auth callback/recovery URL `https://jobs.garyhome.vn/portal.html` and any intended localhost test URL. Existing email delivery/confirmation settings belong to the shared Auth project and must be checked before launch.
+6. Sign in as a Jobs publisher/admin; create and publish employer/category/location profiles before vacancies. Import draft reference content only if editorial owners want it. Verify current eligibility, terms, closing dates and employer identity before publication.
+7. Deploy the built `dist/` only after cross-role tests in the target environment. Verify candidate signup/confirmation, receipt/idempotency, CV upload/download isolation, editorial review, publication snapshots, recruiter assignment/stages, and role revocation.
+8. Define retention/deletion, mail notifications, malware scanning, employer portal access, and operational monitoring before broader recruitment rollout. These integrations are not silently claimed by this release.
 
 ## Local verification
 
 - `npm run build`: pinned SDK bundle, existing gallery/menu build, asset/syntax checks.
 - `npm test`: shared runtime tests, public published-content/fallback/XSS tests, portal role/receipt/signout tests, and isolated in-memory Postgres tests.
-- `npm run test:db`: applies the prepared SQL only to an ephemeral PGlite instance, with fake Auth/Storage fixtures. It never contacts hosted Supabase.
+- `npm run test:db`: applies the prepared SQL only to an ephemeral PGlite instance, with fake Auth/Storage fixtures. It never contacts hosted Supabase. It includes the staff-management guards, audit trail and operator script.
 
 Database tests cover CMS capabilities, unrelated-app rejection, bilingual validation, review/publish gates, stale-version conflicts, revision restore, live snapshot retention, expiry/reference rules, candidate isolation, idempotent receipts, verified-email gating, stage/assignee enforcement, private notes and restrictive CV policies even when an unrelated permissive storage policy exists.
 

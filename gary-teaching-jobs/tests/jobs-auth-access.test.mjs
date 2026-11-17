@@ -104,8 +104,8 @@ test('staff entry opens recruitment for a recruiter without CMS permission',asyn
  }finally{h.dom.window.close();}
 });
 
-test('existing CMS and recruitment deep links infer staff entry',async()=>{
- for(const view of ['cms','applications']){
+test('existing CMS, recruitment and staff-management deep links infer staff entry',async()=>{
+ for(const view of ['cms','applications','staff']){
   const h=await portal({view,user:null});
   try{
    await h.settle();
