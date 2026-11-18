@@ -345,12 +345,12 @@ function openContact() {
 function toggleMenu(force) {
   const nav=$('#mobile-nav');if(!nav)return;
   const open=typeof force==='boolean'?force:nav.hidden;
-  nav.hidden=!open;$('.menu-toggle').setAttribute('aria-expanded',String(open));$('.menu-toggle').setAttribute('aria-label',open?t('Close navigation','Đóng điều hướng'):t('Open navigation','Mở điều hướng'));$('.menu-toggle').innerHTML=icon(open?'close':'menu');
+  nav.hidden=!open;nav.inert=!open;$('.menu-toggle').setAttribute('aria-expanded',String(open));$('.menu-toggle').setAttribute('aria-label',open?t('Close navigation','Đóng điều hướng'):t('Open navigation','Mở điều hướng'));$('.menu-toggle').innerHTML=icon(open?'close':'menu');
 }
 
 function closePreferences(restoreFocus=false) {
   preferencesOpen=false;
-  const panel=$('#jobs-preferences-panel');if(panel)panel.hidden=true;
+  const panel=$('#jobs-preferences-panel');if(panel){panel.hidden=true;panel.inert=true;}
   $('#jobs-preferences-trigger')?.setAttribute('aria-expanded','false');
   if(restoreFocus)$('#jobs-preferences-trigger')?.focus({preventScroll:true});
 }
@@ -359,7 +359,7 @@ function openPreferences() {
   toggleMenu(false);
   $$('.site-header details[open]').forEach(menu=>menu.open=false);
   preferencesOpen=true;
-  $('#jobs-preferences-panel').hidden=false;
+  const panel=$('#jobs-preferences-panel');panel.hidden=false;panel.inert=false;
   $('#jobs-preferences-trigger').setAttribute('aria-expanded','true');
   $('#jobs-preferences-panel [data-language][aria-pressed="true"]')?.focus({preventScroll:true});
 }

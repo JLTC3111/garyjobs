@@ -231,14 +231,24 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 
 @media(min-width:721px) and (max-width:1000px){.jobs-public .nav-actions #gary-apps-header{display:flex;}}
 
-/* Separate palettes, shared recruitment content. Lavender is a quiet visual accent. */
-html{--journey-frame:radial-gradient(ellipse at 100% 10%,#e8ddf68a,transparent 65%),#f3f3fa;--journey-frame-line:#ddd6e9;--journey-card:#ffffffd9;--journey-card-line:#d8cfe7;--journey-icon-bg:#eee7f7;--journey-icon-line:#d7cbe9;--journey-detail:#70578f;--journey-ink:#0b2457;--journey-muted:#435575}
-html[data-jobs-theme=dark]{--journey-frame:radial-gradient(ellipse at 100% 10%,#71609a24,transparent 70%),#151a2c;--journey-frame-line:#3e3654;--journey-card:#202439e8;--journey-card-line:#504361;--journey-icon-bg:#342c49;--journey-icon-line:#65517f;--journey-detail:#c8b2e5;--journey-ink:#f7f5fb;--journey-muted:#c8c9db}
+/* Recruitment and footer controls use the resolved Jobs palette. */
+html {
+  --journey-frame:radial-gradient(ellipse at 100% 10%,#e9e7f466,transparent 65%),#f1f4f8;
+  --journey-line:var(--jobs-line);--journey-icon-bg:var(--jobs-portal-selected);--journey-detail:var(--jobs-portal-accent);
+  --journey-frame-shadow:0 20px 55px #23334b08;--journey-card-shadow:0 6px 18px #23334b06;
+  --jobs-footer-social-ink:#465777;--jobs-footer-social-line:#7587a5;
+}
+html[data-jobs-theme=dark] {
+  --journey-frame:radial-gradient(ellipse at 100% 10%,#7763a026,transparent 70%),var(--jobs-soft);
+  --journey-line:var(--jobs-portal-line);
+  --journey-frame-shadow:var(--jobs-popover-shadow);--journey-card-shadow:0 6px 18px #00000026;
+  --jobs-footer-social-ink:#e9e5fc;--jobs-footer-social-line:#7c8aa8;
+}
 .jobs-public .why-copy h2,.jobs-public .benefit-row h3{color:var(--jobs-ink)}
 .jobs-public .why-copy h2 em{color:var(--jobs-accent)}
 .jobs-public .why-copy>.eyebrow{color:var(--jobs-action);font-size:11px;line-height:1.6;letter-spacing:.12em}
 html[data-jobs-theme=dark] .jobs-public .why-copy>.eyebrow{color:var(--jobs-accent)}
 .jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{color:var(--jobs-muted);font-size:14px;line-height:1.8}
 .jobs-public .benefit-row h3{font-size:16px;line-height:1.5;margin-bottom:5px}
-.jobs-public .benefit-icon{border-color:var(--jobs-line);background:var(--journey-icon-bg);color:var(--journey-detail)}
+.jobs-public .benefit-icon{border-color:var(--journey-line);background:var(--journey-icon-bg);color:var(--journey-detail)}
 @media(max-width:720px){.jobs-public .why-copy>.eyebrow{font-size:10px}.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{font-size:14px}.jobs-public .benefit-row h3{font-size:16px}}

@@ -1,0 +1,156 @@
+/* Shared interaction timing, applied to the existing component states. */
+:root {
+  --gary-motion-open: 240ms;
+  --gary-motion-close: 180ms;
+  --gary-motion-chevron: 200ms;
+  --gary-motion-out: cubic-bezier(.2,.72,.28,1);
+  --gary-motion-in: cubic-bezier(.4,0,.65,1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --gary-motion-open: 0ms; --gary-motion-close: 0ms; --gary-motion-chevron: 0ms; }
+}
+
+:is(.jobs-preferences-panel, .jobs-public .mobile-nav, .gary-apps-menu-panel, .jobs-login-options) {
+  --gary-panel-time: var(--gary-motion-open);
+  --gary-panel-ease: var(--gary-motion-out);
+  opacity: 1;
+  translate: 0 0;
+  animation: none;
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: var(--gary-panel-time);
+  transition-timing-function: var(--gary-panel-ease);
+  transition-behavior: allow-discrete;
+}
+:is(.jobs-preferences-panel, .jobs-public .mobile-nav, .gary-apps-menu-panel, .jobs-login-options)[hidden] { display: none; }
+:is(:is(.jobs-preferences-panel, .jobs-public .mobile-nav, .gary-apps-menu-panel, .jobs-login-options)[hidden], .gary-apps-menu:not([open]) > .gary-apps-menu-panel, .jobs-login-menu:not([open]) > .jobs-login-options) {
+  --gary-panel-time: var(--gary-motion-close);
+  --gary-panel-ease: var(--gary-motion-in);
+  opacity: 0;
+  translate: 0 var(--gary-panel-shift, -5px);
+  pointer-events: none;
+}
+@starting-style {
+  :is(.jobs-preferences-panel, .jobs-public .mobile-nav, .gary-apps-menu-panel, .jobs-login-options) { opacity: 0; translate: 0 var(--gary-panel-shift, -5px); }
+}
+
+:is(.gary-apps-menu, .jobs-login-menu)::details-content {
+  transition: content-visibility var(--gary-motion-close) allow-discrete;
+}
+
+:is(.faq-item, #workspace-nav details, .gary-cms details)::details-content {
+  opacity: 0;
+  transition: opacity var(--gary-motion-close) var(--gary-motion-in),
+    content-visibility var(--gary-motion-close) allow-discrete;
+}
+:is(.faq-item, #workspace-nav details, .gary-cms details)[open]::details-content {
+  opacity: 1;
+  transition-duration: var(--gary-motion-open);
+  transition-timing-function: var(--gary-motion-out);
+}
+@supports (interpolate-size: allow-keywords) {
+  :is(.faq-item, #workspace-nav details, .gary-cms details)::details-content {
+    interpolate-size: allow-keywords;
+    block-size: 0;
+    overflow: clip;
+    overflow-clip-margin: 6px;
+    transition: block-size var(--gary-motion-close) var(--gary-motion-in),
+      opacity var(--gary-motion-close) var(--gary-motion-in),
+      content-visibility var(--gary-motion-close) allow-discrete;
+  }
+  :is(.faq-item, #workspace-nav details, .gary-cms details)[open]::details-content {
+    block-size: auto;
+    transition-duration: var(--gary-motion-open);
+    transition-timing-function: var(--gary-motion-out);
+  }
+}
+
+.gw-editor { --gary-layout-time: var(--gary-motion-open); }
+.gw-editor:is(.gw-resizing, .gw-mobile) { --gary-layout-time: 0ms; }
+:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog) {
+  --gary-dialog-time: var(--gary-motion-close);
+  --gary-dialog-ease: var(--gary-motion-in);
+  opacity: 0;
+  translate: 0 7px;
+  animation: none;
+  transition-property: opacity, translate, display, overlay, left, top, width, height;
+  transition-duration: var(--gary-dialog-time), var(--gary-dialog-time), var(--gary-dialog-time), var(--gary-dialog-time),
+    var(--gary-layout-time, 0ms), var(--gary-layout-time, 0ms), var(--gary-layout-time, 0ms), var(--gary-layout-time, 0ms);
+  transition-timing-function: var(--gary-dialog-ease);
+  transition-behavior: allow-discrete;
+}
+:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting]) {
+  --gary-dialog-time: var(--gary-motion-open);
+  --gary-dialog-ease: var(--gary-motion-out);
+  opacity: 1;
+  translate: 0 0;
+}
+:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog):is(:not([open]), [data-ui-exiting]) { pointer-events: none; }
+:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)::backdrop {
+  opacity: 0;
+  transition: opacity var(--gary-motion-close, 180ms) ease-in;
+}
+:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting])::backdrop {
+  opacity: 1;
+  transition: opacity var(--gary-motion-open, 240ms) ease-out;
+}
+@starting-style {
+  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting]) { opacity: 0; translate: 0 7px; }
+  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting])::backdrop { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)::backdrop { transition: none; }
+}
+
+.jobs-staff-active .jobs-staff-layout {
+  --gary-sidebar-time: var(--gary-motion-open);
+  --gary-sidebar-ease: var(--gary-motion-out);
+  transition: grid-template-columns var(--gary-sidebar-time) var(--gary-sidebar-ease);
+}
+.jobs-staff-active .jobs-sidebar-collapsed {
+  --gary-sidebar-time: var(--gary-motion-close);
+  --gary-sidebar-ease: var(--gary-motion-in);
+}
+.jobs-staff-active .jobs-staff-layout[data-gary-resizing] { transition: none; }
+.jobs-staff-active .jobs-sidebar-overlay .jobs-staff-sidebar {
+  animation: gary-sidebar-enter var(--gary-motion-open) var(--gary-motion-out);
+}
+@keyframes gary-sidebar-enter { from { opacity: 0.55; translate: -6px 0; } }
+.jobs-staff-active .jobs-sidebar-overlay[data-sidebar-closing] .jobs-staff-sidebar {
+  animation: none;
+  opacity: 0;
+  translate: -6px 0;
+  pointer-events: none;
+  transition: opacity var(--gary-motion-close) var(--gary-motion-in), translate var(--gary-motion-close) var(--gary-motion-in);
+}
+
+.jobs-login-menu > summary::after { transition: transform var(--gary-motion-chevron) var(--gary-motion-out); }
+.jobs-login-menu[open] > summary::after { transform: rotate(180deg); }
+.jobs-staff-active #workspace-nav details > summary { list-style: none; }
+.jobs-staff-active #workspace-nav details > summary::-webkit-details-marker { display: none; }
+.jobs-staff-active #workspace-nav details > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-inline-end: .3em;
+  transition: transform var(--gary-motion-chevron) var(--gary-motion-out);
+}
+.jobs-staff-active #workspace-nav details[open] > summary::before { transform: rotate(90deg); }
+:is(.gary-apps-chevron, .faq-item summary > span:last-child) {
+  transition: transform var(--gary-motion-chevron) var(--gary-motion-out);
+}
+.faq-item[open] summary > span:last-child { transform: rotate(45deg); }
+.faq-item p { animation: none; }
+
+@media (max-width: 520px) {
+  .jobs-staff-active .jobs-staff-layout { transition: none; }
+  .jobs-staff-active #workspace-nav {
+    opacity: 1;
+    transition: opacity var(--gary-motion-open) var(--gary-motion-out), display var(--gary-motion-open) allow-discrete;
+  }
+  .jobs-staff-active .jobs-sidebar-collapsed #workspace-nav {
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--gary-motion-close);
+    transition-timing-function: var(--gary-motion-in);
+  }
+  @starting-style { .jobs-staff-active #workspace-nav { opacity: 0; } }
+}

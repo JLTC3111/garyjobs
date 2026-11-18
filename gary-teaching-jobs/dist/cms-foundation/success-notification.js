@@ -7,16 +7,22 @@ const copy = {
 };
 export function createSuccessNotification(host, {language = () => 'en', returnFocus = () => {}, duration = 5000} = {}) {
   const doc = host.ownerDocument, win = doc.defaultView, id = `cms-success-${++notificationSerial}`;
-  let dialog = null, timer = null, content = null, destroyed = false, paused = false;
+  let dialog = null, exiting = null, timer = null, content = null, destroyed = false, paused = false;
   const currentLanguage = () => typeof language === 'function' ? language() : language;
   const text = value => typeof value === 'object' && value ? value[currentLanguage()] || value.en || '' : String(value || '');
   function clearTimer() { if (timer !== null) win.clearTimeout(timer); timer = null; }
   function dismiss({restoreFocus = true} = {}) {
     clearTimer();
+    exiting?.remove(); exiting = null;
     if (!dialog) return;
     const previous = dialog; dialog = null; content = null;
     if (previous.open) previous.close?.();
-    previous.remove();
+    const fade = restoreFocus && previous.getAnimations?.().find(animation => animation.transitionProperty === 'opacity');
+    if (fade) {
+      exiting = previous;
+      const remove = () => { if (exiting === previous) { previous.remove(); exiting = null; } };
+      void fade.finished.then(remove, remove);
+    } else previous.remove();
     if (restoreFocus && !destroyed) returnFocus();
   }
   function setLanguage() {

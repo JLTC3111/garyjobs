@@ -430,7 +430,7 @@ test('recruitment text contrast and stacked layout survive desktop/mobile and li
    for(const width of [360,390,720,1000,1440]){
     const paint=cascade(h.d,width),grid=h.d.querySelector('.why-grid');
     assert.equal(paint.value(grid,'grid-template-columns'),width<=720?'1fr':'1fr 1fr');
-    for(const selector of ['.why-copy h2','.why-copy h2 em','.why-copy>.eyebrow','.why-copy>.body-copy','.benefit-row h3','.benefit-row p','.journey-card h3','.journey-card p']){
+    for(const selector of ['.why-copy h2','.why-copy h2 em','.why-copy>.eyebrow','.why-copy>.body-copy','.benefit-row h3','.benefit-row p','.benefit-icon','.journey-index','.journey-card h3','.journey-card p','.journey-symbol','.journey-connector']){
      for(const node of h.d.querySelectorAll(selector)){
       const ink=rgba(paint.value(node,'color'));
       for(const surface of backgrounds(node,paint))assert.ok(contrast(ink,surface)>=4.5,`${dark?'dark':'light'} ${width} ${selector}: ${contrast(ink,surface).toFixed(2)}`);
@@ -442,4 +442,42 @@ test('recruitment text contrast and stacked layout survive desktop/mobile and li
    }
   }finally{h.dom.window.close();}
  }
+});
+
+test('footer social links inherit readable glyph, boundary and focus colors across live theme changes', async () => {
+ const h=await page();
+ try {
+  const links=[...h.d.querySelectorAll('.footer-social a')];
+  assert.equal(links.length,3);
+  assert.match(links[0].href,/facebook\.com/);
+  assert.match(links[1].href,/zalo\.me/);
+  assert.match(links[2].href,/^mailto:/);
+  for(const mode of ['light','dark']){
+   h.w.setGaryJobsTheme(mode);
+   assert.deepEqual([...h.d.querySelectorAll('.footer-social a')],links);
+   for(const link of links){
+    const glyph=link.querySelector('svg,.zalo-word');
+    assert.ok(link.getAttribute('aria-label')&&glyph);
+    if(glyph.tagName==='svg'){
+     assert.equal(glyph.getAttribute('stroke'),'currentColor');
+     assert.equal(glyph.getAttribute('fill'),'none');
+     assert.equal(glyph.getAttribute('aria-hidden'),'true');
+     assert.equal(glyph.getAttribute('opacity'),null);
+    }
+    for(const state of [undefined,'hover','focus-visible']){
+     const paint=cascade(h.d,1440,state?{[state]:new Set([link])}:{});
+     const ink=rgba(paint.value(glyph,'color'));
+     const boundary=rgba(paint.value(link,'border-color').match(/#[\da-f]{6}\b/i)[0]);
+     const [surface]=backgrounds(link,paint),[footer]=backgrounds(link.closest('footer'),paint);
+     assert.ok(contrast(ink,surface)>=4.5,mode+' '+state+' glyph');
+     assert.ok(contrast(boundary,footer)>=3,mode+' '+state+' border');
+     if(state==='focus-visible'){
+      const ring=rgba(paint.value(link,'outline-color').match(/#[\da-f]{6}\b/i)[0]);
+      assert.ok(contrast(ring,footer)>=3,mode+' focus');
+     }
+    }
+    link.focus();assert.equal(h.d.activeElement,link);
+   }
+  }
+ }finally{h.dom.window.close();}
 });

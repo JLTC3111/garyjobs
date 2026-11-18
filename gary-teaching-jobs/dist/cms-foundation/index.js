@@ -276,7 +276,7 @@ export function mountCms(root, options) {
     const restoreScroll = preserveScroll(), publishedCollection = collection();
     ++editorEpoch; draft = null; baseline = ''; editorIssues = []; revisions = [];
     referenceQueries.clear(); referenceDrafts.clear(); referenceCreates.clear();
-    root.querySelector('.cms-dialog')?.close?.();
+    await closeEditorDialog();
     announce('');
     // List read failures are independent from the already committed publication.
     await refresh();
@@ -339,6 +339,12 @@ export function mountCms(root, options) {
     const target = index >= 0 ? root.querySelector(`[data-action="edit"][data-index="${index}"]`) : root.querySelector('[data-action="new"]');
     (target || root.querySelector('[data-action="refresh"]'))?.focus({preventScroll: true});
   }
+  async function closeEditorDialog() {
+    const dialog = root.querySelector('.cms-dialog');
+    dialog?.close?.();
+    const fade = dialog?.getAnimations?.().find(animation => animation.transitionProperty === 'opacity');
+    if (fade) await fade.finished.catch(() => {});
+  }
   async function onClick(event) {
     const target = event.target.closest('[data-action]'); if (!target || !root.contains(target) || target.disabled || busy) return;
     event.stopPropagation?.();
@@ -346,7 +352,7 @@ export function mountCms(root, options) {
     if (action === 'focus-issue') { focusField(target.dataset.fieldKey); return; }
     if (action === 'reference-refresh') { const field = referenceFields().find(item => item.key === target.dataset.fieldKey); if (field) await loadReference(field.referenceKind, true); return; }
     if (action === 'reference-create') return createReference(target.dataset.fieldKey);
-    if (action === 'close') { if (!canLeave()) return; ++editorEpoch; draft = null; baseline = ''; root.querySelector('.cms-dialog')?.close?.(); await refresh(); restoreEditorFocus(); return; }
+    if (action === 'close') { if (!canLeave()) return; ++editorEpoch; draft = null; baseline = ''; await closeEditorDialog(); if (draft || disposed) return; await refresh(); restoreEditorFocus(); return; }
     if (action === 'edit') return openEditor(records[Number(target.dataset.index)]);
     if (action === 'new') { if (capabilities.edit) return openEditor(); return; }
     if (action === 'collection' || action === 'media') return navigate(action === 'media' ? 'media' : target.dataset.kind);

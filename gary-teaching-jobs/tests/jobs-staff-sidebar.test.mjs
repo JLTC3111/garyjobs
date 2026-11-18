@@ -30,7 +30,9 @@ test('navigation resizing and collapse preserve an unsaved invalid vacancy and e
  const h=await staffPortal();try{
   await h.click('[data-action=new]');h.input('title_en','Unsaved teaching position');await h.click('[data-action=publish]');const form=h.doc.querySelector('[data-cms-editor]'),title=form.querySelector('[name=title_en]'),error=form.querySelector('[data-error-for=body_en]');assert.ok(error.textContent);const dialog=h.doc.querySelector('.cms-dialog'),editor=attachEditorWorkspace(dialog);dialog.querySelector('[data-gw-toggle]').click();const editorState=editor.getState();
   const handle=h.doc.querySelector('[data-jobs-sidebar-resize]'),pointer=(target,type,x)=>{const event=new h.w.MouseEvent(type,{clientX:x,button:0,bubbles:true,cancelable:true});Object.defineProperty(event,'pointerId',{value:1});target.dispatchEvent(event);};
-  pointer(handle,'pointerdown',272);pointer(h.w,'pointermove',342);pointer(h.w,'pointerup',342);assert.equal(h.sidebar.getState().width,342);assert.equal(h.doc.body.style.userSelect,'');
+  const layout=handle.closest('.jobs-staff-layout');
+  pointer(handle,'pointerdown',272);assert.ok(layout.hasAttribute('data-gary-resizing'));
+  pointer(h.w,'pointermove',342);pointer(h.w,'pointerup',342);assert.equal(h.sidebar.getState().width,342);assert.equal(h.doc.body.style.userSelect,'');assert.equal(layout.hasAttribute('data-gary-resizing'),false);
   resizeKey(h,'Home');assert.equal(h.sidebar.getState().width,216);resizeKey(h,'End');assert.equal(h.sidebar.getState().width,384);
   await h.click('[data-jobs-sidebar-toggle]');assert.equal(h.sidebar.getState().collapsed,true);assert.deepEqual(editor.getState(),editorState);assert.equal(h.doc.querySelector('[data-cms-editor]'),form);assert.equal(title.value,'Unsaved teaching position');assert.ok(error.textContent);assert.equal(h.cms.isDirty(),true);
   await h.click('[data-jobs-sidebar-toggle]');await h.click('[data-collection=guide]');assert.equal(h.cms.navigationState().kind,'vacancy','declining the dirty warning leaves the current collection intact');assert.equal(h.doc.querySelector('[data-cms-editor]'),form);assert.equal(title.value,'Unsaved teaching position');
@@ -42,7 +44,14 @@ test('sidebar preferences and nested groups persist without changing editor pref
  const h=await staffPortal();try{
   resizeKey(h,'Home');const group=h.doc.querySelector('[data-jobs-nav-group=directory]');group.open=false;group.dispatchEvent(new h.w.Event('toggle',{bubbles:false}));await h.click('[data-jobs-sidebar-toggle]');h.sidebar.destroy();const sidebar=mountJobsStaffSidebar(h.doc);assert.equal(sidebar.getState().width,216);assert.equal(sidebar.getState().collapsed,true);assert.equal(sidebar.getState().groups.directory,false);assert.equal(h.doc.querySelector('[data-jobs-nav-group=directory]').open,true,'collapsed rail keeps every labelled icon route reachable');await h.click('[data-jobs-sidebar-toggle]');assert.equal(h.doc.querySelector('[data-jobs-nav-group=directory]').open,false,'expanding restores the preferred closed group');
   h.w.innerWidth=390;h.w.innerHeight=844;h.w.dispatchEvent(new h.w.Event('resize'));assert.ok(h.doc.querySelector('[data-jobs-sidebar-resize]').hidden);assert.equal(h.doc.querySelector('[data-jobs-sidebar-toggle]').getAttribute('aria-expanded'),'false');
-  await h.click('[data-jobs-sidebar-toggle]');assert.equal(sidebar.getState().overlay,true);h.doc.querySelector('[data-jobs-sidebar-toggle]').dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert.equal(sidebar.getState().overlay,false);assert.equal(h.doc.activeElement,h.doc.querySelector('[data-jobs-sidebar-toggle]'));
+  await h.click('[data-jobs-sidebar-toggle]');assert.equal(sidebar.getState().overlay,true);
+  const panel=h.doc.querySelector('.jobs-staff-sidebar'),layout=panel.closest('.jobs-staff-layout'),toggle=h.doc.querySelector('[data-jobs-sidebar-toggle]');
+  let finished;const fade=new Promise(resolve=>{finished=resolve;});
+  panel.getAnimations=()=>[{transitionProperty:'opacity',finished:fade}];
+  toggle.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(sidebar.getState().overlay,false);assert.equal(h.doc.activeElement,toggle);
+  assert.ok(layout.classList.contains('jobs-sidebar-overlay'));assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
+  finished();await fade;assert.equal(layout.classList.contains('jobs-sidebar-overlay'),false);
   assert.equal(JSON.parse(h.w.localStorage.getItem('gary-jobs:staff-sidebar:v1')).width,216);sidebar.destroy();
  }finally{await h.close();}
 });
