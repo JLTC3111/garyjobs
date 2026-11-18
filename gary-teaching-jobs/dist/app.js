@@ -1,6 +1,7 @@
 import { mountGaryApps, mountPhotoGallery, mountGlassHero } from './photo-gallery.js';
 import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
+import {showActionToast,setCounterValues} from './action-toast.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
 
 
@@ -173,7 +174,7 @@ function renderPage() {
         <nav class="jobs-hub" aria-label="${t('Explore teaching and life in Vietnam','Khám phá việc giảng dạy và cuộc sống tại Việt Nam')}"><div id="jobs-glass-hero"><div class="jobs-hub-fallback">${[['#opportunities','briefcase','Find Jobs','Tìm việc'],['#questions','books','Teaching Guides','Cẩm nang'],['#life','heart','Life in Vietnam','Sống ở Việt Nam'],['#location','pin','Locations','Địa điểm'],['https://visa.garyhome.vn/','document','Visa Support','Hỗ trợ visa'],['#contact','chat','Contact Support','Liên hệ']].map(([href,glyph,en,vi])=>`<a href="${href}" aria-label="${t(en,vi)}">${icon(glyph)}<span>${t(en,vi)}</span></a>`).join('')}</div></div></nav>
       </div><svg class="hero-waves" viewBox="0 0 1600 160" preserveAspectRatio="none" aria-hidden="true"><path d="M0 80C380 170 520-25 930 55S1260 140 1600 0V160H0Z"/><path d="M0 110C350 25 610 170 1050 95S1370 20 1600 70V160H0Z"/></svg></section>
 
-      <section id="opportunities" class="opportunities section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('GOOD WORK STARTS WITH A GOOD FIT', 'CÔNG VIỆC TỐT BẮT ĐẦU TỪ SỰ PHÙ HỢP')}</p><h2>${t('Find your kind of <em>classroom.</em>', 'Tìm lớp học <em>dành cho bạn.</em>')}</h2></div><p class="section-intro">${t('Big city or a change of pace?<br>There’s more than one way to teach in Vietnam.', 'Thành phố lớn hay một nhịp sống mới?<br>Có nhiều cách để giảng dạy tại Việt Nam.')}</p></div><div class="job-toolbar"><div class="job-tabs" role="group" aria-label="${t('Filter opportunities', 'Lọc cơ hội việc làm')}" id="job-tabs"></div><span id="job-count" class="job-count" aria-live="polite"></span></div><div id="active-filters"></div><div id="job-grid" class="job-grid"></div><div class="jobs-footer"><span>${icon('chat')}${t('Not sure where to start?', 'Bạn chưa biết bắt đầu từ đâu?')} <button class="inline-link" data-action="apply">${t('Let’s find your fit.', 'Cùng tìm việc phù hợp.')}</button></span><button id="more-jobs" class="text-button" data-action="more-jobs">${t('Explore all opportunities', 'Xem tất cả cơ hội')} ${icon('arrow')}</button></div><p class="listing-note">${t('Listings from Gary Agency. Your recruiter will confirm availability and the final offer.', 'Tin tuyển dụng từ Gary Agency. Chuyên viên sẽ xác nhận vị trí còn tuyển và đề nghị cuối cùng.')}</p></div></section>
+      <section id="opportunities" class="opportunities section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('GOOD WORK STARTS WITH A GOOD FIT', 'CÔNG VIỆC TỐT BẮT ĐẦU TỪ SỰ PHÙ HỢP')}</p><h2>${t('Find your kind of <em>classroom.</em>', 'Tìm lớp học <em>dành cho bạn.</em>')}</h2></div><p class="section-intro">${t('Big city or a change of pace?<br>There’s more than one way to teach in Vietnam.', 'Thành phố lớn hay một nhịp sống mới?<br>Có nhiều cách để giảng dạy tại Việt Nam.')}</p></div><div class="job-toolbar"><div class="job-tabs" role="group" aria-label="${t('Filter opportunities', 'Lọc cơ hội việc làm')}" id="job-tabs"></div><span id="job-count" class="job-count"><span id="job-count-value"></span><span id="job-count-label"></span></span></div><div id="active-filters"></div><div id="job-grid" class="job-grid"></div><div class="jobs-footer"><span>${icon('chat')}${t('Not sure where to start?', 'Bạn chưa biết bắt đầu từ đâu?')} <button class="inline-link" data-action="apply">${t('Let’s find your fit.', 'Cùng tìm việc phù hợp.')}</button></span><button id="more-jobs" class="text-button" data-action="more-jobs">${t('Explore all opportunities', 'Xem tất cả cơ hội')} ${icon('arrow')}</button></div><p class="listing-note">${t('Listings from Gary Agency. Your recruiter will confirm availability and the final offer.', 'Tin tuyển dụng từ Gary Agency. Chuyên viên sẽ xác nhận vị trí còn tuyển và đề nghị cuối cùng.')}</p></div></section>
       <section class="partner-section container" aria-label="${t('Our education partners', 'Đối tác giáo dục của chúng tôi')}"><span class="partner-caption">${t('GOOD PEOPLE.<br>GREAT CONNECTIONS.', 'ĐỐI TÁC TỐT.<br>KẾT NỐI BỀN VỮNG.')}</span><div class="partner-logos">${[['genius','Genius English School'],['elis','Elis Education'],['dreams','DreamsWorld Montessori'],['language','Language Link'],['ocb','OCB Education'],['au','A&U Language Institute']].map(([src,alt])=>`<img src="assets/partner-${src}.webp" alt="${alt}" loading="lazy" width="140" height="65">`).join('')}</div></section>
       <section id="why-gary" class="why-section section-pad"><div class="container why-grid"><div class="why-visual"><ol class="recruitment-journey" aria-label="${t('Your recruitment journey', 'Hành trình tuyển dụng của bạn')}">${[
         ['chat', ['Connect', 'Kết nối'], ['Tell us about your experience and what comes next.', 'Chia sẻ kinh nghiệm và điều bạn hướng đến.']],
@@ -237,7 +238,9 @@ function renderJobs() {
   const visible = state.expanded ? results : results.slice(0,3);
   const labels = managedRecords ? [['all',t('All opportunities','Tất cả cơ hội')],...managedCategoryLabels(),['saved',t('Saved','Đã lưu')]] : [['all', t('All opportunities','Tất cả cơ hội')], ['public',t('Public schools','Trường công lập')], ['centers',t('Language centers','Trung tâm tiếng Anh')], ['saved', `${icon('bookmark')} ${t('Saved','Đã lưu')} <span>${state.saved.size}</span>`]];
   $('#job-tabs').innerHTML = labels.map(([id,label])=>`<button data-action="filter" data-id="${esc(id)}" class="job-tab ${state.category===id?'is-active':''}" aria-pressed="${state.category===id}">${label}</button>`).join('');
-  $('#job-count').textContent = t(`${results.length} ${results.length === 1 ? 'opportunity' : 'opportunities'} to explore`, `${results.length} cơ hội để khám phá`);
+  $('#job-count-label').textContent = t(results.length === 1 ? ' opportunity to explore' : ' opportunities to explore', ' cơ hội để khám phá');
+  if (managedRecords !== null) setCounterValues(document, {'job-count-value': results.length}, state.lang);
+  else $('#job-count-value').textContent = String(results.length);
   $('#active-filters').innerHTML = state.keyword || state.location !== 'all' ? `<div class="active-filter"><span>${t('Your search', 'Tìm kiếm')}: <strong>${esc(state.keyword || t('All roles', 'Tất cả vị trí'))}</strong>${state.location !== 'all' ? ` · ${esc(jobs.find(j=>j.region===state.location)?.location || '')}` : ''}</span><button data-action="clear-search">${t('Clear search', 'Xóa tìm kiếm')} ${icon('close')}</button></div>` : '';
   $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card"><div class="job-card-top"><span class="job-school-icon ${job.color}">${icon(job.icon)}</span><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><div class="job-location">${icon('pin')} ${job.location}</div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags"><span>${icon('clock')}${job.hours} ${t('hrs / month','giờ / tháng')}</span><span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
   const more = $('#more-jobs');
@@ -258,9 +261,28 @@ function observeNavigation() {
   ['opportunities','why-gary','life','services'].forEach(id=>navigationObserver.observe(document.getElementById(id)));
 }
 
-let toastTimer;
-function toast(message) {
-  const el=$('#toast');el.innerHTML=`${icon('check')}<span>${esc(message)}</span>`;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3000);
+function toast(message, tone = 'success', action) {
+  return showActionToast(document, message, {language:state.lang, tone, action});
+}
+
+let shortlistToast;
+function updateShortlist(id, before) {
+  if(before)state.saved.delete(id);else state.saved.add(id);
+  persist('gary-saved-jobs',[...state.saved]);
+  renderJobs();
+  $(`[data-action="save"][data-id="${id}"]`)?.focus({preventScroll:true});
+}
+function toggleShortlist(id) {
+  const saved=state.saved.has(id);
+  updateShortlist(id,saved);
+  shortlistToast?.dismiss();
+  shortlistToast=toast(saved?t('Opportunity removed from saved.','Đã bỏ lưu cơ hội.'):t('Saved for your next chapter.','Đã lưu cho chương tiếp theo.'),'success',{
+    label:t('Undo','Hoàn tác'),
+    run:()=>{
+      updateShortlist(id,!saved);
+      toast(t('Shortlist change undone.','Đã hoàn tác thay đổi danh sách lưu.'),'info');
+    }
+  });
 }
 
 let dialogOpener;
@@ -386,7 +408,7 @@ document.addEventListener('click',event=>{
   }
   if(action==='menu'){closePreferences();toggleMenu();}
   if(action==='filter'){state.category=id;state.expanded=false;renderJobs();$(`[data-action="filter"][data-id="${id}"]`).focus({preventScroll:true});}
-  if(action==='save'){if(state.saved.has(id))state.saved.delete(id);else state.saved.add(id);persist('gary-saved-jobs',[...state.saved]);renderJobs();$(`[data-action="save"][data-id="${id}"]`)?.focus({preventScroll:true});toast(state.saved.has(id)?t('Saved for your next chapter.','Đã lưu cho chương tiếp theo.'):t('Opportunity removed from saved.','Đã bỏ lưu cơ hội.'));}
+  if(action==='save')toggleShortlist(id);
   if(action==='more-jobs'){state.expanded=!state.expanded;renderJobs();if(!state.expanded)$('#opportunities').scrollIntoView({behavior:'smooth'});}
   if(action==='clear-search'||action==='reset-jobs'){state.keyword='';state.location='all';if(action==='reset-jobs')state.category='all';state.expanded=false;$('#keyword').value='';$('#location').value='all';renderJobs();}
   if(action==='job'){if(control.tagName==='A'&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;event.preventDefault();openJob(id);}
@@ -401,7 +423,7 @@ document.addEventListener('click',event=>{
   if(action==='contact')openContact();
   if(action==='contact-email')openApplication(null,t('Hello Gary Agency','Xin chào Gary Agency'));
   if(action==='privacy')openDialog(`<p class="eyebrow">${t('YOUR INFORMATION','THÔNG TIN CỦA BẠN')}</p><h2 id="dialog-title">${t('A little about <em>privacy.</em>','Một chút về <em>quyền riêng tư.</em>')}</h2><p class="dialog-intro">${t('This page remembers your language and saved jobs on this device. The candidate portal stores applications and private documents only when you submit them while signed in. If the backend is unavailable, the fallback form only prepares an email draft; you decide whether to send it.','Trang lưu ngôn ngữ và mã công việc trên thiết bị. Cổng ứng viên chỉ lưu hồ sơ và tài liệu riêng tư khi bạn đăng nhập và gửi. Khi backend chưa khả dụng, biểu mẫu dự phòng chỉ chuẩn bị email nháp; bạn quyết định có gửi hay không.')}</p><p class="body-copy">${t('Contact links take you to third-party services such as Facebook, Zalo, Google Maps or your email provider. Their own privacy policies apply. You can clear locally saved preferences using the button below.','Liên kết liên hệ mở dịch vụ bên thứ ba như Facebook, Zalo, Google Maps hoặc nhà cung cấp email. Các dịch vụ áp dụng chính sách riêng. Bạn có thể xóa lựa chọn được lưu trên trình duyệt bằng nút bên dưới.')}</p><button class="button" data-action="clear-data">${t('Clear saved preferences','Xóa dữ liệu đã lưu')} ${icon('arrow')}</button>`);
-  if(action==='clear-data'){try{localStorage.removeItem('gary-language');localStorage.removeItem('gary-saved-jobs');}catch{}state.saved.clear();renderJobs();toast(t('Saved browser preferences cleared.','Đã xóa lựa chọn lưu trên trình duyệt.'));closeDialog();}
+  if(action==='clear-data'){shortlistToast?.dismiss();try{localStorage.removeItem('gary-language');localStorage.removeItem('gary-saved-jobs');}catch{}state.saved.clear();renderJobs();closeDialog();toast(t('Saved browser preferences cleared.','Đã xóa lựa chọn lưu trên trình duyệt.'));}
   if(action==='copy-email')copyPreparedEmail(control);
 });
 
@@ -424,7 +446,7 @@ document.addEventListener('submit',event=>{
 async function copyPreparedEmail(control){
   const field=$('.email-copy-area');
   try{await navigator.clipboard.writeText(field.value);control.textContent=t('Copied!','Đã sao chép!');}
-  catch{field.focus();field.select();toast(t('Select and copy the email text below.','Chọn và sao chép nội dung email bên dưới.'));}
+  catch{field.focus();field.select();toast(t('Select and copy the email text below.','Chọn và sao chép nội dung email bên dưới.'),'info');}
 }
 
 $('#detail-dialog').addEventListener('click',event=>{if(event.target===$('#detail-dialog')){const rect=event.target.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeDialog();}});

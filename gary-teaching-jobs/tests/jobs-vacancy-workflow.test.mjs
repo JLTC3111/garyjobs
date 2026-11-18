@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile, readdir} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {PGlite} from '@electric-sql/pglite';
 import {mountCms} from '../dist/cms-foundation/index.js';
 import {createJobsPublishingAdapter} from '../dist/jobs-publishing-adapter.js';
@@ -98,6 +99,8 @@ async function setup({language='en',legacy=false,failPublication,prepare}={}) {
   const publishing=createJobsPublishingAdapter(db,{collections});
   const adapter={...publishing,...(prepare?{prepare:record=>prepare(record,publishing.prepare)}:{}),capabilities:async()=>(await db.rpc('jobs_capabilities')).data,list:async({kind})=>{const records=(await pg.query('select * from public.jobs_cms_entries where kind=$1 order by updated_at desc',[kind])).rows;return {records,total:records.length};},revisions:async()=>[]};
   const dom=new JSDOM('<main></main>',{url:'https://jobs.garyhome.vn/portal.html'}),root=dom.window.document.querySelector('main');
+  bindFeedbackDom(dom.window);
+
   dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};dom.window.HTMLElement.prototype.scrollIntoView=function(){};dom.window.confirm=()=>true;
   const controller=mountCms(root,{appId:'jobs',collections,language,adapter});
   await controller.ready;

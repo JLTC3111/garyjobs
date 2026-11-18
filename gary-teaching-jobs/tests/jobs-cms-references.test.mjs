@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountCms} from '../dist/cms-foundation/index.js';
 import {validateEntry} from '../dist/cms-foundation/content.js';
 import {validationText} from '../dist/cms-foundation/copy.js';
@@ -12,6 +13,8 @@ const record={id:'vacancy-1',kind:'vacancy',slug:'english-teacher',title_en:'Eng
 const choices={employer:[{value:'school',label:{en:'ABC School',vi:'Trường ABC'},status:'published',published:true}],category:[{value:'public-schools',label:{en:'Public schools',vi:'Trường công'},status:'published',published:true}],location:[{value:'hanoi',label:{en:'Hanoi',vi:'Hà Nội'},status:'published',published:true},{value:'danang',label:{en:'Da Nang',vi:'Đà Nẵng'},status:'published',published:true}]};
 function harness({language='en',entry=record,options=choices,referenceOptions,onCreate,onValidate,onTransition,onSave,publisher=true}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://jobs.garyhome.vn/portal.html'}),root=dom.window.document.querySelector('main'),calls={options:[],creates:[],validation:[],transitions:[],saves:[]};
+  bindFeedbackDom(dom.window);
+
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};dom.window.HTMLElement.prototype.scrollIntoView=function(){};dom.window.confirm=()=>true;
  const adapter={errorText:()=>language==='vi'?'Thao tác chưa hoàn tất.':'The action could not be completed.',capabilities:async()=>({read:true,edit:true,publish:publisher,media:false}),list:async()=>({records:[structuredClone(entry)],total:1}),revisions:async()=>[],referenceOptions:async kind=>{calls.options.push(kind);return referenceOptions?referenceOptions(kind):structuredClone(options[kind]||[]);},validatePublication:async value=>{calls.validation.push(structuredClone(value));return onValidate?onValidate(value):[];},transition:async(...args)=>{calls.transitions.push(args);return onTransition?onTransition(...args):{...entry,status:args[1],version:entry.version+1};},save:async(value,input)=>{calls.saves.push({value:structuredClone(value),input});return onSave?onSave(value,input):{...value,version:value.version+1};},createReference:async(kind,value)=>{calls.creates.push({kind,value:structuredClone(value)});return onCreate?onCreate(kind,value):{id:'reference-1',kind,slug:'new-school',version:3,status:'published'};}};
  const controller=mountCms(root,{appId:'jobs',collections:[collection],language,adapter});

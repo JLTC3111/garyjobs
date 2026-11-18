@@ -6,9 +6,14 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 export async function buildGallery({ watch = false } = {}) {
   const options = {
     absWorkingDir: root,
-    entryPoints: { 'photo-gallery': 'src/react-islands.jsx' },
+    entryPoints: {
+      'photo-gallery': 'src/react-islands.jsx',
+      'feedback/action-feedback': 'src/feedback/action-feedback.tsx',
+    },
     outdir: 'dist',
     bundle: true,
+    splitting: true,
+    chunkNames: 'feedback/[name]-[hash]',
     format: 'esm',
     jsx: 'automatic',
     target: ['es2020'],

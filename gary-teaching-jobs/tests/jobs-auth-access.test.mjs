@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const candidate={id:'10000000-0000-4000-8000-000000000001',email:'candidate@example.test'};
@@ -12,6 +13,8 @@ async function portal({access,view,user=candidate,caps={},getUser,getCapabilitie
  if(access)url.searchParams.set('access',access);
  if(view)url.searchParams.set('view',view);
  const dom=new JSDOM(await readFile(new URL('../dist/portal.html',import.meta.url),'utf8'),{url:url.href,runScripts:'outside-only',pretendToBeVisual:true});
+  bindFeedbackDom(dom.window);
+
  const w=dom.window,calls={cms:0,destroy:0,applications:0,applicationOptions:[],rpc:[],users:0,signIns:[],registrations:[]};
  let currentUser=user,authListener;
  if(fastTimeout){const schedule=w.setTimeout.bind(w);w.setTimeout=(fn,delay,...args)=>schedule(fn,delay>=1000?25:delay,...args);}

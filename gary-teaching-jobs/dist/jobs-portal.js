@@ -3,7 +3,7 @@ import {db,capabilities,collections,createCmsAdapter,createStaffAdapter,STAGES,S
 import {jobsConfig} from './jobs-config.js';
 import {mountCms} from './cms-foundation/index.js';
 import {mountStaffManagement} from './jobs-staff-management.js';
-import {showActionToast} from './action-toast.js';
+import {showActionToast,setCounterValues,clearCounterValues} from './action-toast.js';
 
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
@@ -30,7 +30,7 @@ function renderChrome(){
  document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
 }
 function deadline(promise){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('portal_timeout')),12000);})]).finally(()=>clearTimeout(timer));}
-function clearWorkspace(){cms?.destroy?.({force:true});cms=null;staffPage?.destroy();staffPage=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();}
+function clearWorkspace(keepStats=false){cms?.destroy?.({force:true});cms=null;staffPage?.destroy();staffPage=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();if(!keepStats)resetRecruitmentStats();}
 function requestKey(vacancy){const key='jobs-request:'+user.id+':'+(vacancy||'general');try{let value=sessionStorage.getItem(key);if(!value){value=crypto.randomUUID();sessionStorage.setItem(key,value);}return value;}catch{return crypto.randomUUID();}}
 async function guarded(task){const g=generation;try{return await task();}catch(e){if(g===generation){status(errorText(e,language),true);if(e?.code==='42501'||[401,403].includes(e?.status))schedulePermissionRefresh(true);}throw e;}}
 function renderAuth(){
@@ -76,7 +76,7 @@ async function openStaffCollection(destination){
  await cms?.ready;
  if(await cms?.navigate?.(destination))updateCmsNavigation(cms.navigationState?.());
 }
-function setView(next){if(cms?.canLeave&&!cms.canLeave())return;generation++;clearWorkspace();view=next;const u=new URL(location.href);u.searchParams.set('view',view);u.searchParams.set('access',access);history.pushState({},'',u);currentViewUrl=u.href;void renderView().catch(e=>status(errorText(e,language),true,true));}
+function setView(next){if(cms?.canLeave&&!cms.canLeave())return;generation++;clearWorkspace(true);view=next;const u=new URL(location.href);u.searchParams.set('view',view);u.searchParams.set('access',access);history.pushState({},'',u);currentViewUrl=u.href;void renderView().catch(e=>status(errorText(e,language),true,true));}
 function setAccess(next){
  if(next===access||recovery||cms?.canLeave&&!cms.canLeave())return;
  generation++;clearWorkspace();access=next;view='';status('');const u=new URL(location.href);u.searchParams.set('access',access);u.searchParams.delete('view');if(access==='candidate'&&u.searchParams.has('vacancy'))view='apply';history.pushState({},'',u);currentViewUrl=u.href;
@@ -94,7 +94,7 @@ async function renderView(){
   const mounted=cms;await mounted.ready;if(cms===mounted&&destination!==(mounted.navigationState?.().kind||collections[0]?.kind))await mounted.navigate?.(destination);return;
  }
  if(view==='staff'){
-  staffPage=mountStaffManagement(target,{adapter:createStaffAdapter(),language,errorText,onNotice:(message,error,confirmed)=>confirmed?success(message):status(message,error)});
+  staffPage=mountStaffManagement(target,{adapter:createStaffAdapter(),language,errorText,onNotice:(message,error,confirmed)=>confirmed?success(message):error?status(message,true):showActionToast(document,message,{language,tone:'info'})});
   await staffPage.ready;return;
  }
  if(view==='apply'){await renderApplicationForm();return;}
@@ -108,9 +108,43 @@ async function renderApplicationForm(){
  const profile=unwrap(await db.from('jobs_candidates').select('*').eq('id',user.id).maybeSingle())||{};if(currentGeneration!==generation||!user)return;
  target.innerHTML=`<h1>${t('Apply with confidence','Ứng tuyển thuận tiện')}</h1><p>${esc(job?(language==='vi'?job.title_vi:job.title_en):t('General introduction to the recruitment team','Giới thiệu chung với đội ngũ tuyển dụng'))}</p><form id="persistent-application" data-vacancy="${job?.id||''}"><div class="jobs-form-grid"><label>${t('Full name','Họ và tên')}<input name="full_name" required minlength="2" maxlength="100" autocomplete="name" value="${esc(profile.full_name)}"></label><label>${t('Verified account email','Email tài khoản đã xác minh')}<input type="email" value="${esc(user.email)}" disabled></label><label>${t('Phone / WhatsApp','Điện thoại / WhatsApp')}<input name="phone" maxlength="60" value="${esc(profile.phone)}" autocomplete="tel"></label><label>${t('Current location','Nơi đang sống')}<input name="current_location" maxlength="200" value="${esc(profile.current_location)}"></label></div><label>${t('Experience, qualifications and questions','Kinh nghiệm, bằng cấp và câu hỏi')}<textarea name="message" maxlength="5000" rows="6"></textarea></label><label>${t('CV (optional): PDF or DOCX, up to 10 MB','CV (không bắt buộc): PDF hoặc DOCX, tối đa 10 MB')}<input type="file" name="cv" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><label class="consent"><input type="checkbox" name="consent" required><span>${t('I agree to this site storing my application and documents for recruitment by the Jobs team. I understand these are not shared automatically with other Gary applications.','Tôi đồng ý để trang lưu hồ sơ và tài liệu phục vụ tuyển dụng bởi đội ngũ Jobs. Hồ sơ không tự động được chia sẻ với các ứng dụng Gary khác.')}</span></label><button class="primary" type="submit">${t('Submit application','Nộp hồ sơ')}</button></form>`;
 }
+const recruitmentStats = {
+ 'jobs-stat-active':['Active vacancies','Tin đang tuyển'],
+ 'jobs-stat-applications':['Applications','Hồ sơ ứng tuyển'],
+ 'jobs-stat-candidates':['Candidates','Ứng viên'],
+ 'jobs-stat-hired':['Hired','Đã tuyển']
+};
+let recruitmentCounts={}, recruitmentGeneration=-1, recruitmentRequest=0;
+function resetRecruitmentStats(){
+ recruitmentCounts={};recruitmentGeneration=-1;recruitmentRequest++;
+ clearCounterValues(document,Object.keys(recruitmentStats));
+}
+function renderRecruitmentStats(target){
+ target.querySelector('h1').insertAdjacentHTML('afterend',`<dl class="jobs-recruitment-stats">${Object.entries(recruitmentStats).map(([id,[en,vi]])=>`<div class="jobs-record"><dt>${t(en,vi)}</dt><dd id="${id}">—</dd></div>`).join('')}</dl>`);
+ setCounterValues(document,recruitmentCounts,language);
+}
+async function loadRecruitmentStats(force=false){
+ if(view!=='applications'||!caps.recruit||!user||(!force&&recruitmentGeneration===generation))return;
+ const currentGeneration=generation,request=++recruitmentRequest;
+ const count=table=>db.from(table).select('id',{count:'exact',head:true});
+ recruitmentGeneration=generation;
+ const results=await Promise.allSettled([
+  Promise.resolve().then(()=>deadline(count('jobs_public_content').eq('kind','vacancy'))),
+  Promise.resolve().then(()=>deadline(count('jobs_applications'))),
+  Promise.resolve().then(()=>deadline(count('jobs_candidates'))),
+  Promise.resolve().then(()=>deadline(count('jobs_applications').eq('stage','hired')))
+ ]);
+ if(currentGeneration!==generation||request!==recruitmentRequest||view!=='applications'||!caps.recruit)return;
+ const ids=Object.keys(recruitmentStats);
+ for(const [index,result] of results.entries()){
+  if(result.status==='fulfilled'&&!result.value?.error&&Number.isFinite(result.value?.count))recruitmentCounts[ids[index]]=result.value.count;
+ }
+ setCounterValues(document,recruitmentCounts,language);
+}
 async function renderApplications(){
  const target=$('#workspace-view'),staff=view==='applications';
  target.innerHTML=`<h1>${staff?t('Recruitment workspace','Không gian tuyển dụng'):t('My applications','Hồ sơ của tôi')}</h1>${staff?`<form id="application-filters" class="jobs-filters"><label>${t('Role keyword','Từ khóa vị trí')}<input name="query" type="search" maxlength="80"></label><label>${t('Stage','Giai đoạn')}<select name="stage"><option value="">${t('All stages','Tất cả giai đoạn')}</option>${STAGES.map(s=>`<option value="${s}">${stageLabel(s)}</option>`).join('')}</select></label><label>${t('Assignment','Phân công')}<select name="assignee"><option value="">${t('All recruiters','Tất cả chuyên viên')}</option><option value="unassigned">${t('Unassigned','Chưa phân công')}</option>${roster.map(s=>`<option value="${s.user_id}">${esc(s.full_name)}</option>`).join('')}</select></label><button type="submit">${t('Search','Tìm kiếm')}</button></form>`:''}<div class="jobs-list" id="applications-list" aria-live="polite"></div><div class="jobs-pagination"><button data-action="previous" type="button">${t('Previous','Trước')}</button><span id="page-count"></span><button data-action="next" type="button">${t('Next','Tiếp')}</button></div><section id="application-detail"></section>`;
+ if(staff){renderRecruitmentStats(target);void loadRecruitmentStats();}
  await loadApplications();
 }
 let filterValues={},total=0;
@@ -186,22 +220,23 @@ document.addEventListener('submit',event=>{
   if(button)button.disabled=true;
   try{
    if(form.id==='auth-form'){
-    if(recovery){unwrap(await deadline(db.auth.updateUser({password:String(data.get('password'))})));recovery=false;status(t('Password saved.','Đã lưu mật khẩu.'));await authenticate();}
+    if(recovery){unwrap(await deadline(db.auth.updateUser({password:String(data.get('password'))})));recovery=false;success(t('Password saved.','Đã lưu mật khẩu.'));await authenticate();}
     else{unwrap(await deadline(db.auth.signInWithPassword({email:String(data.get('email')),password:String(data.get('password'))})));await authenticate();}
    }
    if(form.id==='persistent-application'){
     const vacancy=form.dataset.vacancy||null,cv=data.get('cv');if(cv?.size) {const {validateCv}=await import('./jobs-backend.js');validateCv(cv);}
     const r=await submitApplication({vacancyId:vacancy,profile:{full_name:data.get('full_name'),phone:data.get('phone'),current_location:data.get('current_location'),consent:data.get('consent')==='on'},message:String(data.get('message')||''),requestId:requestKey(vacancy)});
     if(actor!==user?.id)return;
+    success(t(`Application saved. Receipt: ${r.receipt_code}.`,`Đã lưu hồ sơ. Mã tiếp nhận: ${r.receipt_code}.`));
     let uploaded=true;if(cv?.size){try{await uploadCv(r,cv);}catch{uploaded=false;}}
     if(actor!==user?.id)return;
+    if(cv?.size&&uploaded)success(t('Private CV saved.','Đã lưu CV riêng tư.'));
     try{sessionStorage.removeItem('jobs-request:'+user.id+':'+(vacancy||'general'));}catch{}
     const u=new URL(location.href);u.searchParams.delete('vacancy');u.searchParams.set('view','mine');history.replaceState({},'',u);currentViewUrl=u.href;view='mine';await renderView();
-    success(t(`Application saved. Receipt: ${r.receipt_code}.`,`Đã lưu hồ sơ. Mã tiếp nhận: ${r.receipt_code}.`));
     if(!uploaded)status(t('Your CV upload failed; open your application to retry.','Tải CV thất bại; mở hồ sơ để thử lại.'),true);
    }
    if(form.id==='application-filters'){filterValues=Object.fromEntries(data);page=1;await loadApplications();}
-   if(form.id==='transition-form'){const id=selected.id,updated=await transitionApplication(id,String(data.get('stage')),String(data.get('assignee')),selected.version);if(actor!==user?.id||currentGeneration!==generation)return;if(selected?.id===id)selected=updated;status('');success(t('Stage and assignment saved.','Đã lưu giai đoạn và phân công.'));await loadApplications();if(currentGeneration===generation&&selected?.id===id)await openApplication(id,{scroll:false});}
+   if(form.id==='transition-form'){const id=selected.id,updated=await transitionApplication(id,String(data.get('stage')),String(data.get('assignee')),selected.version);if(actor!==user?.id||currentGeneration!==generation)return;if(selected?.id===id)selected=updated;status('');success(t('Stage and assignment saved.','Đã lưu giai đoạn và phân công.'));void loadRecruitmentStats(true);await loadApplications();if(currentGeneration===generation&&selected?.id===id)await openApplication(id,{scroll:false});}
    if(form.id==='note-form'){const id=selected.id,body=String(data.get('body'));unwrap(await db.from('jobs_recruitment_notes').insert({application_id:id,body}));if(actor!==user?.id||currentGeneration!==generation)return;if(form.elements.body.value===body)form.reset();status('');success(t('Private note added.','Đã thêm ghi chú riêng tư.'));await openApplication(id,{scroll:false,preserveStage:true});}
    if(form.id==='upload-cv'){const id=selected.id;await uploadCv(selected,data.get('cv'));if(actor!==user?.id||currentGeneration!==generation)return;status('');success(t('Private CV saved.','Đã lưu CV riêng tư.'));await openApplication(id,{scroll:false});}
   }finally{if(button?.isConnected)button.disabled=false;}

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountCms} from '../dist/cms-foundation/index.js';
 
 const settle = async () => { for (let index = 0; index < 16; index++) await new Promise(resolve => setImmediate(resolve)); };
@@ -11,6 +12,8 @@ const base = {id:'existing-vacancy',kind:'vacancy',slug:'existing-teacher',title
 function harness(options = {}) {
   const dom = new JSDOM('<main id="cms"></main>', {url:'https://jobs.garyhome.vn/portal.html?access=staff',pretendToBeVisual:true});
   const win = dom.window, doc = win.document, root = doc.querySelector('main');
+  bindFeedbackDom(dom.window);
+
   Object.defineProperty(win,'innerWidth',{value:1440,writable:true});
   Object.defineProperty(win,'innerHeight',{value:960,writable:true});
   win.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -101,9 +104,16 @@ test('confirmed Publish closes only the editor, refreshes the list and shows tit
 });
 
 test('a pending Publish blocks duplicate submissions and shows no success until authoritative confirmation',async () => {
-  let resolveTransition;
+  let resolveTransition, finishList, reading = false;
   const pending = new Promise(resolve => { resolveTransition = resolve; });
-  const h = harness({transition:() => pending});
+  const listPending = new Promise(resolve => { finishList = resolve; });
+  const h = harness({
+    transition: () => pending,
+    async list(_, state) {
+      if (state.entries.some(entry => entry.status === 'published')) { reading = true; await listPending; }
+      return {records: state.entries, total: state.entries.length};
+    }
+  });
   try {
     await h.open(); h.fill(); const editor = h.find('.cms-dialog'),title = h.find('[name="title_en"]');
     const publish = h.find('[data-action="publish"]'); publish.click(); publish.click(); await settle();
@@ -111,8 +121,10 @@ test('a pending Publish blocks duplicate submissions and shows no success until 
     assert.equal(editor.open,true); assert.equal(h.find('[name="title_en"]'),title); assert.equal(publish.disabled,true);
     assert.equal(h.find('[data-cms-success]')?.isConnected || false,false);
     resolveTransition({...h.state.entries[0],status:'published',version:2}); await settle();
+    assert.equal(reading, true, 'the follow-up read is still pending');
     assert.ok(h.find('[data-cms-success]')?.isConnected); assert.equal(h.find('.cms-dialog')?.open,false);
-  } finally { resolveTransition?.({...base,status:'published'}); h.close(); }
+    finishList(); await settle();
+  } finally { resolveTransition?.({...base,status:'published'}); finishList(); h.close(); }
 });
 
 test('successful publication retains existing content filters and query while updating its published status',async () => {
@@ -163,7 +175,7 @@ test('interaction pauses automatic dismissal and Escape remains available to key
   try {
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
     const success = h.find('[data-cms-success]');
-    success.dispatchEvent(new h.win.Event('pointerenter')); assert.equal(h.timers.size,0);
+    success.dispatchEvent(new h.win.MouseEvent('pointerover',{bubbles:true})); await settle(); assert.equal(h.timers.size,0);
     await h.expire(); assert.ok(success.isConnected,'an interacting editor can read or use the public link without a timeout');
     const close = success.querySelector('[data-success-close]'); close.focus();
     close.dispatchEvent(new h.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); await settle();

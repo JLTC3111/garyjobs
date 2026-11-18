@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-public-content.js';
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const init = await readFile(new URL('../dist/jobs-theme-init.js', import.meta.url), 'utf8');
@@ -10,6 +11,8 @@ const app = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8'))
 async function page({ stored = {}, dark = false } = {}) {
   const dom = new JSDOM(html, { url: 'https://jobs.garyhome.vn/', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window, query = { matches: dark, listeners: [], addEventListener(_,fn) { this.listeners.push(fn); } };
+  bindFeedbackDom(dom.window);
+
   for (const [key,value] of Object.entries(stored)) w.localStorage.setItem(key,value);
   w.matchMedia = () => query;
   w.IntersectionObserver = class { observe() {} disconnect() {} };

@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './feedback-dom.mjs';
 import {mountCms} from '../../dist/cms-foundation/index.js';
 import {mountJobsStaffSidebar} from '../../dist/jobs-staff-sidebar.js';
 import {mountStaffManagement} from '../../dist/jobs-staff-management.js';
@@ -11,6 +12,8 @@ export const collections=JSON.parse(JSON.stringify(context.value));
 export const settle=async()=>{for(let i=0;i<16;i++)await new Promise(resolve=>setImmediate(resolve));};
 export async function staffPortal({caps={read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},access='staff',view='cms',width=1440,height=960,records=[],confirm=()=>false,theme='light',staff=null}={}){
  const dom=new JSDOM(await readFile(new URL('../../dist/portal.html',import.meta.url),'utf8'),{url:`https://jobs.garyhome.vn/portal.html?access=${access}&view=${view}`,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,doc=w.document;
+  bindFeedbackDom(dom.window);
+
  Object.defineProperty(w,'innerWidth',{value:width,writable:true});Object.defineProperty(w,'innerHeight',{value:height,writable:true});doc.documentElement.dataset.jobsTheme=theme;
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=confirm;
  const calls={lists:[],saves:[],transitions:[],applications:[],uploads:[],mediaLists:0};let cms=null,rows=structuredClone(records);

@@ -286,13 +286,9 @@ export function mountCms(root, options) {
     const restoreScroll = preserveScroll(), publishedCollection = collection();
     ++editorEpoch; draft = null; baseline = ''; editorIssues = []; revisions = [];
     referenceQueries.clear(); referenceDrafts.clear(); referenceCreates.clear();
-    await closeEditorDialog();
-    announce('');
-    // List read failures are independent from the already committed publication.
-    await refresh();
-    if (disposed) return;
-    restoreEditorFocus();
+    const closing = closeEditorDialog();
     restoreScroll();
+    announce('');
     const vacancy = record.kind === 'vacancy' || publishedCollection.kind === 'vacancy';
     const title = {en: record.title_en || record.title_vi || record.slug, vi: record.title_vi || record.title_en || record.slug};
     const publicPath = publishedCollection.publicPath;
@@ -302,6 +298,12 @@ export function mountCms(root, options) {
       message: vacancy ? {en: 'Your vacancy is now published and ready for applicants.', vi: 'Tin tuyển dụng đã được đăng và sẵn sàng nhận hồ sơ.'} : {en: 'Your content is now published.', vi: 'Nội dung của bạn đã được đăng.'},
       title, href, linkLabel: vacancy ? {en: 'View vacancy', vi: 'Xem tin tuyển dụng'} : {en: 'View content', vi: 'Xem nội dung'}
     });
+    await closing;
+    if (disposed) return;
+    restoreEditorFocus();
+    // List read failures are independent from the already committed publication.
+    await refresh();
+    if (!disposed && !draft && root.ownerDocument.activeElement === root.ownerDocument.body) restoreEditorFocus();
   }
   async function mutate(operation, success, {published = false, expectedStatus} = {}) {
     if (busy || !draft) return;

@@ -28,5 +28,5 @@ export function createSuccessNotification(host, {language = () => 'en', returnFo
     });
   }
   function dismiss() { toast?.dismiss(); toast = null; }
-  return {show, setLanguage() { if (toast?.node.isConnected) toast.update(options(), text(content.message)); }, dismiss, destroy: dismiss};
+  return {show, setLanguage() { if (toast?.node?.isConnected) toast.update(options(), text(content.message)); }, dismiss, destroy: dismiss};
 }

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountCms} from '../dist/cms-foundation/index.js';
 import {emptyEntry, titleSlug, validateEntry} from '../dist/cms-foundation/content.js';
 
@@ -9,6 +10,8 @@ const vacancy={kind:'vacancy',label:{en:'Vacancies',vi:'Tin tuyển dụng'},aut
 const record={...emptyEntry('vacancy'),id:'existing-vacancy',slug:'original-job-title',title_en:'Original job title',title_vi:'Vị trí ban đầu',status:'draft',version:1};
 function harness({collection=vacancy,records=[],language='en',savedSlug}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://jobs.garyhome.vn/portal.html'}),root=dom.window.document.querySelector('main'),calls=[];
+  bindFeedbackDom(dom.window);
+
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
  dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
  dom.window.confirm=()=>true;

@@ -3,11 +3,14 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
 async function page(){
  const rows=[{id:'category',kind:'category',slug:'schools',title_en:'Schools',title_vi:'Trường học'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'job',kind:'vacancy',slug:'english-teacher',title_en:'English Teacher',title_vi:'Giáo viên tiếng Anh',summary_en:'A teaching role',summary_vi:'Công việc giảng dạy',published_at:'2026-11-16T00:00:00Z',data:{category_slug:'schools',location_slug:'hanoi',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/',runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window;
+  bindFeedbackDom(dom.window);
+
  w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
  Object.assign(w,{mountGaryApps:()=>({unmount(){}}),mountPhotoGallery:()=>({unmount(){}}),mountGlassHero:()=>({unmount(){},update(){}}),vacancyCard,vacancySlug,escapeText,safeLink,publicContent:async()=>rows});
  w.eval(await readFile(new URL('../dist/jobs-theme-init.js',import.meta.url),'utf8'));

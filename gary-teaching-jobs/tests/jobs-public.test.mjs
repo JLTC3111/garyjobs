@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
 async function publicPage(result,{url='https://jobs.garyhome.vn/'}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
- const w=dom.window;w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
+ const w=dom.window;
+  bindFeedbackDom(dom.window);
+w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
  w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());await settle();return dom;
@@ -301,4 +304,18 @@ test('direct employer, workplace and address text is escaped before reaching pub
  const data={...records[3].data,employer_name_en:'<img src=x onerror=bad()>',workplace_name:'<svg onload=bad()>',street_address:'<script>bad()</script>'};
  const card=vacancyCard({...records[3],data},0,records);
  assert.match(card.employer[0],/^&lt;img/);assert.match(card.workplace,/^&lt;svg/);assert.match(card.streetAddress,/^&lt;script&gt;/);
+});
+
+test('Undo restores the local shortlist after a confirmed bookmark change',async()=>{
+ const dom=await publicPage(records);
+ try{
+  const doc=dom.window.document,key='gary-saved-jobs';
+  const save=doc.querySelector('#job-grid [data-action="save"]'),id=save.dataset.id;
+  save.click();
+  assert.ok(JSON.parse(dom.window.localStorage.getItem(key)).includes(id));
+  assert.equal(doc.querySelector('[data-action-toast-host] .action-toast-undo').textContent,'Undo');
+  doc.querySelector('.action-toast-undo').click();
+  assert.ok(!JSON.parse(dom.window.localStorage.getItem(key)).includes(id));
+  assert.match(doc.querySelector('[data-tone="info"] [data-success-message]').textContent,/undone/);
+ }finally{dom.window.close();}
 });

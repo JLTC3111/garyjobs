@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {attachEditorWorkspace} from '../dist/editor-workspace/index.js';
 
 const markup='<dialog id="editor" open><header><h2>Listing</h2><div class="gw-editor-controls"><button id="language" type="button">VI</button><button id="close" type="button">Close</button></div></header><form><div data-gw-body><input name="title" required><textarea name="body"></textarea><input name="file" type="file"><p role="alert">Existing field error</p></div><footer data-gw-actions><button type="submit">Save</button><button type="button">Cancel</button></footer></form></dialog>';
@@ -73,6 +74,8 @@ test('unmount cancels pointer capture styles and preserves original header contr
 test('real CMS retains field errors, dirty guard and submission through maximize/resize and remembers the next vacancy',async()=>{
  const {mountCms}=await import('../dist/cms-foundation/index.js');
  const dom=new JSDOM('<main></main>',{url:'https://jobs.garyhome.vn/portal.html',pretendToBeVisual:true}),win=dom.window,root=win.document.querySelector('main');
+  bindFeedbackDom(dom.window);
+
  Object.defineProperty(win,'innerWidth',{value:1440,writable:true});Object.defineProperty(win,'innerHeight',{value:960,writable:true});
  win.HTMLDialogElement.prototype.showModal=function(){this.open=true;};win.HTMLDialogElement.prototype.close=function(){this.open=false;};win.HTMLElement.prototype.scrollIntoView=function(){};win.confirm=()=>false;
  const saved=[],collection={kind:'vacancy',label:{en:'Vacancies',vi:'Tin tuyển dụng'},automaticSlug:true,directPublish:true,publishTextFields:['title_en','body_en']};
