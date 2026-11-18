@@ -90,7 +90,7 @@ async function renderView(){
  if(view==='cms'){
   if(!caps.read){target.textContent=t('Jobs content access is not assigned to this account.','Tài khoản này chưa được cấp quyền nội dung Jobs.');return;}
   const destination=cmsNavigation==='media'?'media':cmsDestination;
-  cms=mountCms(target,{appId:'jobs',appName:'Vietnam English Teaching Jobs',language,collections,adapter:createCmsAdapter(),navigation:false,onNavigationChange:updateCmsNavigation,onNotice:(message,error)=>status(message,error)});
+  cms=mountCms(target,{appId:'jobs',appName:{en:'Vietnam English Teaching Jobs',vi:'Tuyển Dụng Dạy Tiếng Anh'},language,collections,adapter:createCmsAdapter(),navigation:false,onNavigationChange:updateCmsNavigation,onNotice:(message,error)=>status(message,error)});
   const mounted=cms;await mounted.ready;if(cms===mounted&&destination!==(mounted.navigationState?.().kind||collections[0]?.kind))await mounted.navigate?.(destination);return;
  }
  if(view==='staff'){

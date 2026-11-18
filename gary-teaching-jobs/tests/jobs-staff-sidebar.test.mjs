@@ -15,7 +15,8 @@ test('Jobs staff sidebar exposes every implemented CMS destination and permitted
   await h.click('[data-collection=media]');assert.ok(h.calls.mediaLists>0);assert.equal(navigation(h,'media').getAttribute('aria-current'),'page');
   await h.click('[data-view=applications]');assert.ok(h.calls.applications.length);assert.equal(h.doc.querySelector('[data-view=applications]').getAttribute('aria-current'),'page');
   await h.click('[data-collection=employer]');assert.equal(h.calls.lists.at(-1).kind,'employer');assert.equal(navigation(h,'employer').getAttribute('aria-current'),'page');
-  await h.click('#portal-language');assert.equal(navigation(h,'vacancy').getAttribute('aria-label'),'Tin tuyển dụng');assert.equal(h.doc.querySelector('[data-jobs-sidebar-toggle]').getAttribute('aria-label'),'Thu gọn điều hướng');
+  assert.equal(h.doc.querySelector('.jobs-sidebar-brand').textContent,'TEACHING JOBS');assert.equal(h.doc.querySelector('.cms-header .cms-eyebrow').textContent,'Vietnam English Teaching Jobs');
+  await h.click('#portal-language');assert.equal(navigation(h,'vacancy').getAttribute('aria-label'),'Tin tuyển dụng');assert.equal(h.doc.querySelector('[data-jobs-sidebar-toggle]').getAttribute('aria-label'),'Thu gọn điều hướng');assert.equal(h.doc.querySelector('.jobs-sidebar-brand').textContent,'Nền Tảng Tuyển Dụng');assert.equal(h.doc.querySelector('.cms-header .cms-eyebrow').textContent,'Tuyển Dụng Dạy Tiếng Anh');
  }finally{await h.close();}
 });
 

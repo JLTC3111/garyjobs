@@ -1,4 +1,4 @@
-const labels={en:{title:'Staff workspace',collapse:'Collapse navigation',expand:'Expand navigation',resize:'Resize staff navigation. Use left and right arrow keys.',width:'Navigation width'},vi:{title:'Không gian nhân viên',collapse:'Thu gọn điều hướng',expand:'Mở rộng điều hướng',resize:'Đổi độ rộng điều hướng nhân viên. Dùng phím mũi tên trái và phải.',width:'Độ rộng điều hướng'}};
+const labels={en:{brand:'TEACHING JOBS',title:'Staff workspace',collapse:'Collapse navigation',expand:'Expand navigation',resize:'Resize staff navigation. Use left and right arrow keys.',width:'Navigation width'},vi:{brand:'Nền Tảng Tuyển Dụng',title:'Không gian nhân viên',collapse:'Thu gọn điều hướng',expand:'Mở rộng điều hướng',resize:'Đổi độ rộng điều hướng nhân viên. Dùng phím mũi tên trái và phải.',width:'Độ rộng điều hướng'}};
 const key='gary-jobs:staff-sidebar:v1';
 const instances=new WeakMap();
 export function mountJobsStaffSidebar(doc=document){
@@ -21,7 +21,7 @@ export function mountJobsStaffSidebar(doc=document){
   if(active&&!nav.inert)nav.tabIndex=0;else nav.removeAttribute('tabindex');
   layout.style.setProperty('--jobs-sidebar-width',(collapsed||compact?68:width)+'px');sidebar.style.setProperty('--jobs-sidebar-expanded-width',width+'px');
   toggle.setAttribute('aria-expanded',String(!collapsed));toggle.setAttribute('aria-label',collapsed?copy.expand:copy.collapse);toggle.title=collapsed?copy.expand:copy.collapse;toggle.querySelector('.jobs-sidebar-toggle-label').textContent=collapsed?copy.expand:copy.collapse;
-  sidebar.querySelector('[data-jobs-sidebar-title]').textContent=copy.title;
+  sidebar.querySelector('.jobs-sidebar-brand').textContent=copy.brand;sidebar.querySelector('[data-jobs-sidebar-title]').textContent=copy.title;
   handle.hidden=!active||collapsed||compact;handle.setAttribute('aria-label',copy.resize);handle.title=copy.resize;handle.setAttribute('aria-valuemin',String(limit.min));handle.setAttribute('aria-valuemax',String(limit.max));handle.setAttribute('aria-valuenow',String(Math.round(width)));handle.setAttribute('aria-valuetext',copy.width+': '+Math.round(width)+' px');
   for(const group of sidebar.querySelectorAll('[data-jobs-nav-group]')){
    const name=group.dataset.jobsNavGroup,wanted=preferred.groups[name];
