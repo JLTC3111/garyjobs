@@ -22,7 +22,7 @@ function harness(options = {}) {
   let timerId = 90000;
   const timers = new Map(), originalSetTimeout = win.setTimeout.bind(win), originalClearTimeout = win.clearTimeout.bind(win);
   win.setTimeout = (callback,delay,...args) => {
-    if (Number(delay) === 5000) { const id = ++timerId; timers.set(id,() => callback(...args)); return id; }
+    if (Number(delay) === 4500) { const id = ++timerId; timers.set(id,() => callback(...args)); return id; }
     return originalSetTimeout(callback,delay,...args);
   };
   win.clearTimeout = id => { if (!timers.delete(id)) originalClearTimeout(id); };
@@ -84,7 +84,10 @@ test('confirmed Publish closes only the editor, refreshes the list and shows tit
     assert.equal(h.state.calls.saves.length,1); assert.equal(h.state.calls.transitions.length,1);
     assert.equal(h.find('.cms-dialog')?.open,false); assert.equal(h.cms.isDirty(),false);
     assert.ok(h.state.calls.lists.length > before,'publication refreshes without a page reload');
-    const success = h.find('[data-cms-success]'); assert.ok(success?.open);
+    const success = h.find('[data-cms-success]'); assert.ok(success?.isConnected);
+    assert.equal(success.tagName,'DIV');
+    assert.equal(success.querySelector('[role="status"]').getAttribute('aria-atomic'),'true');
+    assertManagerFocus(h);
     assert.match(success.textContent,/English teacher/); assert.match(success.textContent,/published/i);
     assert.equal(success.querySelector('a').href,'https://jobs.garyhome.vn/jobs/confirmed-public-url');
     assert.equal(success.querySelector('[data-gw-toggle],[data-gw-edge]'),null,'compact confirmation is not another resizable editor');
@@ -92,7 +95,7 @@ test('confirmed Publish closes only the editor, refreshes the list and shows tit
     assert.match(h.root.querySelector('tbody').textContent,/Published/);
     assert.ok(h.find('[data-success-close]'));
     await h.click('[data-success-close]');
-    assert.ok(!success.open || !success.isConnected); assertManagerFocus(h);
+    assert.ok(!success.isConnected); assertManagerFocus(h);
     assert.equal(h.timers.size,0,'manual dismissal cancels pending auto-dismissal');
   } finally { h.close(); }
 });
@@ -106,9 +109,9 @@ test('a pending Publish blocks duplicate submissions and shows no success until 
     const publish = h.find('[data-action="publish"]'); publish.click(); publish.click(); await settle();
     assert.equal(h.state.calls.saves.length,1); assert.equal(h.state.calls.transitions.length,1);
     assert.equal(editor.open,true); assert.equal(h.find('[name="title_en"]'),title); assert.equal(publish.disabled,true);
-    assert.equal(h.find('[data-cms-success]')?.open || false,false);
+    assert.equal(h.find('[data-cms-success]')?.isConnected || false,false);
     resolveTransition({...h.state.entries[0],status:'published',version:2}); await settle();
-    assert.ok(h.find('[data-cms-success]')?.open); assert.equal(h.find('.cms-dialog')?.open,false);
+    assert.ok(h.find('[data-cms-success]')?.isConnected); assert.equal(h.find('.cms-dialog')?.open,false);
   } finally { resolveTransition?.({...base,status:'published'}); h.close(); }
 });
 
@@ -121,34 +124,36 @@ test('successful publication retains existing content filters and query while up
     await h.click('[data-action="new"]'); h.fill(); await h.click('[data-action="publish"]');
     assert.equal(h.state.calls.lists.at(-1).status,'draft'); assert.equal(h.state.calls.lists.at(-1).query,'English');
     assert.equal(h.find('[data-cms-status]').value,'draft'); assert.equal(h.find('[data-cms-search]').value,'English');
-    assert.ok(h.find('[data-cms-success]')?.open); assert.equal(h.state.entries[0].status,'published');
+    assert.ok(h.find('[data-cms-success]')?.isConnected); assert.equal(h.state.entries[0].status,'published');
     assert.equal(h.root.querySelector('[data-action="edit"]'),null,'published records correctly leave a Draft-only view');
   } finally { h.close(); }
 });
 
-test('success confirmation translates live, dismisses after five seconds, and restores manager focus without scrolling',async () => {
+test('success toast translates live and expires after 4.5 seconds without moving focus',async () => {
   const h = harness();
   try {
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
-    assert.equal(h.timers.size,1,'the confirmation has one five-second timer');
+    assert.equal(h.timers.size,1,'the toast has one 4.5-second timer');
     h.cms.setLanguage('vi'); await settle();
-    const success = h.find('[data-cms-success]'); assert.ok(success?.open); assert.match(success.textContent,/Giáo viên tiếng Anh/);
+    const success = h.find('[data-cms-success]'); assert.ok(success?.isConnected); assert.match(success.textContent,/Giáo viên tiếng Anh/);
     assert.match(success.textContent,/Đã đăng|được đăng|tuyển dụng/i); assert.match(success.querySelector('[data-success-close]').textContent,/Đóng/);
     assert.equal(h.find('.cms-dialog')?.open,false,'language changes do not reopen a cleared editor');
-    await h.expire(); assert.ok(!success.open || !success.isConnected); assertManagerFocus(h);
+    const focused=h.doc.activeElement;
+    await h.expire(); assert.ok(!success.isConnected); assert.equal(h.doc.activeElement,focused);
   } finally { h.close(); }
 });
 
-test('Escape/native cancel dismisses success, while destroying the CMS cleans up its timer and dialog',async () => {
+test('Escape dismisses a focused toast, and destroying the CMS clears the next toast and timer',async () => {
   const h = harness();
   try {
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
     const success = h.find('[data-cms-success]');
-    const cancel = new h.win.Event('cancel',{bubbles:false,cancelable:true}); success.dispatchEvent(cancel); await settle();
-    assert.ok(!success.open || !success.isConnected); assertManagerFocus(h); assert.equal(h.timers.size,0);
+    const close=success.querySelector('[data-success-close]'); close.focus();
+    close.dispatchEvent(new h.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); await settle();
+    assert.ok(!success.isConnected); assertManagerFocus(h); assert.equal(h.timers.size,0);
     await h.click('[data-action="new"]'); h.fill(); await h.click('[data-action="publish"]');
-    const second = h.find('[data-cms-success]'); assert.ok(second?.open);
-    h.cms.destroy({force:true}); assert.equal(h.timers.size,0); assert.ok(!second.open || !second.isConnected);
+    const second = h.find('[data-cms-success]'); assert.ok(second?.isConnected);
+    h.cms.destroy({force:true}); assert.equal(h.timers.size,0); assert.ok(!second.isConnected);
     await h.expire(); assert.equal(h.root.childElementCount,0);
   } finally { h.close(); }
 });
@@ -159,10 +164,10 @@ test('interaction pauses automatic dismissal and Escape remains available to key
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
     const success = h.find('[data-cms-success]');
     success.dispatchEvent(new h.win.Event('pointerenter')); assert.equal(h.timers.size,0);
-    await h.expire(); assert.ok(success.open,'an interacting editor can read or use the public link without a timeout');
+    await h.expire(); assert.ok(success.isConnected,'an interacting editor can read or use the public link without a timeout');
     const close = success.querySelector('[data-success-close]'); close.focus();
     close.dispatchEvent(new h.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); await settle();
-    assert.ok(!success.open || !success.isConnected); assertManagerFocus(h);
+    assert.ok(!success.isConnected); assertManagerFocus(h);
   } finally { h.close(); }
 });
 
@@ -174,12 +179,12 @@ test('validation and server failures retain editor values and distinguish field 
     await h.click('[data-action="publish"]');
     assert.equal(h.state.calls.saves.length,0); assert.equal(h.state.calls.transitions.length,0);
     assert.equal(h.find('[name="title_en"]'),title); assert.ok(h.find('[data-error-for="body_en"]').textContent);
-    assert.equal(editor.open,true); assert.equal(h.find('[data-cms-success]')?.open || false,false);
+    assert.equal(editor.open,true); assert.equal(h.find('[data-cms-success]')?.isConnected || false,false);
     h.input('body_en','Complete English details'); await h.click('[data-action="publish"]');
     assert.equal(h.find('.cms-dialog').open,true); assert.equal(h.find('[name="title_en"]'),title,'server failure must retain the original input node'); assert.equal(h.find('[name="title_en"]').value,'Unsaved English role');
     assert.equal(h.find('[name="title_vi"]').value,'Bản dịch vẫn được giữ'); assert.equal(h.find('[name="body_en"]').value,'Complete English details');
     assert.match(h.find('[data-editor-notice]').textContent,/Server unavailable/); assert.equal(h.find('[data-editor-notice]').getAttribute('role'),'alert');
-    assert.equal(h.find('[data-cms-success]')?.open || false,false);
+    assert.equal(h.find('[data-cms-success]')?.isConnected || false,false);
   } finally { h.close(); }
 });
 
@@ -196,7 +201,7 @@ test('save-success/publish-failure retains saved identity and retries without cr
     await h.click('[data-action="publish"]');
     assert.equal(h.state.entries.length,1); assert.equal(h.state.calls.saves.length,1,'retry reuses already saved draft');
     assert.equal(h.state.calls.transitions[1].id,saved.id); assert.equal(h.state.calls.transitions[1].input.expectedVersion,saved.version);
-    assert.ok(h.find('[data-cms-success]')?.open); assert.equal(h.state.entries[0].status,'published');
+    assert.ok(h.find('[data-cms-success]')?.isConnected); assert.equal(h.state.entries[0].status,'published');
   } finally { h.close(); }
 });
 
@@ -206,11 +211,11 @@ test('an authoritative response without published status does not close the edit
   try {
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
     assert.equal(h.find('.cms-dialog').open,true); assert.equal(h.find('[name="title_en"]').value,'English teacher');
-    assert.equal(h.find('[data-cms-success]')?.open || false,false); assert.ok(h.find('[data-editor-notice]').textContent);
+    assert.equal(h.find('[data-cms-success]')?.isConnected || false,false); assert.ok(h.find('[data-editor-notice]').textContent);
     const savedId = h.state.calls.transitions[0].id;
     await h.click('[data-action="publish"]');
     assert.equal(h.state.calls.saves.length,1,'an unconfirmed response must still preserve the already committed save identity');
-    assert.equal(h.state.calls.transitions[1].id,savedId); assert.equal(h.state.entries.length,1); assert.ok(h.find('[data-cms-success]')?.open);
+    assert.equal(h.state.calls.transitions[1].id,savedId); assert.equal(h.state.entries.length,1); assert.ok(h.find('[data-cms-success]')?.isConnected);
   } finally { h.close(); }
 });
 
@@ -222,7 +227,7 @@ test('a list/history read failure after committed publication cannot undo the su
   try {
     await h.open(); h.fill(); await h.click('[data-action="publish"]');
     assert.equal(h.state.entries[0].status,'published'); assert.equal(h.cms.isDirty(),false);
-    assert.equal(h.find('.cms-dialog')?.open,false); assert.ok(h.find('[data-cms-success]')?.open);
+    assert.equal(h.find('.cms-dialog')?.open,false); assert.ok(h.find('[data-cms-success]')?.isConnected);
     assert.equal(h.find('[data-editor-notice]'),null); assert.equal(h.state.calls.transitions.length,1);
   } finally { h.close(); }
 });
@@ -234,7 +239,7 @@ test('Save draft and Archive remain separate state transitions instead of trigge
     h.find('[data-cms-editor]').dispatchEvent(new h.win.Event('submit',{bubbles:true,cancelable:true})); await settle();
     assert.equal(h.state.calls.saves.length,1); assert.equal(h.state.calls.transitions.length,0);
     assert.equal(h.state.entries[0].status,'draft'); assert.equal(h.find('.cms-dialog').open,true); assert.equal(h.cms.isDirty(),false);
-    assert.equal(h.find('[data-cms-success]')?.open || false,false);
+    assert.equal(h.find('[data-cms-success]')?.isConnected || false,false);
     await h.click('[data-action="archive"]');
     assert.equal(h.state.calls.transitions.length,1); assert.equal(h.state.calls.transitions[0].status,'archived');
     assert.equal(h.state.entries[0].status,'archived'); assert.doesNotMatch(h.find('[data-cms-success]')?.textContent || '',/Vacancy published!/);

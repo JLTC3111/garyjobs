@@ -161,7 +161,7 @@ test('end-to-end: editing a published vacancy preserves its public snapshot unti
     await h.click('new');h.fill();await h.click('publish');
     await until(async()=>(await h.one("select count(*)::int n from public.jobs_public_content where kind='vacancy'")).n===1,h.root.querySelector('dialog').textContent);
     const before=await h.one("select * from public.jobs_public_content where kind='vacancy'");
-    await until(()=>h.dom.window.document.querySelector('[data-cms-success]')?.open,'Publication should close the editor and show confirmation');
+    await until(()=>h.dom.window.document.querySelector('[data-cms-success]')?.isConnected,'Publication should close the editor and show confirmation');
     assert.equal(h.root.querySelector('.cms-dialog').open,false);assert.equal(h.controller.isDirty(),false);
     h.dom.window.document.querySelector('[data-success-close]').click();await settle();
     await h.click('edit');

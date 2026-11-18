@@ -1,20 +1,28 @@
-.gary-cms.cms-success-dialog{color:var(--cms-ink,#18384b);background:var(--cms-surface,#fff);border:1px solid var(--cms-line,#d9e3e6);border-radius:20px;padding:clamp(24px,5vw,40px);width:min(540px,calc(100vw - 32px));max-width:540px;max-height:calc(100dvh - 32px);margin:auto;overflow:auto;box-shadow:0 24px 90px #0005;text-align:center;overscroll-behavior:contain}
-.cms-success-dialog::backdrop{background:var(--cms-backdrop,#10283e88)}
-.cms-success-icon{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 18px;border-radius:50%;background:var(--cms-success-bg,#e4f4eb);color:var(--cms-success,#1e6541)}
-.cms-success-icon svg{width:40px;height:40px;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-.gary-cms.cms-success-dialog h2{font-size:clamp(24px,5vw,30px);line-height:1.2;margin:0 0 14px}
-.cms-success-dialog p{color:var(--cms-muted,#526978);margin:10px 0;overflow-wrap:anywhere}
-.cms-success-dialog .cms-success-title{font-weight:650;color:var(--cms-ink,#18384b);margin-bottom:22px}
-.cms-success-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:20px 0}
-.cms-success-actions a,.gary-cms .cms-success-actions button{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;border-radius:30px;padding:11px 20px;font:inherit;text-decoration:none}
-/* Beat the portal link color so action text stays the paired ink, including dark text on the light action fill. */
-.gary-cms.cms-success-dialog .cms-success-actions a,
-.gary-cms.cms-success-dialog .cms-success-actions a:link,
-.gary-cms.cms-success-dialog .cms-success-actions a:visited,
-.gary-cms.cms-success-dialog .cms-success-actions a:hover,
-.gary-cms.cms-success-dialog .cms-success-actions a:focus{background:var(--cms-action,#18384b);color:var(--cms-action-ink,#fff);border:1px solid transparent}
-.gary-cms.cms-success-dialog .cms-success-actions button{color:var(--cms-ink,#18384b);background:var(--cms-surface,#fff);border-color:var(--cms-line,#d9e3e6)}
-.cms-success-actions svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.cms-success-dialog [data-success-timer]{display:block;font-size:13px;color:var(--cms-muted,#526978)}
-.cms-success-dialog [hidden]{display:none!important}
-@media(max-width:480px){.cms-success-actions>*{width:100%}.gary-cms.cms-success-dialog{border-radius:16px}}
+
+.action-toast {
+  position: fixed; inset: auto 12px calc(84px + env(safe-area-inset-bottom)) 12px; z-index: 100;
+  box-sizing: border-box; width: min(440px, calc(100% - 24px)); max-height: 50dvh; overflow: auto; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 10px 12px 10px 16px; border: 1px solid var(--toast-accent); border-radius: 12px;
+  background: var(--toast-surface); color: var(--toast-ink); box-shadow: 0 8px 28px #0003;
+  font-size: 14px; line-height: 1.45; text-align: start; overflow-wrap: anywhere;
+  animation: action-toast-in 200ms ease-out;
+}
+.action-toast [data-success-heading], .action-toast [data-success-title] { display: block; font-weight: 650; }
+.action-toast [data-success-link]:not([hidden]) { display: inline-block; margin-top: 4px; color: inherit; text-decoration: underline; }
+.action-toast [data-success-close] {
+  min-height: 44px; padding: 6px 10px; border: 1px solid currentColor; border-radius: 8px;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.action-toast :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.action-toast :hover:is(button, a) { text-decoration: underline; }
+@keyframes action-toast-in { from { opacity: 0; translate: 0 5px; } }
+@media (prefers-reduced-motion: reduce) { .action-toast { animation: none; } }
+
+.action-toast {
+  --toast-accent: var(--jobs-success, #1e6541);
+  --toast-surface: var(--jobs-success-bg, #e4f4eb);
+  --toast-ink: var(--jobs-portal-ink, #18384b);
+}
+.action-toast[data-tone="warning"] { --toast-accent: var(--jobs-warning); --toast-surface: var(--jobs-warning-bg); }
+.action-toast[data-tone="error"] { --toast-accent: var(--jobs-error); --toast-surface: var(--jobs-error-bg); }

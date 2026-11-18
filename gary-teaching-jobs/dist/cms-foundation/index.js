@@ -1,4 +1,5 @@
 import { attachEditorWorkspace } from '../editor-workspace/index.js';
+import { showActionToast } from '../action-toast.js';
 import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
 import { cmsText, validationText } from './copy.js';
 import { localizeFinding } from './seo-findings.js';
@@ -43,7 +44,10 @@ export function mountCms(root, options) {
     notice = text; noticeKind = failed ? 'alert' : 'status';
     const target = root.querySelector('[data-cms-notice]');
     if (target) { target.textContent = text; target.setAttribute('role', noticeKind); }
-    options.onNotice?.(text);
+    options.onNotice?.(text, failed);
+  }
+  function confirmAction(message) {
+    if (!disposed) showActionToast(root.ownerDocument, message, {language});
   }
   function canLeave() { return !dirty() || root.ownerDocument.defaultView.confirm(t('discard')); }
   const navigationState = () => ({kind, view, capabilities: {...capabilities}});
@@ -106,7 +110,7 @@ export function mountCms(root, options) {
     const options = `${unmatched ? `<option value="${escape(value)}" selected disabled>${escape(t('referenceExisting'))}: ${escape(value)}</option>` : ''}${selected && !matching.includes(selected) ? option(selected) : ''}${matching.map(option).join('')}`;
     const hint = loading ? t('referenceLoading') : failed ? t('referenceFailed') : !choices.some(item => item.published) ? t('referenceEmpty') : !matching.length ? t('referenceNoMatch') : unmatched ? t('referenceUnmatched') : '';
     const issue = editorIssues.find(item => item.field === key);
-    return `<div class="cms-field cms-reference" data-reference-field="${escape(key)}"><label for="${controlId}">${escape(text)}${extra.required ? ` <small>(${t('required')})</small>` : ''}</label><label class="cms-sr" for="${controlId}-search">${t('referenceSearch')}: ${escape(text)}</label><input id="${controlId}-search" type="search" data-reference-search="${escape(key)}" value="${escape(search)}" placeholder="${t('referenceSearch')}" aria-controls="${controlId}"${disabled(!capabilities.edit || busy || !!create?.pending)}><select id="${controlId}" name="${escape(key)}" data-field="${escape(key)}" aria-describedby="${controlId}-hint ${controlId}-error"${issue ? ' aria-invalid="true"' : ''}${disabled(off)}><option value="">${loading ? t('referenceLoading') : t('referenceChoose')}</option>${options}</select><small id="${controlId}-hint" data-reference-hint role="status">${escape(hint)}</small><small id="${controlId}-error" class="cms-field-error" data-error-for="${escape(key)}" aria-live="polite">${issue ? escape(validationText(issue, language)) : ''}</small>${button('reference-refresh', t('referenceRefresh'), `data-field-key="${escape(key)}"`, loading || !!create?.pending)}${canCreate ? `<details data-reference-create="${escape(key)}"${inline.open || create?.errorKey || create?.errorCause || create?.partialRecord || create?.pending ? ' open' : ''}><summary>${t('referenceCreate')}: ${escape(text)}</summary><p class="cms-hint">${t('referenceCreateIntro')}</p><div class="cms-language-columns">${LOCALES.map(locale => `<section lang="${locale}"><h4>${locale === 'en' ? 'English' : 'Tiếng Việt'}</h4>${['title', 'summary'].map(field => { const name = `${field}_${locale}`, inputId = `${controlId}-create-${name}`; return `<label class="cms-field" for="${inputId}"><span>${t(field)} <small>(${t('required')}, ${field === 'title' ? '3' : '10'}+)</small></span>${field === 'title' ? `<input id="${inputId}" type="text"` : `<textarea id="${inputId}" rows="3"`} data-reference-create-key="${escape(key)}" data-reference-create-field="${name}" minlength="${field === 'title' ? 3 : 10}" maxlength="${field === 'title' ? 200 : 2000}"${disabled(busy || !!create?.pending)}>${field === 'title' ? '' : escape(inline[name] || '')}${field === 'title' ? '' : '</textarea>'}</label>`; }).join('')}</section>`).join('')}</div>${create?.partialRecord ? `<p class="cms-alert" role="status">${t('referencePartial')}</p>` : ''}<p data-reference-create-notice role="${createError ? 'alert' : 'status'}">${escape(createError || (create?.created ? t('referenceCreated') : ''))}</p>${button('reference-create', create?.pending ? t('referenceCreating') : t('referenceCreateAction'), `data-field-key="${escape(key)}"`, !!create?.pending)}</details>` : ''}</div>`;
+    return `<div class="cms-field cms-reference" data-reference-field="${escape(key)}"><label for="${controlId}">${escape(text)}${extra.required ? ` <small>(${t('required')})</small>` : ''}</label><label class="cms-sr" for="${controlId}-search">${t('referenceSearch')}: ${escape(text)}</label><input id="${controlId}-search" type="search" data-reference-search="${escape(key)}" value="${escape(search)}" placeholder="${t('referenceSearch')}" aria-controls="${controlId}"${disabled(!capabilities.edit || busy || !!create?.pending)}><select id="${controlId}" name="${escape(key)}" data-field="${escape(key)}" aria-describedby="${controlId}-hint ${controlId}-error"${issue ? ' aria-invalid="true"' : ''}${disabled(off)}><option value="">${loading ? t('referenceLoading') : t('referenceChoose')}</option>${options}</select><small id="${controlId}-hint" data-reference-hint role="status">${escape(hint)}</small><small id="${controlId}-error" class="cms-field-error" data-error-for="${escape(key)}" aria-live="polite">${issue ? escape(validationText(issue, language)) : ''}</small>${button('reference-refresh', t('referenceRefresh'), `data-field-key="${escape(key)}"`, loading || !!create?.pending)}${canCreate ? `<details data-reference-create="${escape(key)}"${inline.open || create?.errorKey || create?.errorCause || create?.partialRecord || create?.pending ? ' open' : ''}><summary>${t('referenceCreate')}: ${escape(text)}</summary><p class="cms-hint">${t('referenceCreateIntro')}</p><div class="cms-language-columns">${LOCALES.map(locale => `<section lang="${locale}"><h4>${locale === 'en' ? 'English' : 'Tiếng Việt'}</h4>${['title', 'summary'].map(field => { const name = `${field}_${locale}`, inputId = `${controlId}-create-${name}`; return `<label class="cms-field" for="${inputId}"><span>${t(field)} <small>(${t('required')}, ${field === 'title' ? '3' : '10'}+)</small></span>${field === 'title' ? `<input id="${inputId}" type="text"` : `<textarea id="${inputId}" rows="3"`} data-reference-create-key="${escape(key)}" data-reference-create-field="${name}" minlength="${field === 'title' ? 3 : 10}" maxlength="${field === 'title' ? 200 : 2000}"${disabled(busy || !!create?.pending)}>${field === 'title' ? '' : escape(inline[name] || '')}${field === 'title' ? '' : '</textarea>'}</label>`; }).join('')}</section>`).join('')}</div>${create?.partialRecord ? `<p class="cms-alert" role="status">${t('referencePartial')}</p>` : ''}<p data-reference-create-notice role="alert">${escape(createError)}</p>${button('reference-create', create?.pending ? t('referenceCreating') : t('referenceCreateAction'), `data-field-key="${escape(key)}"`, !!create?.pending)}</details>` : ''}</div>`;
   }
   function renderReference(key) {
     if (!draft || disposed) return;
@@ -161,16 +165,18 @@ export function mountCms(root, options) {
       [...root.querySelectorAll('[data-reference-create-field]')].find(item => item.dataset.referenceCreateKey === key && item.dataset.referenceCreateField === missing)?.focus(); return;
     }
     const previous = referenceCreates.get(key), token = editorEpoch;
-    referenceCreates.set(key, {...previous, pending: true, errorKey: null, errorCause: null, created: false}); renderReference(key);
+    referenceCreates.set(key, {...previous, pending: true, errorKey: null, errorCause: null}); renderReference(key);
     try {
       const next = await adapter.createReference(field.referenceKind, {...record, ...(previous?.partialRecord ? {id: previous.partialRecord.id, version: previous.partialRecord.version} : {})});
       if (disposed || token !== editorEpoch || !draft) return;
       if (!next?.slug || next.status !== 'published') throw Object.assign(new Error('Reference was not published'), {partialRecord: next});
-      referenceDrafts.delete(key); referenceCreates.set(key, {created: true});
+      referenceDrafts.delete(key);
+      confirmAction(t('referenceCreated'));
       await loadReference(field.referenceKind, true);
       if (disposed || token !== editorEpoch || !draft) return;
+      referenceCreates.delete(key);
       setValue(draft, key, next.slug); editorIssues = editorIssues.filter(issue => issue.field !== key); renderReference(key); updateEditorChecks(); renderIssueSummary();
-      [...root.querySelectorAll('[data-field]')].find(item => item.dataset.field === key)?.focus();
+      [...root.querySelectorAll('[data-field]')].find(item => item.dataset.field === key)?.focus({preventScroll: true});
     } catch (error) {
       if (disposed || token !== editorEpoch || !draft) return;
       referenceCreates.set(key, {errorCause: error, partialRecord: error.partialRecord || previous?.partialRecord}); renderReference(key);
@@ -190,12 +196,16 @@ export function mountCms(root, options) {
   function editor({focus = false} = {}) {
     const dialog = root.querySelector('.cms-dialog');
     if (!dialog || !draft) return;
+    const scrollTop = dialog.querySelector('[data-gw-body]')?.scrollTop || 0;
+    const expanded = [...dialog.querySelectorAll('details')].map(details => details.open);
     const extraFields = fieldsFor(collection());
     const textRequired = key => collection().publishTextFields?.includes(key);
     const textOptional = key => !!collection().publishTextFields && !textRequired(key);
     dialog.innerHTML = `<header><div><p class="cms-eyebrow">${escape(label(collection().label))}</p><h2 id="${id}-editor-heading">${escape(draft.id ? t('edit') : t('add'))}</h2></div>${button('close', t('close'))}</header><form data-cms-editor novalidate><div class="cms-editor-body gw-editor-body" data-gw-body><div data-editor-errors></div><div class="cms-editor-meta">${collection().automaticSlug ? '<p class="cms-hint" data-cms-auto-url></p>' : field('slug', t('slug'))}<p><span class="cms-badge cms-badge-${escape(draft.status)}">${t(draft.status)}</span> · <span data-cms-dirty>${t('clean')}</span></p></div><p class="cms-hint">${t(collection().directPublish ? 'vacancyHint' : 'snapshot')}</p><div class="cms-language-columns">${LOCALES.map(locale => `<section lang="${locale}" aria-label="${locale === 'en' ? 'English' : 'Tiếng Việt'}"><h3>${locale === 'en' ? 'English' : 'Tiếng Việt'}</h3>${field(`title_${locale}`, t('title'), 'text', { locale, required: textRequired(`title_${locale}`), optional: textOptional(`title_${locale}`) })}${field(`summary_${locale}`, t('summary'), 'textarea', { locale, required: textRequired(`summary_${locale}`), optional: textOptional(`summary_${locale}`) })}${field(`body_${locale}`, t('body'), 'textarea', { locale, required: textRequired(`body_${locale}`), optional: textOptional(`body_${locale}`) })}${extraFields.filter(item => item.locale === locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details><summary>${t('seo')}</summary>${field(`seo_title_${locale}`, t('seoTitle'), 'text', { locale })}${field(`seo_description_${locale}`, t('seoDescription'), 'textarea', { locale })}</details></section>`).join('')}</div>${extraFields.filter(item => !item.locale).map(item => field(item.key, label(item.label), item.type, item)).join('')}<details class="cms-seo"><summary>${t('seo')}</summary><p class="cms-hint">${t('advisory')}</p><div data-cms-checks></div></details><details class="cms-preview"><summary>${t('preview')}</summary><div class="cms-language-columns" data-cms-preview></div></details><details data-cms-revisions><summary>${t('revision')}</summary><div data-cms-history><p>${t('loadingRevisions')}</p></div></details><p class="cms-dialog-notice" data-editor-notice role="status" aria-live="polite"></p></div><footer class="cms-editor-actions gw-editor-actions" data-gw-actions>${capabilities.edit ? `<button type="submit" class="cms-primary"${disabled(busy)}>${t('save')}</button>${!collection().directPublish || !capabilities.publish ? button('review', t('submit'), '', !draft.id) : ''}` : ''}${capabilities.publish ? `${button('publish', t('publish'), '', !collection().directPublish && (!draft.id || draft.status !== 'review'))}${button('archive', t('archive'), '', !draft.id || draft.status === 'archived')}` : ''}${button('close', t('cancel'))}</footer></form>`;
     if (!editorWorkspace) editorWorkspace = attachEditorWorkspace(dialog, {key: `${options.appId || 'content'}:cms:${kind}`, language: () => language});
     editorWorkspace.refresh();
+    dialog.querySelectorAll('details').forEach((details, index) => { if (expanded[index]) details.open = true; });
+    dialog.querySelector('[data-gw-body]').scrollTop = scrollTop;
     for (const control of dialog.querySelectorAll('input[data-reference-create-field]')) control.value = referenceDrafts.get(control.dataset.referenceCreateKey)?.[control.dataset.referenceCreateField] || '';
     updateEditorChecks(); renderHistory(); showIssues(editorIssues, {focus: false});
     if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); } else dialog.setAttribute('open', '');
@@ -281,6 +291,7 @@ export function mountCms(root, options) {
     // List read failures are independent from the already committed publication.
     await refresh();
     if (disposed) return;
+    restoreEditorFocus();
     restoreScroll();
     const vacancy = record.kind === 'vacancy' || publishedCollection.kind === 'vacancy';
     const title = {en: record.title_en || record.title_vi || record.slug, vi: record.title_vi || record.title_en || record.slug};
@@ -291,7 +302,6 @@ export function mountCms(root, options) {
       message: vacancy ? {en: 'Your vacancy is now published and ready for applicants.', vi: 'Tin tuyển dụng đã được đăng và sẵn sàng nhận hồ sơ.'} : {en: 'Your content is now published.', vi: 'Nội dung của bạn đã được đăng.'},
       title, href, linkLabel: vacancy ? {en: 'View vacancy', vi: 'Xem tin tuyển dụng'} : {en: 'View content', vi: 'Xem nội dung'}
     });
-    restoreScroll();
   }
   async function mutate(operation, success, {published = false, expectedStatus} = {}) {
     if (busy || !draft) return;
@@ -307,7 +317,7 @@ export function mountCms(root, options) {
       if (expectedStatus && next.status !== expectedStatus) throw Object.assign(new Error('Requested content status was not confirmed'), {partialRecord: next});
       if (published) { await publicationComplete(next); return; }
       draft = structuredClone(next); draft.data ||= {}; baseline = JSON.stringify(draft); editorIssues = [];
-      announce(success); busy = false; editor(); editorNotice(success, false);
+      announce(''); busy = false; editor(); confirmAction(success);
       if (adapter.revisions) { const selected = draft.id; try { const result = await adapter.revisions(selected); if (!disposed && draft?.id === selected) { revisions = Array.isArray(result) ? result : result.records || []; renderHistory(); } } catch { /* A history read cannot undo a committed save. */ } }
     } catch (error) { if (!disposed) {
       if (error.partialRecord?.id && draft) {
@@ -317,7 +327,7 @@ export function mountCms(root, options) {
         draft = {...draft, id: saved.id, version: saved.version, slug: saved.slug, status: saved.status, updated_at: saved.updated_at, published_at: saved.published_at};
         baseline = JSON.stringify(saved); updateEditorChecks();
       }
-      failedIssues = Array.isArray(error.issues) ? error.issues : null; failureMessage = errorText(error); editorNotice(failureMessage); options.onNotice?.(failureMessage);
+      failedIssues = Array.isArray(error.issues) ? error.issues : null; failureMessage = errorText(error); editorNotice(failureMessage); options.onNotice?.(failureMessage, true);
     } }
     finally { if (!disposed) {
       busy = false;
@@ -419,7 +429,7 @@ export function mountCms(root, options) {
       if (!file || file.size <= 0 || file.size > mediaPolicy.maxBytes || !mediaPolicy.mimeTypes.includes(file.type)) { announce(t('invalid') + ' ' + `${Math.round(mediaPolicy.maxBytes / 1024 / 1024)} MB`, true); return; }
       if (file.type.startsWith('image/') && (!form.elements.alt_en.value.trim() || !form.elements.alt_vi.value.trim())) { announce(t('altHint'), true); return; }
       busy = true; form.querySelector('button').disabled = true;
-      try { await adapter.uploadMedia(file, { alt_en: form.elements.alt_en.value.trim(), alt_vi: form.elements.alt_vi.value.trim() }); announce(t('mediaSaved')); }
+      try { await adapter.uploadMedia(file, { alt_en: form.elements.alt_en.value.trim(), alt_vi: form.elements.alt_vi.value.trim() }); announce(''); confirmAction(t('mediaSaved')); }
       catch (error) { announce(errorText(error), true); }
       finally { busy = false; await refresh(); }
     }

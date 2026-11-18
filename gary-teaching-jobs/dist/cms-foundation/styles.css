@@ -21,7 +21,6 @@
 .gary-cms .cms-reference h4{margin:16px 0 8px;font-size:16px}
 .gary-cms .cms-reference [data-reference-create-notice]:empty{display:none}
 .gary-cms .cms-reference [data-reference-create-notice][role=alert]{color:var(--cms-accent);padding:10px 0;overflow-wrap:anywhere}
-.gary-cms .cms-reference [data-reference-create-notice][role=status]{color:var(--cms-success);padding:10px 0}
 .gary-cms .cms-validation-summary{border:1px solid var(--cms-error);border-left:4px solid var(--cms-accent);border-radius:8px;background:var(--cms-error-bg);padding:16px;margin-bottom:20px;color:var(--cms-ink)}
 .gary-cms .cms-validation-summary ul{margin:8px 0 0;padding-left:20px}
 .gary-cms .cms-validation-summary button{background:transparent;border:0;border-radius:4px;min-height:44px;text-align:left;padding:6px 0;color:var(--cms-accent);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere;width:100%}

@@ -66,7 +66,7 @@
 
 .gw-editor { --gary-layout-time: var(--gary-motion-open); }
 .gw-editor:is(.gw-resizing, .gw-mobile) { --gary-layout-time: 0ms; }
-:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog) {
+:is(dialog#detail-dialog, dialog.cms-dialog) {
   --gary-dialog-time: var(--gary-motion-close);
   --gary-dialog-ease: var(--gary-motion-in);
   opacity: 0;
@@ -78,27 +78,27 @@
   transition-timing-function: var(--gary-dialog-ease);
   transition-behavior: allow-discrete;
 }
-:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting]) {
+:is(dialog#detail-dialog, dialog.cms-dialog)[open]:not([data-ui-exiting]) {
   --gary-dialog-time: var(--gary-motion-open);
   --gary-dialog-ease: var(--gary-motion-out);
   opacity: 1;
   translate: 0 0;
 }
-:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog):is(:not([open]), [data-ui-exiting]) { pointer-events: none; }
-:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)::backdrop {
+:is(dialog#detail-dialog, dialog.cms-dialog):is(:not([open]), [data-ui-exiting]) { pointer-events: none; }
+:is(dialog#detail-dialog, dialog.cms-dialog)::backdrop {
   opacity: 0;
   transition: opacity var(--gary-motion-close, 180ms) ease-in;
 }
-:is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting])::backdrop {
+:is(dialog#detail-dialog, dialog.cms-dialog)[open]:not([data-ui-exiting])::backdrop {
   opacity: 1;
   transition: opacity var(--gary-motion-open, 240ms) ease-out;
 }
 @starting-style {
-  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting]) { opacity: 0; translate: 0 7px; }
-  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)[open]:not([data-ui-exiting])::backdrop { opacity: 0; }
+  :is(dialog#detail-dialog, dialog.cms-dialog)[open]:not([data-ui-exiting]) { opacity: 0; translate: 0 7px; }
+  :is(dialog#detail-dialog, dialog.cms-dialog)[open]:not([data-ui-exiting])::backdrop { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(dialog#detail-dialog, dialog.cms-dialog, dialog.cms-success-dialog)::backdrop { transition: none; }
+  :is(dialog#detail-dialog, dialog.cms-dialog)::backdrop { transition: none; }
 }
 
 .jobs-staff-active .jobs-staff-layout {

@@ -82,7 +82,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 <section class="jobs-staff-panel jobs-staff-directory" aria-labelledby="jobs-staff-directory-title"><header><div><h2 id="jobs-staff-directory-title">${esc(c.directoryTitle)}</h2><p class="jobs-meta">${esc(c.count(data.members.length))}</p></div><button type="button" data-staff-action="refresh" data-focus="refresh">${esc(c.refresh)}</button></header><div class="jobs-staff-list" aria-busy="${loading}">${list}</div></section>
 <section class="jobs-staff-panel jobs-staff-history" aria-labelledby="jobs-staff-history-title"><h2 id="jobs-staff-history-title">${esc(c.historyTitle)}</h2><p class="jobs-meta">${esc(c.historyNote)}</p>${data.events.length?`<ol>${data.events.map(eventMarkup).join('')}</ol>`:`<p class="jobs-empty">${esc(c.historyEmpty)}</p>`}</section></section>`;
   for(const button of root.querySelectorAll('button'))button.disabled=busy;
-  if(focus)[...root.querySelectorAll('[data-focus]')].find(element=>element.dataset.focus===focus)?.focus();
+  if(focus)[...root.querySelectorAll('[data-focus]')].find(element=>element.dataset.focus===focus)?.focus({preventScroll:true});
  }
  async function load(){
   const current=++request;loading=true;loadError='';render();
@@ -102,7 +102,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(!form.reportValidity())return;
   const c=copy(),email=form.elements.email.value.trim(),role=form.elements.role.value,display_name=form.elements.display_name.value.trim();
   if(role==='admin'&&!ask(c.confirmAdmin(email,c.roles.none,c.roles.admin)))return;
-  return run(async()=>{await adapter.assign({email,role,display_name});draft=emptyDraft();onNotice(c.assigned(email));});
+  return run(async()=>{await adapter.assign({email,role,display_name});if(!disposed){draft=emptyDraft();onNotice(c.assigned(email),false,true);}});
  }
  function update(form){
   const c=copy(),member=data.members.find(item=>item.user_id===form.dataset.userId);if(!member)return;
@@ -111,7 +111,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(access==='none'&&member.active&&!ask(c.confirmSuspend(member.email)))return;
   if(access!=='none'&&access!==current&&(access==='admin'||current==='admin')&&!ask(c.confirmAdmin(member.email,c.roles[current],c.roles[access])))return;
   const active=access!=='none';
-  return run(async()=>{await adapter.update({user_id:member.user_id,role:active?access:member.role,active,display_name,version:member.version});onNotice(c.updated(member.email));});
+  return run(async()=>{await adapter.update({user_id:member.user_id,role:active?access:member.role,active,display_name,version:member.version});if(!disposed)onNotice(c.updated(member.email),false,true);});
  }
  function submitted(event){
   const form=event.target.closest?.('[data-staff-form]');if(!form||!root.contains(form))return;

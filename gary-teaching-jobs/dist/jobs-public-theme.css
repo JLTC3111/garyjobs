@@ -196,6 +196,18 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .support-site-link { color:var(--jobs-support-link); }
 .jobs-public .support-card-main:focus-visible,.jobs-public .support-site-link:focus-visible { outline:3px solid var(--jobs-focus);outline-offset:5px; }
 .jobs-public .support-card-main:is(:hover,:focus-visible) .support-cta,.jobs-public .support-site-link:hover { text-decoration-color:currentColor;text-decoration-line:underline;text-underline-offset:4px; }
+@media (max-width: 720px) {
+  .jobs-public .support-grid { gap: 12px; }
+  .jobs-public .support-grid > .support-card { padding: 18px 16px; }
+  .jobs-public .support-card .support-icon { margin-bottom: 12px; }
+  .jobs-public .support-card h3 { font-size: 18px; margin-bottom: 7px; }
+  .jobs-public .support-card p { font-size: clamp(13px, 3.5vw, 14px); line-height: 1.65; margin-bottom: 12px; }
+  .jobs-public .support-card .support-cta {
+    gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 6px;
+    background: var(--jobs-action); color: var(--jobs-action-ink);
+  }
+  .jobs-public .support-card .support-site-link { margin-top: 10px; font-size: 13px; }
+}
 .jobs-public .floating-contact { background:var(--jobs-contact-bg);color:var(--jobs-contact-ink);border-color:var(--jobs-contact-line);min-height:44px;min-width:44px;box-shadow:var(--jobs-contact-shadow); }
 .jobs-public .floating-contact:hover { background:var(--jobs-contact-hover);color:var(--jobs-contact-ink);border-color:var(--jobs-contact-hover-line);transform:translateY(var(--jobs-contact-hover-lift));box-shadow:var(--jobs-contact-hover-shadow); }
 .jobs-public .floating-contact:active { background:var(--jobs-contact-pressed);transform:translateY(0);box-shadow:inset 0 2px 5px #00000026; }

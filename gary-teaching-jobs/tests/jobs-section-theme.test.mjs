@@ -276,9 +276,11 @@ const LIGHT_BASELINE = {
   }
 };
 
-test('section and floating-control light colors remain the pre-audit presentation', async () => {
+const MOBILE_LIGHT = {...LIGHT_BASELINE, '.support-cta': {ink: '255,255,255', surface: ['8,61,145']}};
+
+test('light mode keeps desktop colors and highlights the mobile support CTA', async () => {
   const h = await page({ stored: { 'gary-jobs-theme': 'light' } });
-  try { for (const width of [390, 1440]) assert.deepEqual(palette(h.d, width), LIGHT_BASELINE); }
+  try { for (const width of [390, 1440]) assert.deepEqual(palette(h.d, width), width <= 720 ? MOBILE_LIGHT : LIGHT_BASELINE); }
   finally { h.dom.window.close(); }
 });
 
@@ -325,7 +327,7 @@ test('Light → Dark → System and fresh-page reload keep paired section roles 
       }
       h.media.matches = false; h.media.listeners.forEach(fn => fn());
       assert.equal(h.d.documentElement.dataset.jobsTheme, 'light');
-      assert.deepEqual(palette(h.d, 390), LIGHT_BASELINE);
+      assert.deepEqual(palette(h.d, 390), MOBILE_LIGHT);
       const title = h.d.querySelector('#services h2').textContent;
       assert.match(title, locale === 'en' ? /More than a job match/ : /Hơn cả một công việc/);
       assert.equal(h.d.querySelectorAll('.support-card').length, 3);

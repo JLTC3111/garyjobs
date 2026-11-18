@@ -83,19 +83,21 @@ function specificity(selector){
  return [(plain.match(/#[\w-]+/g)||[]).length,(plain.match(/\.[\w-]+|\[[^\]]+\]/g)||[]).length,(plain.match(/[a-z][\w-]*/g)||[]).length];
 }
 function beats(winner,loser){const a=specificity(winner),b=specificity(loser);for(let i=0;i<3;i++)if(a[i]!==b[i])return a[i]>b[i];return false;}
-test('publication confirmation actions keep paired ink above the portal link color',()=>{
+test('toast controls retain readable ink and distinct tones across portal palettes',()=>{
  const sheet=new JSDOM(`<style>${successCss}</style>`,{url:'https://jobs.garyhome.vn/portal.html'}).window.document.styleSheets[0];
- const declared=[...sheet.cssRules].flatMap(rule=>rule.selectorText?[{selector:rule.selectorText,color:rule.style.getPropertyValue('color'),background:rule.style.getPropertyValue('background')}]:[]);
- const link=declared.find(rule=>rule.selector.includes('.cms-success-actions a')&&rule.color.includes('--cms-action-ink'));
- const close=declared.find(rule=>rule.selector.trimEnd().endsWith('.cms-success-actions button')&&rule.color.includes('--cms-ink'));
- assert.ok(link);assert.ok(close);
- const portalLink='.jobs-portal-body :is(a,.jobs-link-button)';
- for(const selector of link.selector.split(','))assert.ok(beats(selector.trim(),portalLink),selector);
- assert.match(link.background,/var\(--cms-action/);
- assert.match(close.background,/var\(--cms-surface/);
+ const rules=[...sheet.cssRules].filter(rule=>rule.selectorText);
+ const link=rules.find(rule=>rule.selectorText.includes('[data-success-link]'));
+ const close=rules.find(rule=>rule.selectorText.endsWith('[data-success-close]'));
+ assert.ok(beats(link.selectorText,'.jobs-portal-body :is(a,.jobs-link-button)'));
+ assert.equal(link.style.getPropertyValue('color'),'inherit');
+ assert.equal(close.style.getPropertyValue('color'),'inherit');
+ assert.match(successCss,/prefers-reduced-motion/);
  for(const dark of [false,true]){
   const p=palette(dark),color=name=>resolve(p[name],p),mode=dark?'dark':'light';
-  assert.ok(contrast(color('--jobs-action-ink'),color('--jobs-portal-action'))>=4.5,mode);
-  assert.ok(contrast(color('--jobs-portal-ink'),color('--jobs-portal-surface'))>=4.5,`${mode} close`);
+  for(const tone of ['success','warning','error']){
+   const surface=color(`--jobs-${tone}-bg`);
+   assert.ok(contrast(color('--jobs-portal-ink'),surface)>=4.5,`${mode} ${tone} text`);
+   assert.ok(contrast(color(`--jobs-${tone}`),surface)>=3,`${mode} ${tone} border`);
+  }
  }
 });
