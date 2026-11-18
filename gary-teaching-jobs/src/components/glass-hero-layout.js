@@ -5,7 +5,7 @@ export const glassHeroEnvelope = Object.freeze({
   right: 0.57,
   left: 0.07,
   breathing: 8,
-  labelHeight: 40,
+  labelHeight: 46,
   minimumLabelOffset: 13,
   introFaceShift: 0.1,
   focusReach: 6,
@@ -42,13 +42,14 @@ export function measureGlassHeroLayout(width, height) {
   // Very small/hidden containers keep the six usable DOM links, without a GPU
   // allocation or undersized controls. Public CSS supplies a sufficient height.
   if (minimum.width + 0.5 > frameWidth || minimum.height + 0.5 > height) return null;
-  const frameHeight = floor(Math.max(minimum.height + 0.5, height * (columns === 3 ? 0.8 : 0.9)));
+  const heightBudget = floor(Math.max(minimum.height + 0.5, height * (columns === 3 ? 0.8 : 0.9)));
   const fits = size => {
     const box = envelope(size);
-    return box.width + 0.5 <= frameWidth && box.height + 0.5 <= frameHeight;
+    return box.width + 0.5 <= frameWidth && box.height + 0.5 <= heightBudget;
   };
   let low = e.minimumTarget;
-  let high = Math.max(low, Math.sqrt(width * height) * 0.175);
+  const scaledSize = Math.sqrt(width * height) * (columns === 3 ? 0.16 : 0.175);
+  let high = Math.max(low, columns === 3 ? Math.min(scaledSize, width / 6) : scaledSize);
   for (let i = 0; i < 24; i++) {
     const candidate = (low + high) / 2;
     if (fits(candidate)) low = candidate;
@@ -57,14 +58,16 @@ export function measureGlassHeroLayout(width, height) {
   const size = Math.floor(low);
   const reserve = envelope(size);
   const padding = { top: floor(reserve.top), right: floor(reserve.right), bottom: floor(reserve.bottom), left: floor(reserve.left) };
-  // Half a CSS pixel of slack avoids flex wrapping from fractional layout
-  // rounding; rows/columns still occupy the whole measured composition.
+  // Leave half a pixel for wrapping and limit the spare space between rows.
   const gap = floor((frameWidth - padding.left - padding.right - columns * size - 0.5) / (columns - 1));
-  const rowGap = floor((frameHeight - padding.top - padding.bottom - rows * size - 0.5) / (rows - 1));
+  const spareHeight = Math.max(0, heightBudget - reserve.height - 0.5);
+  const rowGap = floor(reserve.rowGap + Math.min(spareHeight / (rows - 1), size * 0.32));
+  const gridHeight = rows * size + (rows - 1) * rowGap;
+  const frameHeight = floor(gridHeight + padding.top + padding.bottom + 0.5);
   return {
     size, gap, rowGap, columns, rows, labelWidth, labelOffset: reserve.labelOffset, labelTail: reserve.labelTail, frameWidth, frameHeight, padding,
     gridWidth: columns * size + (columns - 1) * gap,
-    gridHeight: rows * size + (rows - 1) * rowGap,
+    gridHeight,
     heightRatio: frameHeight / height
   };
 }

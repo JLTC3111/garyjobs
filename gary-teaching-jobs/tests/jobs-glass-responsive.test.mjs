@@ -41,17 +41,19 @@ function assertSafe(layout, width, height) {
   assert.ok(p.right + size / 2 - labelWidth / 2 >= e.breathing - 0.02);
 }
 
-test('wide desktop sizing derives from both dimensions and distributes the grid through eighty percent of the column', () => {
+test('desktop sizing follows both dimensions and keeps the rows together in tall columns', () => {
   const desktop = measureGlassHeroLayout(604, 630);
   assertSafe(desktop, 604, 630);
-  assert.ok(desktop.size >= 96 && desktop.size <= 112);
-  assert.ok(desktop.heightRatio >= 0.75 && desktop.heightRatio <= 0.85);
+  assert.ok(desktop.size >= 94 && desktop.size <= 102);
   assert.equal(desktop.columns, 3);
   const wider = measureGlassHeroLayout(700, 690);
   const shorter = measureGlassHeroLayout(604, 480);
+  const taller = measureGlassHeroLayout(604, 820);
+  assertSafe(taller, 604, 820);
   assert.ok(wider.size > desktop.size, 'the initial target is not a hard-coded maximum');
   assert.ok(shorter.size < desktop.size, 'height constrains geometry instead of clipping it');
-  assert.notEqual(desktop.rowGap, desktop.gap, 'rows fill available height independently');
+  assert.ok(taller.frameHeight <= desktop.frameHeight + 25, 'spare height leaves space around the grid instead of separating the rows');
+  assert.notEqual(desktop.rowGap, desktop.gap, 'row and column spacing use their own dimensions');
 });
 
 test('laptop/tablet/mobile resize matrix keeps all plate, focus and touch-label envelopes inside the measured box', () => {
@@ -60,7 +62,7 @@ test('laptop/tablet/mobile resize matrix keeps all plate, focus and touch-label 
       const layout = measureGlassHeroLayout(width, height);
       assertSafe(layout, width, height);
       assert.equal(layout.columns, width < 420 ? 2 : 3);
-      if (width >= 420) assert.ok(layout.heightRatio >= 0.75 && layout.heightRatio <= 0.85);
+      if (width >= 420) assert.ok(layout.heightRatio <= 0.8);
     }
   }
   assert.equal(measureGlassHeroLayout(0, 500), null);
