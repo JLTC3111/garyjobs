@@ -1,22 +1,94 @@
--- Operator-only bootstrap AFTER installing the Jobs migrations.
--- Choose an existing, verified Supabase Auth account and an app-scoped role.
--- This grants Jobs access only. Home/Agency membership is never consulted.
--- Replace staff@example.com and admin before executing in the intended project.
--- make_protected: true marks a reviewed Jobs owner, false removes that mark, null keeps the current setting.
--- Only protected admins can grant or change Admin access in Staff management, and protected memberships
--- cannot be changed there. Protect owners only. Changes made here are audited with no actor (database operator).
+-- TEACHING JOBS: STAFF ACCESS BOOTSTRAP
+-- Run after installing Jobs migrations.
+-- Only modifies Jobs staff membership.
+-- Does not change passwords, Auth identities or other apps.
+
 begin;
+
 do $jobs_staff$
-declare target uuid;chosen_role text:='admin';make_protected boolean:=null;
+declare
+  -- EDIT THESE THREE VALUES
+  v_email text := 'giangcr9@gmail.com';
+  v_role text := 'admin';
+  v_protected boolean := true;
+
+  -- ROLE: editor | publisher | recruiter | admin
+  -- PROTECTED:
+  -- true  = mark as protected owner
+  -- false = remove protected status
+  -- null  = preserve existing status
+
+  v_target uuid;
+  v_existing_protected boolean;
+
 begin
- if chosen_role not in('editor','publisher','recruiter','admin') then raise exception 'Choose a Jobs role';end if;
- if make_protected and chosen_role<>'admin' then raise exception 'Only a Jobs admin can be a protected owner';end if;
- select id into strict target from auth.users where lower(email)='staff@example.com' and email_confirmed_at is not null;
- insert into jobs_private.staff_members(user_id,role,active,protected) values(target,chosen_role,true,coalesce(make_protected,false))
- on conflict(user_id) do update set role=excluded.role,active=true,protected=coalesce(make_protected,jobs_private.staff_members.protected);
+  -- Validate role
+  if v_role not in
+    ('editor', 'publisher', 'recruiter', 'admin')
+  then
+    raise exception 'Invalid Teaching Jobs role.';
+  end if;
+
+  -- Find existing, verified Auth account
+  select id into v_target
+  from auth.users
+  where lower(email) = lower(trim(v_email))
+    and email_confirmed_at is not null;
+
+  if v_target is null then
+    raise exception
+      'Nothing changed: % is not a verified Supabase Auth account.',
+      v_email;
+  end if;
+
+  -- Check existing Jobs protection
+  select protected
+  into v_existing_protected
+  from jobs_private.staff_members
+  where user_id = v_target
+  for update;
+
+  -- Only admins can retain protected ownership
+  if coalesce(
+       v_protected,
+       v_existing_protected,
+       false
+     ) and v_role <> 'admin'
+  then
+    raise exception
+      'A protected Jobs owner must have the admin role.';
+  end if;
+
+  -- Create or update Jobs staff membership
+  insert into jobs_private.staff_members
+    (user_id, role, active, protected)
+  values
+    (
+      v_target,
+      v_role,
+      true,
+      coalesce(v_protected, false)
+    )
+  on conflict (user_id)
+  do update set
+    role = excluded.role,
+    active = true,
+    protected = coalesce(
+      v_protected,
+      jobs_private.staff_members.protected
+    );
+
 end;
 $jobs_staff$;
+
 commit;
--- Revoke independently in Staff management, or with: update jobs_private.staff_members set active=false where user_id=...;
--- The last active, verified Jobs admin cannot be suspended or demoted; assign another admin first.
--- Do not delete or reset the global Auth identity to revoke one app membership.
+
+-- REVIEW TEACHING JOBS STAFF
+select
+  u.email,
+  j.role,
+  j.active,
+  j.protected
+from jobs_private.staff_members j
+join auth.users u on u.id = j.user_id
+order by u.email;

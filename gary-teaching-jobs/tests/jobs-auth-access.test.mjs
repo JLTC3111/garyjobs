@@ -232,7 +232,7 @@ test('same-user session events preserve a live CMS controller',async()=>{
   await h.settle();
   assert.equal(h.calls.cms,1);
   assert.equal(h.calls.destroy,0);
-  assert.equal(h.calls.users,requests);
+  assert.equal(h.calls.users,requests+1,'same-user events coalesce a fresh permission check without remounting');
   assert.equal(h.w.document.querySelector('[data-private-content]'),privateContent);
  }finally{h.dom.window.close();}
 });
@@ -333,4 +333,19 @@ test('Vietnamese portal translates candidate, staff, session and empty states',a
   assert.match(h.w.document.querySelector('#auth-panel').textContent,/Đăng nhập nhân viên/);
   assert.equal(h.w.document.querySelector('#auth-panel [data-action="register"]'),null);
  }finally{h.dom.window.close();}
+});
+
+
+test('focus revocation refresh clears private CMS while preserving the shared login',async()=>{
+ let next={read:true,edit:true,role:'editor'};const h=await portal({access:'staff',getCapabilities:()=>next});
+ try{await h.settle();assert.equal(h.calls.cms,1);next={};h.w.dispatchEvent(new h.w.Event('focus'));await h.settle();assert.equal(h.calls.destroy,1);assert.equal(h.w.document.querySelector('[data-private-content]'),null);assert.match(text(h),/Staff access not assigned/);}finally{h.dom.window.close();}
+});
+test('access denial followed by focus cannot lose the forced refresh',async()=>{
+ const h=await portal({access:'staff',caps:{read:true,role:'editor'}});
+ try{await h.settle();h.w.dispatchEvent(new h.w.Event('jobs:access-denied'));h.w.dispatchEvent(new h.w.Event('focus'));await h.settle();assert.equal(h.calls.destroy,1);assert.equal(h.calls.cms,2);}finally{h.dom.window.close();}
+});
+
+test('refocus clears Jobs private data when Auth reports a missing session',async()=>{
+ const h=await portal({access:'staff',caps:{read:true,role:'editor'},getUser:n=>n===1?{data:{user:candidate}}:{error:{name:'AuthSessionMissingError',status:400}}});
+ try{await h.settle();h.w.dispatchEvent(new h.w.Event('focus'));await h.settle();assert.equal(h.calls.destroy,1);assert.equal(h.w.document.querySelector('[data-private-content]'),null);assert.equal(h.w.document.querySelector('#sign-out').hidden,true);}finally{h.dom.window.close();}
 });

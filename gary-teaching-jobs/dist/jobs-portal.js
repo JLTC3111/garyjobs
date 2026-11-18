@@ -29,13 +29,13 @@ function renderChrome(){
 function deadline(promise){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('portal_timeout')),12000);})]).finally(()=>clearTimeout(timer));}
 function clearWorkspace(){cms?.destroy?.({force:true});cms=null;staffPage?.destroy();staffPage=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();}
 function requestKey(vacancy){const key='jobs-request:'+user.id+':'+(vacancy||'general');try{let value=sessionStorage.getItem(key);if(!value){value=crypto.randomUUID();sessionStorage.setItem(key,value);}return value;}catch{return crypto.randomUUID();}}
-async function guarded(task){const g=generation;try{return await task();}catch(e){if(g===generation)status(errorText(e,language),true);throw e;}}
+async function guarded(task){const g=generation;try{return await task();}catch(e){if(g===generation){status(errorText(e,language),true);if(e?.code==='42501'||[401,403].includes(e?.status))schedulePermissionRefresh(true);}throw e;}}
 function renderAuth(){
  $('#auth-panel').hidden=loading||!!user&&!recovery;
  if(user&&!recovery){$('#auth-panel').replaceChildren();return;}
  if(loading)return;
  const staff=access==='staff';
- $('#auth-panel').innerHTML=`<div class="jobs-auth-card"><p class="jobs-meta">${staff?t('FOR ASSIGNED TEAM MEMBERS','DÀNH CHO NHÂN VIÊN ĐƯỢC CẤP QUYỀN'):t('YOUR TEACHING JOURNEY','HÀNH TRÌNH GIẢNG DẠY CỦA BẠN')}</p><h1>${recovery?t('Set your new password','Đặt mật khẩu mới'):staff?t('Staff sign in','Đăng nhập nhân viên'):t('Candidate sign in','Đăng nhập ứng viên')}</h1><p>${staff?t('Use your existing Gary account to open your assigned Jobs content or recruitment workspace.','Dùng tài khoản Gary hiện có để mở không gian nội dung hoặc tuyển dụng Jobs được cấp quyền.'):t('Submit applications, keep your receipts and follow your recruitment progress.','Nộp hồ sơ, lưu mã tiếp nhận và theo dõi tiến độ tuyển dụng.')}</p><form id="auth-form">${!recovery?`<label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label>`:''}<label>${t('Password','Mật khẩu')}<input name="password" type="password" autocomplete="${recovery?'new-password':'current-password'}" ${recovery?'minlength="12"':''} maxlength="128" required></label><div class="jobs-row-actions"><button type="submit" class="primary">${recovery?t('Save password','Lưu mật khẩu'):staff?t('Sign in to staff portal','Đăng nhập cổng nhân viên'):t('Sign in','Đăng nhập')}</button>${!recovery?`${!staff?`<button type="button" data-action="register">${t('Create candidate account','Tạo tài khoản ứng viên')}</button>`:''}<button type="button" data-action="reset">${t('Forgot password','Quên mật khẩu')}</button>`:''}</div></form><p class="jobs-meta">${staff?t('Staff access is assigned by your Jobs administrator. Creating a candidate account does not grant staff access.','Quản trị viên Jobs cấp quyền nhân viên. Tạo tài khoản ứng viên không cấp quyền nhân viên.'):t('New accounts must confirm their email before applying. Already part of the team? Choose Staff portal above.','Tài khoản mới cần xác minh email trước khi ứng tuyển. Nếu là nhân viên, hãy chọn Cổng nhân viên ở trên.')}</p></div>`;
+ $('#auth-panel').innerHTML=`<div class="jobs-auth-card"><p class="jobs-meta">${staff?t('FOR ASSIGNED TEAM MEMBERS','DÀNH CHO NHÂN VIÊN ĐƯỢC CẤP QUYỀN'):t('YOUR TEACHING JOURNEY','HÀNH TRÌNH GIẢNG DẠY CỦA BẠN')}</p><h1>${recovery?t('Set your new password','Đặt mật khẩu mới'):staff?t('Staff sign in','Đăng nhập nhân viên'):t('Candidate sign in','Đăng nhập ứng viên')}</h1><p>${staff?t('Use your existing Gary account to open your assigned Jobs content or recruitment workspace.','Dùng tài khoản Gary hiện có để mở không gian nội dung hoặc tuyển dụng Jobs được cấp quyền.'):t('Submit applications, keep your receipts and follow your recruitment progress.','Nộp hồ sơ, lưu mã tiếp nhận và theo dõi tiến độ tuyển dụng.')}</p><form id="auth-form">${!recovery?`<label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label>`:''}<label>${t('Password','Mật khẩu')}<input name="password" type="password" autocomplete="${recovery?'new-password':'current-password'}" ${recovery?'minlength="12"':''} maxlength="128" required></label><div class="jobs-row-actions"><button type="submit" class="primary">${recovery?t('Save password','Lưu mật khẩu'):staff?t('Sign in to staff portal','Đăng nhập cổng nhân viên'):t('Sign in','Đăng nhập')}</button>${!recovery?`${!staff?`<button type="button" data-action="register">${t('Create candidate account','Tạo tài khoản ứng viên')}</button>`:''}<button type="button" data-action="reset">${t('Forgot password','Quên mật khẩu')}</button>`:''}</div></form><p class="jobs-meta">${staff?t('Ask a Jobs administrator to use Staff Management to assign content or recruitment access. New administrator access requires the Jobs owner. Home/Visa roles and candidate registration do not grant Jobs staff access.','Nhờ quản trị viên Jobs cấp quyền nội dung hoặc tuyển dụng trong Quản lý nhân viên. Quyền quản trị mới cần chủ sở hữu Jobs cấp. Quyền Home/Visa và đăng ký ứng viên không cấp quyền nhân viên Jobs.'):t('New accounts must confirm their email before applying. Already part of the team? Choose Staff portal above.','Tài khoản mới cần xác minh email trước khi ứng tuyển. Nếu là nhân viên, hãy chọn Cổng nhân viên ở trên.')}</p></div>`;
 }
 function updateCmsNavigation(next){
  if(next){cmsDestination=next.kind;cmsNavigation=next.view;}
@@ -197,13 +197,35 @@ window.addEventListener('popstate',()=>{
  generation++;access=accessFromUrl(nextUrl);view=nextUrl.searchParams.get('view')||'';currentViewUrl=nextUrl.href;
  void authenticate();
 });
+let permissionRefreshTimer,permissionRefreshing=false,permissionDenied=false;
+function schedulePermissionRefresh(denied=false){
+ if(!user||recovery)return;permissionDenied ||= denied;if(permissionRefreshing)return;
+ clearTimeout(permissionRefreshTimer);permissionRefreshTimer=setTimeout(()=>{const force=permissionDenied;permissionDenied=false;void refreshPermissions(force)},0);
+}
+async function refreshPermissions(denied=false){
+ if(permissionRefreshing||loading||!user||recovery)return;
+ permissionRefreshing=true;const g=generation,id=user.id;
+ try{
+  const identity=await deadline(db.auth.getUser());if(g!==generation)return;
+  if(identity.error){if([401,403].includes(identity.error.status)||['AuthSessionMissingError','AuthInvalidJwtError'].includes(identity.error.name)||['session_not_found','user_banned','user_not_found','bad_jwt'].includes(identity.error.code)){generation++;clearWorkspace();user=null;caps={};roster=[];loading=false;renderChrome();renderAuth();}else if(denied||permissionDenied){generation++;clearWorkspace();caps={};roster=[];capabilityError=true;await renderView();}return;}
+  if(identity.data?.user?.id!==id){await authenticate();return;}
+  const next=await deadline(capabilities());if(g!==generation)return;
+  const keys=['role','read','edit','publish','media','recruit','manage_staff','manage_admins'];
+  if(denied||permissionDenied||keys.some(key=>(next?.[key]??null)!==(caps?.[key]??null)))await authenticate();
+ }catch(e){if(g===generation&&(denied||permissionDenied||e?.code==='42501'||[401,403].includes(e?.status))){generation++;clearWorkspace();caps={};roster=[];capabilityError=true;loading=false;renderChrome();await renderView();}}
+ finally{permissionRefreshing=false;permissionDenied=false;}
+}
+window.addEventListener('focus',()=>schedulePermissionRefresh());
+window.addEventListener('pageshow',()=>schedulePermissionRefresh());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')schedulePermissionRefresh();});
+window.addEventListener('jobs:access-denied',()=>schedulePermissionRefresh(true));
 let authSyncTimer;
 db.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){clearTimeout(authSyncTimer);generation++;clearWorkspace();recovery=true;loading=false;user=session?.user||user;renderChrome();renderAuth();return;}
  if(event==='SIGNED_OUT'){clearTimeout(authSyncTimer);generation++;clearWorkspace();user=null;caps={};roster=[];recovery=false;loading=false;status('');renderChrome();renderAuth();return;}
  if(!['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)||recovery)return;
  // Supabase may emit SIGNED_IN again on tab focus. Keep an active editor intact.
- if(session?.user?.id===user?.id&&!loading)return;
+ if(session?.user?.id===user?.id&&!loading){schedulePermissionRefresh();return;}
  clearTimeout(authSyncTimer);authSyncTimer=setTimeout(()=>void authenticate(),0);
 });
 renderChrome();void authenticate();
