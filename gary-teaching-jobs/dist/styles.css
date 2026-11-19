@@ -184,7 +184,9 @@ h1 em{white-space:nowrap}
 .job-tags .icon{width:10px;height:10px}
 .job-benefit{display:flex;align-items:center;gap:6px;font-size:10px;color:#75866a;margin-bottom:24px}
 .job-benefit .icon{width:12px;height:12px}
-.job-card-bottom{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #edf0f2;padding-top:15px;margin-top:auto}
+.job-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #edf0f2;padding-top:15px;margin-top:auto}
+.job-card-bottom>div{min-width:0;flex:1}
+.job-card-bottom .round-arrow{flex:none}
 .job-card-bottom>div>span{font-size:8px;color:#8a929a;display:block;line-height:1.5}
 .job-card-bottom strong{font-size:12px;font-weight:600;color:#405770;display:block;margin-top:2px}
 .round-arrow{display:grid;place-items:center;border:1px solid #d6e0e9;border-radius:50%;background:none;width:33px;height:33px;color:var(--blue);transition:background .2s,color .2s,transform .2s}
