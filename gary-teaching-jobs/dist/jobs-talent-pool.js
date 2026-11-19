@@ -20,7 +20,7 @@ export function mountTalentPool(root, {adapter, language='en', canPublish=false,
     : label({},null);
   const textOrMissing = value => e(value || label({},null));
   const badge = value => `<span class="talent-stage" data-stage="${e(value)}">${label(talentStages,value)}</span>`;
-  const buttonVariants = { cancel: 'cancel', publish: 'publish', unpublish: 'archive' };
+  const buttonVariants = { edit: 'edit', cancel: 'cancel', publish: 'publish', unpublish: 'archive' };
   const action = (key,text,extra='') => {
     const variant = buttonVariants[key];
     return `<button type="button" data-talent-action="${key}"${variant?` data-button-variant="${variant}"`:''} ${extra}>${e(text)}</button>`;

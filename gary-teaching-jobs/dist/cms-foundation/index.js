@@ -30,7 +30,7 @@ export function mountCms(root, options) {
   const dirty = () => !!draft && (JSON.stringify(draft) !== baseline || [...referenceDrafts.values()].some(value => ['title_en', 'title_vi', 'summary_en', 'summary_vi'].some(key => String(value[key] || '').trim())));
   const date = value => { try { return value ? new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—'; } catch { return '—'; } };
   const disabled = value => value ? ' disabled' : '';
-  const buttonVariants = { publish: 'publish', archive: 'archive', restore: 'restore', delete: 'danger' };
+  const buttonVariants = { edit: 'edit', publish: 'publish', archive: 'archive', restore: 'restore', delete: 'danger' };
   const button = (action, text, extra = '', off = false) => {
     const variant = buttonVariants[action];
     return `<button type="button" data-action="${action}"${variant ? ` data-button-variant="${variant}"` : ''} ${extra}${disabled(off || busy)}>${escape(text)}</button>`;
