@@ -32,7 +32,7 @@ export function mountPublicApplicationEditor(doc = document) {
   for (const node of [...form.childNodes]) {
    if (node.nodeType === 1 && node.matches('.form-submit,.email-fallback,.dialog-small')) actions.append(node);else body.append(node);
   }
-  cancel=doc.createElement('button');cancel.type='button';cancel.className='button button-outline';cancel.textContent=language()==='vi'?'Hủy':'Cancel';cancel.addEventListener('click',()=>close.click());actions.append(cancel);
+  cancel=doc.createElement('button');cancel.type='button';cancel.className='button button-outline';cancel.dataset.buttonVariant='cancel';cancel.textContent=language()==='vi'?'Hủy':'Cancel';cancel.addEventListener('click',()=>close.click());actions.append(cancel);
   form.classList.add('gw-editor-form');form.append(body,actions);content.classList.add('gw-public-content');dialog.classList.add('jobs-application-editor');
   controller = attachEditorWorkspace(dialog,{key:'jobs.application-email',language,header,body,actions});
  }

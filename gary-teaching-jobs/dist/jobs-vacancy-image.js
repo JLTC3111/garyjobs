@@ -99,8 +99,8 @@ export function mountVacancyImageEditor(root, {record, language, editable, previ
       <label class="cms-field"><span>${t('Image description (Vietnamese)','Mô tả ảnh (tiếng Việt)')}</span><input lang="vi" maxlength="500" data-image-alt="vi"></label>
     </div>
     <div class="jobs-vacancy-image-actions">
-      <button type="button" data-image-upload disabled>${t('Upload and save draft','Tải ảnh và lưu bản nháp')}</button>
-      ${current ? `<button type="button" data-image-remove>${t('Remove image from draft','Xóa ảnh khỏi bản nháp')}</button>` : ''}
+      <button type="button" data-image-upload data-button-variant="save-draft" disabled>${t('Upload and save draft','Tải ảnh và lưu bản nháp')}</button>
+      ${current ? `<button type="button" data-image-remove data-button-variant="danger">${t('Remove image from draft','Xóa ảnh khỏi bản nháp')}</button>` : ''}
     </div>
     <progress data-image-progress max="1" aria-label="${t('Image upload progress','Tiến độ tải ảnh')}" hidden></progress>`);
   root.insertAdjacentHTML('beforeend','<p class="cms-hint" data-image-status role="status"></p>');

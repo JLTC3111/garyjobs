@@ -126,6 +126,10 @@ async function setup({language='en',legacy=false,failPublication,prepare,mountVa
 for(const language of ['en','vi'])test(`end-to-end ${language}: one Publish creates a public vacancy without independent profile or taxonomy publishing`,async()=>{
   const h=await setup({language});try {
     await h.click('new');
+    assert.equal(h.root.querySelector('[data-cms-editor] button[type=submit]').dataset.buttonVariant,'save-draft');
+    assert.equal(h.root.querySelector('[data-cms-editor] button[data-action=publish]').dataset.buttonVariant,'publish');
+    assert.equal(h.root.querySelector('[data-cms-editor] button[data-action=archive]').dataset.buttonVariant,'archive');
+    assert.equal(h.root.querySelector('[data-cms-editor] button[data-action=close]').dataset.buttonVariant,'cancel');
     const dialog=h.root.querySelector('dialog');
     for(const selector of ['[data-reference-search]','[data-action="reference-refresh"]','[data-reference-create]'])assert.equal(dialog.querySelector(selector),null,selector);
     const marker=key=>dialog.querySelector(`[name="${key}"]`).closest('label').querySelector('span small')?.textContent||'';

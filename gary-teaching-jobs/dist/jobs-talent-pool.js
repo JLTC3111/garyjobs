@@ -20,7 +20,11 @@ export function mountTalentPool(root, {adapter, language='en', canPublish=false,
     : label({},null);
   const textOrMissing = value => e(value || label({},null));
   const badge = value => `<span class="talent-stage" data-stage="${e(value)}">${label(talentStages,value)}</span>`;
-  const action = (key,text,extra='') => `<button type="button" data-talent-action="${key}" ${extra}>${e(text)}</button>`;
+  const buttonVariants = { cancel: 'cancel', publish: 'publish', unpublish: 'archive' };
+  const action = (key,text,extra='') => {
+    const variant = buttonVariants[key];
+    return `<button type="button" data-talent-action="${key}"${variant?` data-button-variant="${variant}"`:''} ${extra}>${e(text)}</button>`;
+  };
   const readForm = form => Object.fromEntries(new win.FormData(form));
 
   let disposed=false, writable=false, loading=true, listError=false, records=[], total=0, page=0, view='list';
@@ -196,7 +200,7 @@ export function mountTalentPool(root, {adapter, language='en', canPublish=false,
       ${textarea('story_vi',t('Success story (Vietnamese)','Câu chuyện (tiếng Việt)'),800)}`;
     return `<form data-talent-editor><fieldset class="talent-edit-fields"${busy?' disabled':''}>${fields}</fieldset>
       <div class="talent-actions">${action('cancel',t('Cancel','Hủy'),busy?'disabled':'')}
-      <button class="primary" type="submit"${busy?' disabled':''}>${candidate?t('Save candidate','Lưu ứng viên'):t('Save story draft','Lưu bản nháp câu chuyện')}</button></div></form>`;
+      <button class="primary" type="submit" data-button-variant="${candidate?'save':'save-draft'}"${busy?' disabled':''}>${candidate?t('Save candidate','Lưu ứng viên'):t('Save story draft','Lưu bản nháp câu chuyện')}</button></div></form>`;
   }
 
   function renderDialog(focus=false) {
