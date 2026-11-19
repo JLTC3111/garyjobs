@@ -177,7 +177,25 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .job-card-top .job-type,.jobs-public .job-card h3,.jobs-public .role-salary,.jobs-public .dialog-location,.jobs-public .role-facts strong { color:var(--jobs-ink); }
 .jobs-public :is(.job-card-bottom,.job-toolbar,.jobs-footer,.benefit-row,.process-step,.faq-item,.footer-bottom) { border-color:var(--jobs-line); }
 .jobs-public .job-icon { background:var(--jobs-raised);color:var(--jobs-action); }
-.jobs-public .save-job { background:var(--jobs-soft);color:var(--jobs-action); }.jobs-public .save-job.is-saved { background:var(--jobs-raised);color:var(--jobs-accent); }
+/* The card bookmark is a theme control. Shared save/publish green stays on form commits. */
+.jobs-public .save-job {
+  --action-fill: var(--jobs-soft);
+  --action-ink: var(--jobs-action);
+  --action-hover: var(--jobs-raised);
+  --action-hover-ink: var(--jobs-ink);
+  background: var(--jobs-soft);
+  color: var(--jobs-action);
+}
+.jobs-public .save-job.is-saved,
+.jobs-public .save-job[aria-pressed="true"] {
+  --action-fill: var(--jobs-raised);
+  --action-ink: var(--jobs-accent);
+  --action-hover: var(--jobs-accent);
+  --action-hover-ink: var(--jobs-action-ink);
+  background: var(--jobs-raised);
+  color: var(--jobs-accent);
+}
+.jobs-public .save-job .icon { fill: none; }
 .jobs-public .round-arrow { background:var(--jobs-soft);color:var(--jobs-action); }.jobs-public .round-arrow:hover { background:var(--jobs-action);color:var(--jobs-action-ink); }
 .jobs-public .button { background:var(--jobs-action);border-color:var(--jobs-action);color:var(--jobs-action-ink); }
 .jobs-public .button:hover { background:var(--jobs-ink);border-color:var(--jobs-ink);color:var(--jobs-bg); }
