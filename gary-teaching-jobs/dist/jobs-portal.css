@@ -4,3 +4,31 @@
 .jobs-recruitment-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.75rem;margin:1rem 0}
 .jobs-recruitment-stats dt{color:var(--jobs-portal-muted);font-size:.875rem}
 .jobs-recruitment-stats dd{margin:.25rem 0 0;font-size:1.5rem;font-weight:700}
+.jobs-vacancy-image-editor {
+  display:grid;
+  gap:12px;
+  padding:16px;
+  margin-bottom:16px;
+  background:var(--cms-soft);
+  border:1px solid var(--cms-line);
+  border-radius:8px;
+}
+.jobs-vacancy-image-editor :is(h3,p) { margin:0; }
+.jobs-vacancy-image-editor img {
+  width:min(100%,360px);
+  max-height:215px;
+  object-fit:contain;
+  object-position:center;
+  border-radius:4px;
+}
+.jobs-vacancy-image-editor img.is-cropped { aspect-ratio:16/9;object-fit:cover; }
+.jobs-vacancy-image-alts {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+  gap:12px;
+}
+.jobs-vacancy-image-crop { display:flex;align-items:center;gap:8px; }
+.jobs-vacancy-image-crop input { width:auto;flex:none;accent-color:var(--cms-action); }
+.jobs-vacancy-image-actions { display:flex;flex-wrap:wrap;gap:8px; }
+.jobs-vacancy-image-editor progress { width:min(100%,360px);accent-color:var(--cms-action); }
+.jobs-vacancy-image-editor [hidden] { display:none; }

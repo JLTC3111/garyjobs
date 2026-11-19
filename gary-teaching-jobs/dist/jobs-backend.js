@@ -2,6 +2,7 @@ import {createClient} from './vendor/supabase.js';
 import {jobsConfig} from './jobs-config.js';
 import {createJobsPublishingAdapter} from './jobs-publishing-adapter.js';
 import {categoryOptions, locationOptions} from './jobs-vacancy-options.js';
+import {mountVacancyImageEditor, uploadVacancyImage, vacancyImageErrorText} from './jobs-vacancy-image.js';
 // Observe only this app's data/Storage denials; Auth login failures are unrelated.
 async function permissionFetch(input,options){
  const response=await globalThis.fetch(input,options);
@@ -15,6 +16,7 @@ export const STAGE_LABELS={submitted:['Submitted','Đã nộp'],screening:['Scre
 export function unwrap(result){if(result.error){if(result.error.code==='42501'||[401,403].includes(result.error.status))globalThis.dispatchEvent?.(new Event('jobs:access-denied'));throw result.error;}return result.data;}
 export function errorText(error,language='en'){
  if(error?.code==='42501'||[401,403].includes(error?.status))globalThis.dispatchEvent?.(new Event('jobs:access-denied'));
+ const imageMessage=vacancyImageErrorText(error,language);if(imageMessage)return imageMessage;
  const vi=language==='vi',code=String(error?.message||'').match(/jobs\.([a-z_]+)/)?.[1];
  const messages={publication_invalid:['Please complete the highlighted vacancy fields.','Vui lòng hoàn thành các trường tuyển dụng được đánh dấu.'],title_required:['Enter the job title to generate its URL.','Nhập tiêu đề công việc để tạo đường dẫn tự động.'],version_conflict:['This record changed. Reload it before saving.','Bản ghi đã thay đổi. Tải lại trước khi lưu.'],publisher_required:['A Jobs publisher must publish or archive this content.','Cần người có quyền xuất bản của Jobs để đăng hoặc lưu trữ.'],review_required:['Send this draft for review before publishing.','Gửi bản nháp để duyệt trước khi xuất bản.'],translation_required:['Complete both English and Vietnamese titles and summaries.','Hoàn thành tiêu đề và tóm tắt tiếng Anh và tiếng Việt.'],contact_required:['Enter a valid recruiter email address.','Nhập email chuyên viên tuyển dụng hợp lệ.'],body_required:['Complete the primary content in both languages.','Hoàn thành nội dung chính bằng cả hai ngôn ngữ.'],expiry_required:['Set a vacancy closing date.','Nhập hạn tuyển dụng.'],expiry_past:['The closing date must not be in the past.','Hạn tuyển dụng không được ở quá khứ.'],references_required:['A selected employer, category or location is no longer published. Refresh the selection lists and choose the highlighted item again.','Một nhà tuyển dụng, danh mục hoặc địa điểm đã chọn không còn được đăng. Làm mới danh sách và chọn lại mục được đánh dấu.'],reference_in_use:['An open vacancy still uses this profile. Update or archive that vacancy first.','Tin tuyển dụng đang mở vẫn dùng hồ sơ này. Cập nhật hoặc lưu trữ tin trước.'],email_verification_required:['Verify your account email before applying.','Xác minh email tài khoản trước khi ứng tuyển.'],vacancy_closed:['This vacancy is no longer accepting applications.','Vị trí này không còn nhận hồ sơ.'],intake_limit:['Your daily application limit has been reached. Please try tomorrow.','Bạn đã đạt giới hạn nộp hồ sơ trong ngày. Hãy thử vào ngày mai.'],stage_invalid:['That recruitment stage transition is not allowed.','Không thể chuyển sang giai đoạn tuyển dụng đó.'],assignee_invalid:['Choose an active Jobs recruiter.','Chọn chuyên viên Jobs đang hoạt động.'],forbidden:['Your Jobs permissions do not allow this action.','Quyền Jobs của bạn không cho phép thao tác này.'],self_change_forbidden:['You cannot change your own Jobs access. Ask another authorized administrator.','Bạn không thể tự thay đổi quyền Jobs của mình. Hãy nhờ một quản trị viên có thẩm quyền khác.'],protected_account:['This protected account can only be changed through the reviewed owner process.','Tài khoản được bảo vệ này chỉ có thể thay đổi qua quy trình chủ sở hữu đã được duyệt.'],owner_required:['Only a protected Jobs owner can grant, change or suspend Administrator access.','Chỉ chủ sở hữu Jobs được bảo vệ mới có thể cấp, thay đổi hoặc tạm ngưng quyền Quản trị viên.'],last_admin_required:['At least one active Jobs administrator must remain.','Luôn phải còn ít nhất một quản trị viên Jobs đang hoạt động.'],account_unavailable:['No verified Gary account uses this email. Ask the person to sign up and confirm their email first.','Không có tài khoản Gary đã xác minh nào dùng email này. Hãy nhờ người đó đăng ký và xác minh email trước.'],staff_exists:['This account already has Jobs staff history. Change or restore it in the staff list.','Tài khoản này đã có lịch sử nhân viên Jobs. Hãy thay đổi hoặc khôi phục trong danh sách nhân viên.'],staff_not_found:['This staff membership no longer exists. Refresh the list.','Tư cách nhân viên này không còn tồn tại. Hãy làm mới danh sách.'],role_invalid:['Choose Editor, Publisher, Recruiter or Admin.','Chọn Biên tập viên, Người xuất bản, Chuyên viên tuyển dụng hoặc Quản trị viên.'],name_invalid:['Use a display name of 120 characters or fewer.','Tên hiển thị tối đa 120 ký tự.']};
  if(messages[code])return messages[code][vi?1:0];
@@ -36,6 +38,13 @@ export const collections=[
 export function createCmsAdapter(){return {
  errorText,
  mediaPolicy:{mimeTypes:['image/jpeg','image/png','image/webp','image/avif'],maxBytes:8388608},
+ mountVacancyImage(root, options){
+  return mountVacancyImageEditor(root,{
+   ...options,
+   upload:(id,file,progress)=>uploadVacancyImage(db,id,file,progress),
+   async preview(id){return unwrap(await db.storage.from('jobs-vacancy-images').createSignedUrl(id,120)).signedUrl;},
+  });
+ },
  capabilities,
  async list({kind,query='',status='',page=1,pageSize=20}={}){
   const size=Math.min(100,Math.max(1,pageSize));let q=db.from('jobs_cms_entries').select('*',{count:'exact'}).eq('kind',kind).order('updated_at',{ascending:false}).order('id').range((page-1)*size,page*size-1);

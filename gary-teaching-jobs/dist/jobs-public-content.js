@@ -1,7 +1,17 @@
 import {categoryOptions,locationOptions} from './jobs-vacancy-options.js';
+import {publishedVacancyImage} from './jobs-vacancy-image.js';
 // Pure, escaped view model: CMS-authored text never becomes executable markup.
 export const escapeText=(value='')=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}}
+export const portraitPathPattern=/^(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:webp|png|jpe?g)$/i;
+export function signedPortrait(value, backend, bucket){
+ try{
+  const url=new URL(value),prefix=`/storage/v1/object/sign/${bucket}/`;
+  return url.protocol==='https:'&&url.origin===new URL(backend).origin&&!url.username&&!url.password
+    &&url.pathname.startsWith(prefix)&&portraitPathPattern.test(url.pathname.slice(prefix.length))
+    &&url.searchParams.get('token')?url.href:'';
+ }catch{return '';}
+}
 export function vacancyPath(slug){return typeof slug==='string'&&slug.length<=180&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)?`/jobs/${slug}`:'';}
 export function vacancySlug(pathname){const match=/^\/jobs\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/.exec(pathname);return match&&match[1].length<=180?match[1]:null;}
 export function vacancyCard(row,index,records,language='en'){
@@ -10,5 +20,5 @@ export function vacancyCard(row,index,records,language='en'){
  const city={en:cityOption?.label.en||location?.title_en||location?.title_vi||data.location_slug||'',vi:cityOption?.label.vi||location?.title_vi||location?.title_en||data.location_slug||''};
  const excerpt=value=>String(value||'').replace(/\s+/gu,' ').trim().slice(0,240);
  const pair=(en,vi)=>[escapeText(en||vi||''),escapeText(vi||en||'')],requirementsEn=String(data.requirements_en||'').split('\n').filter(Boolean),requirementsVi=String(data.requirements_vi||'').split('\n').filter(Boolean);
- return {id:row.id,persistent:true,slug:row.slug,url:vacancyPath(row.slug),applyUrl:`/portal.html?access=candidate&view=apply&vacancy=${encodeURIComponent(row.id)}`,location:escapeText(city[language==='vi'?'vi':'en']),region:data.location_slug||'',category:data.category_slug||'',type:pair(categoryOption?.label.en||category?.title_en||data.category_slug,categoryOption?.label.vi||category?.title_vi||data.category_slug),employer:pair(data.employer_name_en||employer?.title_en||data.employer_slug,data.employer_name_vi||(data.employer_name_en?data.employer_name_en:employer?.title_vi||data.employer_slug)),workplace:escapeText(data.workplace_name||''),streetAddress:escapeText(data.street_address||''),title:pair(row.title_en,row.title_vi),salary:pair(data.salary_en,data.salary_vi),hours:Number(data.hours)||0,age:escapeText(data.ages||''),date:String(row.published_at||'').slice(0,10),email:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contact_email||'')?data.contact_email:'',color:['peach','sage','lavender'][index%3],icon:'school',benefit:pair(data.benefits_en,data.benefits_vi),intro:pair(row.summary_en||excerpt(row.body_en),row.summary_vi||row.summary_en||excerpt(row.body_vi||row.body_en)),requirements:Array.from({length:Math.max(requirementsEn.length,requirementsVi.length)},(_,i)=>pair(requirementsEn[i],requirementsVi[i])),notes:pair(row.body_en,row.body_vi),source:safeLink(data.source_url)||'#opportunities'};
+ return {id:row.id,persistent:true,slug:row.slug,url:vacancyPath(row.slug),applyUrl:`/portal.html?access=candidate&view=apply&vacancy=${encodeURIComponent(row.id)}`,location:escapeText(city[language==='vi'?'vi':'en']),region:data.location_slug||'',category:data.category_slug||'',type:pair(categoryOption?.label.en||category?.title_en||data.category_slug,categoryOption?.label.vi||category?.title_vi||data.category_slug),employer:pair(data.employer_name_en||employer?.title_en||data.employer_slug,data.employer_name_vi||(data.employer_name_en?data.employer_name_en:employer?.title_vi||data.employer_slug)),employerWebsite:safeLink(employer?.data?.website),workplace:escapeText(data.workplace_name||''),streetAddress:escapeText(data.street_address||''),title:pair(row.title_en,row.title_vi),salary:pair(data.salary_en,data.salary_vi),hours:Number(data.hours)||0,age:escapeText(data.ages||''),date:String(row.published_at||'').slice(0,10),email:/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contact_email||'')?data.contact_email:'',image:publishedVacancyImage(data.vacancy_image),benefit:pair(data.benefits_en,data.benefits_vi),intro:pair(row.summary_en||excerpt(row.body_en),row.summary_vi||excerpt(row.body_vi)||row.summary_en||excerpt(row.body_en)),requirements:Array.from({length:Math.max(requirementsEn.length,requirementsVi.length)},(_,i)=>pair(requirementsEn[i],requirementsVi[i])),notes:pair(row.body_en,row.body_vi),source:safeLink(data.source_url)||'#opportunities'};
 }

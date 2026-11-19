@@ -4,12 +4,15 @@ import {jobsConfig} from './jobs-config.js';
 import {mountCms} from './cms-foundation/index.js';
 import {mountStaffManagement} from './jobs-staff-management.js';
 import {showActionToast,setCounterValues,clearCounterValues} from './action-toast.js';
+import {createTalentAdapter} from './jobs-talent-data.js';
+import {mountTalentPool} from './jobs-talent-pool.js';
 
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
-const accessFromUrl=url=>url.searchParams.get('access')==='staff'||(!url.searchParams.has('access')&&['cms','applications','staff'].includes(url.searchParams.get('view')))?'staff':'candidate';
+const accessFromUrl=url=>url.searchParams.get('access')==='staff'||(!url.searchParams.has('access')&&['cms','applications','talent','staff'].includes(url.searchParams.get('view')))?'staff':'candidate';
 let language=locale(),user=null,caps={},view=new URL(location.href).searchParams.get('view')||'',access=accessFromUrl(new URL(location.href)),page=1,selected=null,cms=null,staffPage=null,recovery=false,roster=[],generation=0,loading=true,capabilityError=false;
 let currentViewUrl=location.href, cmsDestination='vacancy', cmsNavigation='content';
+let talentPage=null;
 const t=(en,vi)=>language==='vi'?vi:en;
 const stageLabel=s=>STAGE_LABELS[s]?.[language==='vi'?1:0]||s;
 function success(message){return showActionToast(document,message,{language});}
@@ -30,7 +33,8 @@ function renderChrome(){
  document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
 }
 function deadline(promise){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('portal_timeout')),12000);})]).finally(()=>clearTimeout(timer));}
-function clearWorkspace(keepStats=false){cms?.destroy?.({force:true});cms=null;staffPage?.destroy();staffPage=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();if(!keepStats)resetRecruitmentStats();}
+function clearWorkspace(keepStats=false){cms?.destroy?.({force:true});cms=null;staffPage?.destroy();staffPage=null;talentPage?.destroy();talentPage=null;selected=null;filterValues={};page=1;$('#workspace-nav').replaceChildren();$('#workspace-view').replaceChildren();if(!keepStats)resetRecruitmentStats();}
+const mayLeave=()=>(cms?.canLeave?.()??true)&&(talentPage?.canLeave()??true);
 function requestKey(vacancy){const key='jobs-request:'+user.id+':'+(vacancy||'general');try{let value=sessionStorage.getItem(key);if(!value){value=crypto.randomUUID();sessionStorage.setItem(key,value);}return value;}catch{return crypto.randomUUID();}}
 async function guarded(task){const g=generation;try{return await task();}catch(e){if(g===generation){status(errorText(e,language),true);if(e?.code==='42501'||[401,403].includes(e?.status))schedulePermissionRefresh(true);}throw e;}}
 function renderAuth(){
@@ -47,7 +51,7 @@ function updateCmsNavigation(next){
  document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
 }
 function nav(){
- const permitted=access==='staff'?[...(caps.read?['cms']:[]),...(caps.recruit?['applications']:[]),...(caps.manage_staff?['staff']:[])]:['mine'];
+ const permitted=access==='staff'?[...(caps.read?['cms']:[]),...(caps.recruit?['applications']:[]),...(caps.recruit===true?['talent']:[]),...(caps.manage_staff?['staff']:[])]:['mine'];
  if(!permitted.includes(view)&&!(access==='candidate'&&view==='apply'))view=permitted[0]||'';
  $('#signed-panel').classList.toggle('jobs-staff-active',access==='staff'&&!!user&&(caps.read||caps.recruit));
  if(access!=='staff'){
@@ -58,7 +62,9 @@ function nav(){
   const collectionButton=kind=>{const pair=labels[kind]||[kind,kind],label=t(...pair);return `<button type="button" data-action="staff-collection" data-collection="${esc(kind)}" aria-label="${esc(label)}" title="${esc(label)}" aria-current="false"><span class="jobs-nav-symbol" aria-hidden="true">${glyphs[kind]||'·'}</span><span class="jobs-nav-label">${esc(label)}</span></button>`;};
   const available=kind=>kind==='media'||collections.some(item=>item.kind===kind);
   const group=(key,en,vi,content)=>content?`<details data-jobs-nav-group="${key}" open><summary>${t(en,vi)}</summary><div class="jobs-nav-items">${content}</div></details>`:'';
-  const recruitment=(caps.read&&available('vacancy')?collectionButton('vacancy'):'')+(caps.recruit?`<button type="button" data-action="view" data-view="applications" aria-label="${t('Recruitment','Tuyển dụng')}" title="${t('Recruitment','Tuyển dụng')}"><span class="jobs-nav-symbol" aria-hidden="true">↗</span><span class="jobs-nav-label">${t('Recruitment','Tuyển dụng')}</span></button>`:'');
+  const recruitment=(caps.read&&available('vacancy')?collectionButton('vacancy'):'')+(caps.recruit?[
+   ['applications','↗',t('Recruitment','Tuyển dụng')],...(caps.recruit===true?[['talent','◉',t('Talent Pool','Nguồn ứng viên')]]:[])
+  ].map(([destination,symbol,label])=>`<button type="button" data-action="view" data-view="${destination}" aria-label="${label}" title="${label}"><span class="jobs-nav-symbol" aria-hidden="true">${symbol}</span><span class="jobs-nav-label">${label}</span></button>`).join(''):'');
   const directory=caps.read?['employer','category','location'].filter(available).map(collectionButton).join(''):'';
   const knowledge=caps.read?['guide','faq'].filter(available).map(collectionButton).join(''):'';
   const staffLabel=t('Staff management','Quản lý nhân viên');
@@ -76,9 +82,17 @@ async function openStaffCollection(destination){
  await cms?.ready;
  if(await cms?.navigate?.(destination))updateCmsNavigation(cms.navigationState?.());
 }
-function setView(next){if(cms?.canLeave&&!cms.canLeave())return;generation++;clearWorkspace(true);view=next;const u=new URL(location.href);u.searchParams.set('view',view);u.searchParams.set('access',access);history.pushState({},'',u);currentViewUrl=u.href;void renderView().catch(e=>status(errorText(e,language),true,true));}
+function setView(next, applicationId){
+ if(!mayLeave())return;
+ const current=++generation;
+ clearWorkspace(true);view=next;
+ const u=new URL(location.href);u.searchParams.set('view',view);u.searchParams.set('access',access);history.pushState({},'',u);currentViewUrl=u.href;
+ void renderView().then(()=>{
+  if(applicationId&&current===generation&&view==='applications'&&access==='staff'&&caps.recruit)return openApplication(applicationId);
+ }).catch(e=>{if(current===generation)status(errorText(e,language),true,true);});
+}
 function setAccess(next){
- if(next===access||recovery||cms?.canLeave&&!cms.canLeave())return;
+ if(next===access||recovery||!mayLeave())return;
  generation++;clearWorkspace();access=next;view='';status('');const u=new URL(location.href);u.searchParams.set('access',access);u.searchParams.delete('view');if(access==='candidate'&&u.searchParams.has('vacancy'))view='apply';history.pushState({},'',u);currentViewUrl=u.href;
  void authenticate();
 }
@@ -96,6 +110,15 @@ async function renderView(){
  if(view==='staff'){
   staffPage=mountStaffManagement(target,{adapter:createStaffAdapter(),language,errorText,onNotice:(message,error,confirmed)=>confirmed?success(message):error?status(message,true):showActionToast(document,message,{language,tone:'info'})});
   await staffPage.ready;return;
+ }
+ if(view==='talent' && access==='staff' && caps.recruit===true){
+  const mountedAt=generation;
+  talentPage=mountTalentPool(target,{
+   adapter:createTalentAdapter({db,unwrap,deadline,backend:jobsConfig.supabaseUrl}),language,canPublish:caps.publish===true,
+   allowed:()=>mountedAt===generation&&view==='talent'&&access==='staff'&&!!user&&caps.recruit===true,
+   notify:success,openApplication:id=>setView('applications',id)
+  });
+  return;
  }
  if(view==='apply'){await renderApplicationForm();return;}
  if(view==='applications'&&!caps.recruit){setView('mine');return;}
@@ -193,7 +216,7 @@ async function authenticate(){
   status(e.message==='portal_timeout'?t('The portal is taking too long to respond. Check your connection and try again.','Cổng thông tin phản hồi quá lâu. Kiểm tra kết nối rồi thử lại.'):t('The portal could not be loaded. Check your connection and try again.','Chưa thể tải cổng thông tin. Kiểm tra kết nối rồi thử lại.'),true,true);
  }
 }
-$('#portal-language').addEventListener('click',()=>{language=language==='en'?'vi':'en';try{localStorage.setItem('gary-language',JSON.stringify(language));}catch{}renderChrome();renderAuth();if(user&&!loading&&!recovery)nav();if(cms)cms.setLanguage(language);else if(staffPage)staffPage.setLanguage(language);else if(user&&!loading&&!recovery)void renderView().catch(e=>status(errorText(e,language),true,true));});
+$('#portal-language').addEventListener('click',()=>{language=language==='en'?'vi':'en';try{localStorage.setItem('gary-language',JSON.stringify(language));}catch{}renderChrome();renderAuth();if(user&&!loading&&!recovery)nav();if(cms)cms.setLanguage(language);else if(staffPage)staffPage.setLanguage(language);else if(talentPage)talentPage.setLanguage(language);else if(user&&!loading&&!recovery)void renderView().catch(e=>status(errorText(e,language),true,true));});
 $('#sign-out').addEventListener('click',()=>{void guarded(async()=>{unwrap(await deadline(db.auth.signOut({scope:'local'})));generation++;user=null;caps={};roster=[];recovery=false;loading=false;clearWorkspace();status('');renderChrome();renderAuth();}).catch(()=>{});});
 document.addEventListener('click',event=>{
  const b=event.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;
@@ -244,7 +267,7 @@ document.addEventListener('submit',event=>{
 });
 window.addEventListener('popstate',()=>{
  const nextUrl=new URL(location.href);
- if(cms?.canLeave&&!cms.canLeave()){history.pushState({},'',currentViewUrl);return;}
+ if(!mayLeave()){history.pushState({},'',currentViewUrl);return;}
  cms?.destroy?.({force:true});cms=null;filterValues={};selected=null;page=1;
  generation++;access=accessFromUrl(nextUrl);view=nextUrl.searchParams.get('view')||'';currentViewUrl=nextUrl.href;
  void authenticate();

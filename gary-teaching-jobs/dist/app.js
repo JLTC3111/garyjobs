@@ -3,6 +3,8 @@ import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
 import {showActionToast,setCounterValues} from './action-toast.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
+let vacancyQuery='';
+const defaultSocialImage=document.querySelector('meta[property="og:image"]')?.content;
 
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -39,7 +41,6 @@ const icons = {
   check: '<path d="m5 12 4 4L19 6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/>',
-  school: '<path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7M11 8h2"/>',
   books: '<path d="M3 4h5v16H3zM10 4h5v16h-5zM17 5l4-1 3 16-4 1zM4 8h3m4 0h3"/>',
   cap: '<path d="m2 9 10-6 10 6-10 6zM6 12v6q6 5 12 0v-6M22 9v9"/>',
   chat: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l1-5a8.5 8.5 0 1 1 16-3.5Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/>',
@@ -76,7 +77,7 @@ let jobs = [
     source: 'https://garyagency.com/offer-in-bac-giang-2/',
   },
   {
-    id: 'hai-phong', location: 'Hải Phòng', region: 'hai-phong', category: 'public', type: ['Public schools', 'Trường công lập'], title: ['Public School English Teacher', 'Giáo viên tiếng Anh trường công'], hours: 60, age: null, date: '2026-08-19', email: 'chloevu02@gmail.com', color: 'sage', icon: 'school',
+    id: 'hai-phong', location: 'Hải Phòng', region: 'hai-phong', category: 'public', type: ['Public schools', 'Trường công lập'], title: ['Public School English Teacher', 'Giáo viên tiếng Anh trường công'], hours: 60, age: null, date: '2026-08-19', email: 'chloevu02@gmail.com',
     benefit: ['WP / TRC support', 'Hỗ trợ WP / TRC'], intro: ['Find your rhythm in the port city of Hải Phòng with an English teaching role in public schools. The published teaching load is 60 hours per month, with work permit and residence card support.', 'Giảng dạy tiếng Anh tại các trường công lập ở thành phố cảng Hải Phòng. Khối lượng giảng dạy được công bố là 60 giờ/tháng, có hỗ trợ giấy phép lao động và thẻ tạm trú.'],
     requirements: [['CV and bachelor’s degree', 'CV và bằng cử nhân'], ['TEFL, TESOL, CELTA or equivalent teaching certificate', 'Chứng chỉ TEFL, TESOL, CELTA hoặc tương đương'], ['Short introduction video', 'Video giới thiệu ngắn'], ['The listing names South African, Russian, Moroccan, EU and native English-speaking applicants as preferred; ask the recruiter about eligibility.', 'Tin gốc ưu tiên ứng viên Nam Phi, Nga, Ma-rốc, EU và người bản ngữ; liên hệ chuyên viên để xác nhận điều kiện.']],
     notes: ['The published start date was 7 September 2026. Ask the recruiter to confirm whether recruitment is still open and discuss the current start date.', 'Ngày bắt đầu được đăng là 7/9/2026. Liên hệ chuyên viên để xác nhận vị trí còn tuyển và ngày bắt đầu hiện tại.'],
@@ -97,7 +98,7 @@ let jobs = [
     source: 'https://garyagency.com/%f0%9f%8c%9f-full-time-english-teacher-needed-dong-nai-%f0%9f%8c%9f-4/',
   },
   {
-    id: 'thai-nguyen', location: 'Thái Nguyên', region: 'thai-nguyen', category: 'centers', type: ['Language center', 'Trung tâm tiếng Anh'], title: ['Native English Teacher', 'Giáo viên tiếng Anh bản ngữ'], hours: 100, age: '3–15', date: '2026-08-12', email: 'chloevu02@gmail.com', color: 'sage', icon: 'school',
+    id: 'thai-nguyen', location: 'Thái Nguyên', region: 'thai-nguyen', category: 'centers', type: ['Language center', 'Trung tâm tiếng Anh'], title: ['Native English Teacher', 'Giáo viên tiếng Anh bản ngữ'], hours: 100, age: '3–15', date: '2026-08-12', email: 'chloevu02@gmail.com',
     benefit: ['Housing allowance', 'Hỗ trợ tiền nhà'], intro: ['A language center role in Thái Nguyên City for a native English speaker. Teach learners aged 3–15, with a published housing allowance of 2,000,000 VND per month and 50% WP / TRC support.', 'Vị trí tại trung tâm tiếng Anh ở thành phố Thái Nguyên dành cho giáo viên bản ngữ. Học sinh từ 3–15 tuổi, hỗ trợ tiền nhà 2.000.000 VNĐ/tháng và 50% WP / TRC theo tin gốc.'],
     requirements: [['Native English speaker', 'Người nói tiếng Anh bản ngữ'], ['Bachelor’s degree', 'Bằng cử nhân'], ['CELTA, TESOL, TEFL or equivalent', 'Chứng chỉ CELTA, TESOL, TEFL hoặc tương đương'], ['CV, degree, teaching certificate and introduction video', 'CV, bằng cấp, chứng chỉ giảng dạy và video giới thiệu']],
     notes: ['Salary is negotiable and paid monthly. Confirm the current availability, start date and housing arrangements with the recruiter.', 'Lương thỏa thuận, thanh toán hằng tháng. Xác nhận vị trí còn tuyển, ngày bắt đầu và chỗ ở với chuyên viên.'],
@@ -135,7 +136,10 @@ function heroHeading() {
 }
 
 function renderThemeControls() {
-  $$('[data-jobs-theme-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.jobsThemeChoice===(window.garyJobsTheme?.preference||'system'))));
+  const preference=window.garyJobsTheme?.preference||'system';
+  $$('[data-jobs-theme-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.jobsThemeChoice===preference)));
+  const vacancyTheme=$('#vacancy-theme');
+  if(vacancyTheme)vacancyTheme.value=preference;
 }
 document.addEventListener('gary-jobs:theme',renderThemeControls);
 
@@ -191,6 +195,7 @@ function renderPage() {
         [['Find your right fit', 'Tìm công việc phù hợp'], ['Explore roles together, meet the school, and ask all the questions that matter.', 'Cùng khám phá công việc, gặp nhà trường và giải đáp những điều bạn quan tâm.']],
         [['Start your next chapter', 'Bắt đầu chương mới'], ['Get support with the next steps, so you can arrive ready for your first day.', 'Nhận hỗ trợ cho các bước tiếp theo để sẵn sàng cho ngày đầu tiên.']],
       ].map(([title,desc],i)=>`<div class="process-step"><span class="step-number">0${i+1}</span><div><h3>${pick(title)}</h3><p>${pick(desc)}</p></div>${i<2?icon('arrow'):icon('spark')}</div>`).join('')}</div></div></section>
+      <section id="teacher-showcase" class="teacher-showcase section-pad" aria-labelledby="teacher-showcase-title" hidden></section>
       <section id="life" class="life-section section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('THERE’S A WHOLE LIFE BEYOND THE CLASSROOM', 'CÒN CẢ MỘT CUỘC SỐNG BÊN NGOÀI LỚP HỌC')}</p><h2>${t('Make a living.<br>Make a little <em>more of life.</em>', 'Tạo dựng sự nghiệp.<br>Thêm sắc màu <em>cho cuộc sống.</em>')}</h2></div><p class="section-intro">${t('New routines. Unexpected friendships.<br>Weekends that feel like a world away.<br>This is your invitation to explore.', 'Thói quen mới. Tình bạn bất ngờ.<br>Cuối tuần với những hành trình khác biệt.<br>Mời bạn cùng khám phá.')}</p></div><div id="photo-gallery"></div><div class="life-bottom">${icon('sun')}<p>${t('Come for the teaching. Stay for everything else.', 'Đến vì giảng dạy. Gắn bó vì tất cả những điều còn lại.')}</p><span class="handwritten">${t('That’s the Vietnam feeling.', 'Đó là cảm giác Việt Nam.')}</span></div></div></section>
       <section id="services" class="support-section section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('YOUR LANDING, A LITTLE SOFTER', 'ĐỂ KHỞI ĐẦU NHẸ NHÀNG HƠN')}</p><h2>${t('More than a <em>job match.</em>', 'Hơn cả một <em>công việc.</em>')}</h2></div><p class="section-intro">${t('A new home comes with a few moving parts.<br>We’re here to help you put them together.', 'Một cuộc sống mới có nhiều điều cần sắp xếp.<br>Chúng tôi ở đây để hỗ trợ bạn.')}</p></div><div class="support-grid">${[
         ['documents','document',['Paperwork, made clearer', 'Giấy tờ, rõ ràng hơn'],['Work permits, visas, temporary residence cards and document services. Get a clearer picture of your next steps.', 'Giấy phép lao động, visa, thẻ tạm trú và dịch vụ giấy tờ. Hiểu rõ hơn các bước bạn cần thực hiện.'],['Explore document support','Khám phá hỗ trợ giấy tờ']],
@@ -214,6 +219,7 @@ function renderPage() {
   renderThemeControls();
   renderJobs();
   renderManagedContent();
+  document.dispatchEvent(new CustomEvent('jobs:public-render'));
   observeNavigation();
   mountHeaderApps();
   photoGalleryMount = mountPhotoGallery($('#photo-gallery'), { locale: state.lang, onExploreRegion: openDestination });
@@ -221,17 +227,30 @@ function renderPage() {
   if(preferencesOpen&&preferenceFocus)$(`[data-preference-focus="${preferenceFocus}"]`)?.focus({preventScroll:true});
 }
 
+const normalizeJobSearch = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g,'d');
+function matchesJobSearch(job, query) {
+  return !query || normalizeJobSearch(`${job.title.join(' ')} ${job.type.join(' ')} ${(job.employer||[]).join(' ')} ${job.workplace||''} ${job.streetAddress||''} ${job.location} English teacher teaching full time tieng Anh giao vien ${job.benefit.join(' ')}`).includes(query);
+}
 function filteredJobs() {
-  const normalize = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g,'d');
-  const query = normalize(state.keyword.trim());
+  const query = normalizeJobSearch(state.keyword.trim());
   return jobs.filter(job => (state.location === 'all' || job.region === state.location)
     && (state.category === 'all' || job.category === state.category || state.category === 'saved' && state.saved.has(job.id))
-    && (!query || normalize(`${job.title.join(' ')} ${job.type.join(' ')} ${(job.employer||[]).join(' ')} ${job.workplace||''} ${job.streetAddress||''} ${job.location} English teacher teaching full time tieng Anh giao vien ${job.benefit.join(' ')}`).includes(query)));
+    && matchesJobSearch(job, query));
 }
 
 // Fixed categories come from vacancy cards; legacy labels remain available only
 // when a published vacancy actually uses them. Unrelated taxonomy never becomes a job filter.
 function managedCategoryLabels(){return [...new Map(jobs.filter(job=>job.category).map(job=>[job.category,[job.category,pick(job.type)||esc(job.category)]])).values()];}
+
+function vacancyPhoto(job, detail = false) {
+  const image = job.image;
+  if (!image) return '';
+  return `<figure class="vacancy-photo${detail?' vacancy-photo--detail':''}"><img src="${esc(image.url)}" alt="${esc(pick(image.alt))}" width="${image.width}" height="${image.height}" decoding="async"${detail?'':' loading="lazy"'}></figure>`;
+}
+
+document.addEventListener('error', event => {
+  if (event.target.matches?.('.vacancy-photo img')) event.target.parentElement.hidden = true;
+}, true);
 
 function renderJobs() {
   const results = filteredJobs();
@@ -242,7 +261,7 @@ function renderJobs() {
   if (managedRecords !== null) setCounterValues(document, {'job-count-value': results.length}, state.lang);
   else $('#job-count-value').textContent = String(results.length);
   $('#active-filters').innerHTML = state.keyword || state.location !== 'all' ? `<div class="active-filter"><span>${t('Your search', 'Tìm kiếm')}: <strong>${esc(state.keyword || t('All roles', 'Tất cả vị trí'))}</strong>${state.location !== 'all' ? ` · ${esc(jobs.find(j=>j.region===state.location)?.location || '')}` : ''}</span><button data-action="clear-search">${t('Clear search', 'Xóa tìm kiếm')} ${icon('close')}</button></div>` : '';
-  $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card"><div class="job-card-top"><span class="job-school-icon ${job.color}">${icon(job.icon)}</span><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><div class="job-location">${icon('pin')} ${job.location}</div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags"><span>${icon('clock')}${job.hours} ${t('hrs / month','giờ / tháng')}</span><span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
+  $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card">${vacancyPhoto(job)}<div class="job-card-top"><div class="job-location">${icon('pin')} ${job.location}</div><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags"><span>${icon('clock')}${job.hours} ${t('hrs / month','giờ / tháng')}</span><span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
   const more = $('#more-jobs');
   more.hidden = results.length <= 3;
   more.innerHTML = `${state.expanded?t('Show fewer opportunities','Thu gọn danh sách'):t(`Explore all ${results.length} opportunities`,`Xem cả ${results.length} cơ hội`)} ${icon(state.expanded?'chevron':'arrow')}`;
@@ -270,7 +289,14 @@ function updateShortlist(id, before) {
   if(before)state.saved.delete(id);else state.saved.add(id);
   persist('gary-saved-jobs',[...state.saved]);
   renderJobs();
-  $(`[data-action="save"][data-id="${id}"]`)?.focus({preventScroll:true});
+  const dialog=$('#detail-dialog');
+  const workspaceSave=$('.vacancy-save',dialog);
+  if(dialog.open){
+    if(workspaceSave?.dataset.id===id){
+      workspaceSave.setAttribute('aria-pressed',String(state.saved.has(id)));
+      workspaceSave.focus({preventScroll:true});
+    }
+  }else $(`#job-grid [data-action="save"][data-id="${id}"]`)?.focus({preventScroll:true});
 }
 function toggleShortlist(id) {
   const saved=state.saved.has(id);
@@ -286,14 +312,16 @@ function toggleShortlist(id) {
 }
 
 let dialogOpener;
-function openDialog(content) {
+function openDialog(content, {workspace=false, focus=true}={}) {
   const dialog=$('#detail-dialog');
   if(!dialog.open) dialogOpener=document.activeElement;
+  dialog.classList.toggle('is-vacancy-workspace',workspace);
   $('#dialog-content').innerHTML=content;
   $('.dialog-close').setAttribute('aria-label',t('Close dialog','Đóng hộp thoại'));
   if(!dialog.open)dialog.showModal();
   document.body.classList.add('dialog-open');dialog.scrollTop=0;
-  requestAnimationFrame(()=>$('.dialog-close').focus({preventScroll:true}));
+  const target=focus&&$(workspace?'#dialog-title':'.dialog-close',dialog);
+  if(target)requestAnimationFrame(()=>{if(dialog.open&&target.isConnected)target.focus({preventScroll:true});});
 }
 function closeDialog() { leaveVacancyRoute(); $('#detail-dialog').close(); }
 
@@ -303,6 +331,7 @@ function updateVacancyMetadata(job=null){
   document.title=job?`${decode(pick(job.title))} | Vietnam English Teaching Jobs`:t('English Teaching Jobs in Vietnam | Gary Agency','Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
   const description=job?decode(pick(job.intro)):t('Find your next English teaching opportunity in Vietnam with Gary Agency. Fee-free placement, a local team, and support for your next chapter.','Tìm công việc giảng dạy tiếng Anh tại Việt Nam cùng Gary Agency. Giới thiệu việc làm miễn phí và đội ngũ địa phương đồng hành.');
   for(const [selector,value] of [['meta[name="description"]',description],['meta[property="og:title"]',document.title],['meta[property="og:description"]',description]])document.querySelector(selector)?.setAttribute('content',value);
+  if(defaultSocialImage)$('meta[property="og:image"]')?.setAttribute('content',job?.image?.url||defaultSocialImage);
   let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}canonical.href=new URL(job?.url||'/',location.origin).href;
   document.querySelector('meta[data-vacancy-robots]')?.remove();
 }
@@ -310,7 +339,11 @@ function leaveVacancyRoute(){
   if(!routeDialog)return;routeDialog=false;updateVacancyMetadata();
   if(!location.pathname.startsWith('/jobs/'))return;
   const previous=history.state?.garyJobsReturnUrl,returnUrl=typeof previous==='string'&&previous.startsWith('/')&&!previous.startsWith('//')?previous:'/'+location.search+'#opportunities';
-  if(history.state?.garyJobsFromListing)history.back();else history.replaceState({},'',returnUrl);
+  if(history.state?.garyJobsFromListing)history.go(-(history.state.garyJobsListingDepth||1));
+  else {
+    history.replaceState({},'',returnUrl);
+    $('#opportunities')?.scrollIntoView({block:'start',behavior:'instant'});
+  }
 }
 function syncVacancyRoute(){
   const slug=vacancySlug(location.pathname);
@@ -320,8 +353,10 @@ function syncVacancyRoute(){
     if(job){openJob(job.id,{navigate:false});return;}
   }
   routeDialog=true;
+  updateVacancyMetadata();
   const pending=publicLoadState==='loading',failed=publicLoadState==='failed';
-  openDialog(`<p class="eyebrow">${t('TEACHING JOBS','VIỆC GIẢNG DẠY')}</p><h2 id="dialog-title">${pending?t('Loading vacancy…','Đang tải tin tuyển dụng…'):failed?t('Vacancy could not be loaded','Chưa thể tải tin tuyển dụng'):t('Vacancy unavailable','Tin tuyển dụng không còn khả dụng')}</h2><p class="dialog-intro">${pending?t('Checking the current published vacancy.','Đang kiểm tra tin tuyển dụng đã xuất bản.'):failed?t('Check your connection and try again.','Kiểm tra kết nối rồi thử lại.'):t('This vacancy may have closed or is no longer published. Browse current opportunities to find another role.','Vị trí này có thể đã hết hạn hoặc không còn được đăng. Xem các cơ hội hiện tại để tìm công việc khác.')}</p>${failed?`<button type="button" class="button" data-action="retry-vacancy">${t('Try again','Thử lại')}</button>`:''}<a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>`);
+  openDialog(`<div class="vacancy-workspace">${vacancyHeader()}<section class="vacancy-route-status" aria-busy="${pending}"><h1 id="dialog-title" tabindex="-1">${pending?t('Loading vacancy…','Đang tải tin tuyển dụng…'):failed?t('Vacancy could not be loaded','Chưa thể tải tin tuyển dụng'):t('Vacancy unavailable','Tin tuyển dụng không còn khả dụng')}</h1><p>${pending?t('Checking the current published vacancy.','Đang kiểm tra tin tuyển dụng đã xuất bản.'):failed?t('Check your connection and try again.','Kiểm tra kết nối rồi thử lại.'):t('This vacancy may have closed or is no longer published. Browse current opportunities to find another role.','Vị trí này có thể đã hết hạn hoặc không còn được đăng. Xem các cơ hội hiện tại để tìm công việc khác.')}</p>${failed?`<button type="button" class="button" data-action="retry-vacancy">${t('Try again','Thử lại')}</button>`:''}</section></div>`,{workspace:true});
+  renderThemeControls();
   if(!pending){document.title=t('Vacancy unavailable | Vietnam English Teaching Jobs','Tin tuyển dụng không còn khả dụng | Vietnam English Teaching Jobs');let robots=document.querySelector('meta[data-vacancy-robots]');if(!robots){robots=document.createElement('meta');robots.name='robots';robots.dataset.vacancyRobots='';document.head.append(robots);}robots.content='noindex,follow';}
 }
 window.addEventListener('popstate',syncVacancyRoute);
@@ -330,18 +365,166 @@ function openDestination(id) {
   const d=destinations[id];if(!d)return;openDialog(`<div class="destination-dialog-photo"><img src="${d.image}" alt="${pick(d.alt)}" width="${d.width}" height="${d.height}" style="object-position:${d.position}"></div><p class="eyebrow">${pick(d.eyebrow)}</p><h2 id="dialog-title">${pick(d.name)}<em>, Vietnam.</em></h2><p class="dialog-intro">${pick(d.detail)}</p><button class="button" data-action="destination-jobs" data-id="${id}">${t('Explore teaching opportunities','Khám phá cơ hội giảng dạy')} ${arrow()}</button>`);
 }
 
+function vacancyHeader(){
+  return `<header class="vacancy-workspace-header">
+    <a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>
+    <div class="vacancy-preferences">
+      <button type="button" class="text-button dialog-job-language" data-action="language" lang="${t('vi','en')}">${t('Tiếng Việt','English')}</button>
+      <select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
+        <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
+      </select>
+    </div>
+  </header>`;
+}
+
+function renderVacancyResults(workspace){
+  const query=normalizeJobSearch(vacancyQuery.trim());
+  const matches=jobs.filter(job=>matchesJobSearch(job,query));
+  $('[data-vacancy-result-status]',workspace).textContent=t(`${matches.length} ${matches.length===1?'vacancy':'vacancies'}`,`${matches.length} tin tuyển dụng`);
+  $('.vacancy-results',workspace).innerHTML=matches.length?`<ul>${matches.map(job=>{
+    const current=job.id===workspace.dataset.vacancy?' aria-current="page"':'';
+    const label=`<strong>${pick(job.title)}</strong><small>${job.location}</small>`;
+    const action=`data-action="job" data-id="${esc(job.id)}"${current}`;
+    return `<li>${job.url?`<a href="${esc(job.url)}" ${action}>${label}</a>`:`<button type="button" ${action}>${label}</button>`}</li>`;
+  }).join('')}</ul>`:`<p>${t('No vacancies match your search.','Không có tin tuyển dụng phù hợp.')}</p>`;
+}
+
+function vacancyApply(job){
+  const label=`${t('Apply for this role','Ứng tuyển vị trí này')} ${arrow()}`;
+  return job.applyUrl?`<a class="button" href="${esc(job.applyUrl)}">${label}</a>`:
+    `<button class="button" type="button" data-action="apply" data-id="${esc(job.id)}">${label}</button>`;
+}
+
+function vacancyContent(job){
+  const category=pick(job.type),summary=pick(job.intro),description=pick(job.notes);
+  const showSummary=summary&&!description.replace(/\s+/g,' ').trim().startsWith(summary);
+  const requirements=job.requirements.map(pick).filter(Boolean);
+  const salary=pick(job.salary||[])||t('Let’s discuss','Thỏa thuận'),benefits=pick(job.benefit);
+  return `<article class="vacancy-article">
+    <header>
+      ${category?`<p class="eyebrow">${category}</p>`:''}
+      <h1 id="dialog-title" tabindex="-1">${pick(job.title)}</h1>
+      ${job.location?`<p class="vacancy-location">${icon('pin')} ${job.location}</p>`:''}
+    </header>
+    ${vacancyPhoto(job,true)}
+    <section aria-labelledby="vacancy-description">
+      <h2 id="vacancy-description">${t('Job description','Mô tả công việc')}</h2>
+      ${showSummary?`<p class="vacancy-summary">${summary}</p>`:''}
+      ${description?`<p class="vacancy-copy">${description}</p>`:''}
+    </section>
+    ${requirements.length?`<section aria-labelledby="vacancy-requirements">
+      <h2 id="vacancy-requirements">${t('What you’ll need','Yêu cầu ứng tuyển')}</h2>
+      <ul class="check-list">${requirements.map(requirement=>`<li>${icon('check')}<span>${requirement}</span></li>`).join('')}</ul>
+    </section>`:''}
+    <section aria-labelledby="vacancy-compensation">
+      <h2 id="vacancy-compensation">${t('Salary and benefits','Lương và phúc lợi')}</h2>
+      <dl class="vacancy-facts">
+        <div><dt>${t('Salary','Mức lương')}</dt><dd>${salary}</dd></div>
+        ${benefits?`<div><dt>${t('Support','Hỗ trợ')}</dt><dd class="vacancy-copy">${benefits}</dd></div>`:''}
+      </dl>
+    </section>
+    ${job.source&&job.source!=='#opportunities'?`<a class="text-button" href="${esc(job.source)}" target="_blank" rel="noopener noreferrer">${t('Original listing','Tin tuyển dụng gốc')} ${arrow()}</a>`:''}
+  </article>`;
+}
+
+function vacancySidebar(job, apply){
+  const date=new Date(`${job.date}T12:00:00Z`);
+  const posted=Number.isNaN(date.getTime())?'':new Intl.DateTimeFormat(state.lang==='vi'?'vi-VN':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(date);
+  const students=Array.isArray(job.age)?pick(job.age):job.age&&`${job.age} ${t('years old','tuổi')}`;
+  const employer=pick(job.employer||[]),address=[job.workplace,job.streetAddress].filter(Boolean).join(' · ');
+  return `<aside class="vacancy-sidebar" aria-label="${t('Vacancy facts and actions','Thông tin và thao tác tuyển dụng')}">
+    <div class="vacancy-sidebar-actions">
+      <div class="vacancy-desktop-apply">${apply}</div>
+      <div class="vacancy-secondary-actions">
+        <button type="button" class="button button-secondary vacancy-save" data-action="save" data-id="${esc(job.id)}" aria-pressed="${state.saved.has(job.id)}">${icon('bookmark')} ${t('Save','Lưu')}</button>
+        ${job.url?`<button type="button" class="button button-secondary" data-action="share-vacancy" data-id="${esc(job.id)}">${t('Share','Chia sẻ')}</button>`:''}
+      </div>
+      ${job.url?`<label class="vacancy-share-link" hidden>${t('Copy this link','Sao chép liên kết này')}<input readonly value="${esc(new URL(job.url,location.origin).href)}"></label>`:''}
+    </div>
+    <section aria-labelledby="vacancy-facts-heading">
+      <h2 id="vacancy-facts-heading">${t('Key facts','Thông tin chính')}</h2>
+      <dl class="vacancy-facts">
+        ${job.hours?`<div><dt>${t('Teaching hours','Giờ giảng dạy')}</dt><dd>${job.hours} ${t('hours / month','giờ / tháng')}</dd></div>`:''}
+        <div><dt>${t('Contract type','Hình thức')}</dt><dd>${t('Full-time','Toàn thời gian')}</dd></div>
+        ${students?`<div><dt>${t('Students','Học sinh')}</dt><dd>${students}</dd></div>`:''}
+        ${posted?`<div><dt>${t('Posted','Ngày đăng')}</dt><dd><time datetime="${esc(job.date)}">${posted}</time></dd></div>`:''}
+      </dl>
+    </section>
+    ${employer||address?`<section aria-labelledby="vacancy-employer">
+      <h2 id="vacancy-employer">${t('Employer','Nhà tuyển dụng')}</h2>
+      ${employer?`<p>${employer}</p>`:''}${address?`<p>${address}</p>`:''}
+      ${job.employerWebsite?`<a class="text-button" href="${esc(job.employerWebsite)}" target="_blank" rel="noopener noreferrer">${t('Employer website','Website nhà tuyển dụng')} ${arrow()}</a>`:''}
+    </section>`:''}
+    <p class="dialog-small">${t('Placement is free for teachers. Availability and terms are confirmed by the recruiter.','Dịch vụ giới thiệu miễn phí cho giáo viên. Chuyên viên xác nhận vị trí còn tuyển và điều kiện.')}</p>
+  </aside>`;
+}
+
 function openJob(id,{navigate=true}={}) {
-  const job=jobs.find(j=>j.id===id);if(!job)return;
+  const job=jobs.find(item=>item.id===id);
+  if(!job)return;
+  const previous=$('#detail-dialog[open] .vacancy-workspace[data-vacancy]');
+  const keepPosition=!navigate&&previous?.dataset.vacancy===id;
+  const bodyScroll=keepPosition?$('.vacancy-workspace-body',previous).scrollTop:0;
+  const readingScroll=keepPosition?$('.vacancy-reading',previous).scrollTop:0;
+  const resultScroll=previous?$('.vacancy-results',previous).scrollTop:0;
+  const browseExpanded=keepPosition&&$('.vacancy-browse-toggle',previous).getAttribute('aria-expanded')==='true';
+  if(!previous)vacancyQuery='';
   if(job.url){
     if(navigate&&location.pathname!==job.url){
-      const fromListing=!vacancySlug(location.pathname),returnUrl=fromListing?location.pathname+location.search+location.hash:'/'+location.search+'#opportunities';
+      const fromListing=!location.pathname.startsWith('/jobs/'),previousState=history.state;
+      const returnUrl=fromListing?location.pathname+location.search+location.hash:previousState?.garyJobsReturnUrl||'/'+location.search+'#opportunities';
+      const depth=fromListing?1:previousState?.garyJobsFromListing?(previousState.garyJobsListingDepth||1)+1:0;
       const target=new URL(job.url,location.origin);target.search=location.search;
-      history.pushState({garyJobsFromListing:fromListing,garyJobsReturnUrl:returnUrl},'',target);
+      history.pushState({garyJobsFromListing:depth>0,garyJobsListingDepth:depth,garyJobsReturnUrl:returnUrl},'',target);
     }
     routeDialog=true;updateVacancyMetadata(job);
   }
-  const date=new Intl.DateTimeFormat(state.lang==='vi'?'vi-VN':'en-GB',{day:'numeric',month:'short',year:'numeric'}).format(new Date(`${job.date}T12:00:00Z`));
-  openDialog(`<div class="dialog-job-head"><button type="button" class="text-button dialog-job-language" data-action="language">${t('Tiếng Việt','English')}</button><span class="eyebrow">${pick(job.type)}</span><h2 id="dialog-title">${pick(job.title)}</h2><div class="dialog-location">${icon('pin')}${job.location} <span>· ${t('Posted','Đăng')} ${date}</span></div>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}${job.workplace||job.streetAddress?`<p class="job-workplace">${[job.workplace,job.streetAddress].filter(Boolean).join(' · ')}</p>`:''}</div><p class="dialog-intro">${pick(job.intro)}</p><p class="role-salary"><strong>${t('Salary','Mức lương')}:</strong> ${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</p><div class="role-facts"><div>${icon('clock')}<span>${t('Teaching hours','Giờ giảng dạy')}<strong>${job.hours} ${t('hours / month','giờ / tháng')}</strong></span></div><div>${icon('briefcase')}<span>${t('Contract type','Hình thức')}<strong>${t('Full-time','Toàn thời gian')}</strong></span></div><div>${icon('people')}<span>${t('Students','Học sinh')}<strong>${job.age?(Array.isArray(job.age)?pick(job.age):`${job.age} ${t('years old','tuổi')}`):t('Public school learners','Học sinh trường công')}</strong></span></div><div>${icon('shield')}<span>${t('Support','Hỗ trợ')}<strong>${pick(job.benefit)}</strong></span></div></div><h3>${t('What you’ll need','Yêu cầu ứng tuyển')}</h3><ul class="check-list">${job.requirements.map(r=>`<li>${icon('check')}<span>${pick(r)}</span></li>`).join('')}</ul><div class="role-note">${icon('document')}<p>${pick(job.notes)}</p></div><div class="dialog-actions">${job.applyUrl?`<a class="button" href="${esc(job.applyUrl)}">${t('Apply for this role','Ứng tuyển vị trí này')} ${arrow()}</a>`:`<button class="button" data-action="apply" data-id="${job.id}">${t('Apply for this role','Ứng tuyển vị trí này')} ${arrow()}</button>`}<a class="text-button" href="${job.source}" target="_blank" rel="noopener noreferrer">${t('Original listing','Tin tuyển dụng gốc')} ${arrow()}</a></div><p class="dialog-small">${t('Placement is free for teachers. Availability and terms are confirmed by the recruiter.','Dịch vụ giới thiệu miễn phí cho giáo viên. Chuyên viên xác nhận vị trí còn tuyển và điều kiện.')}</p>`);
+  const apply=vacancyApply(job);
+  openDialog(`<div class="vacancy-workspace" data-vacancy="${esc(id)}">
+    ${vacancyHeader()}
+    <div class="vacancy-workspace-body">
+      <nav class="vacancy-browser" aria-label="${t('Browse vacancies','Duyệt tin tuyển dụng')}">
+        <button type="button" class="vacancy-browse-toggle" data-action="vacancy-browse" aria-controls="vacancy-browse-panel" aria-expanded="${!!browseExpanded}">${t('Browse vacancies','Duyệt tin tuyển dụng')} ${icon('chevron')}</button>
+        <div id="vacancy-browse-panel" class="vacancy-browse-panel">
+          <label for="vacancy-browse-search">${t('Search vacancies','Tìm tin tuyển dụng')}</label>
+          <input type="search" id="vacancy-browse-search" maxlength="100" value="${esc(vacancyQuery)}">
+          <p class="vacancy-result-status" data-vacancy-result-status role="status"></p>
+          <div class="vacancy-results"></div>
+        </div>
+      </nav>
+      <div class="vacancy-reading" tabindex="0" role="region" aria-labelledby="dialog-title">${vacancyContent(job)}${vacancySidebar(job,apply)}</div>
+    </div>
+    <footer class="vacancy-mobile-apply">${apply}</footer>
+  </div>`,{workspace:true,focus:!keepPosition});
+  const workspace=$('.vacancy-workspace');
+  renderVacancyResults(workspace);
+  renderThemeControls();
+  $('.vacancy-results',workspace).scrollTop=resultScroll;
+  $('.vacancy-workspace-body',workspace).scrollTop=bodyScroll;
+  $('.vacancy-reading',workspace).scrollTop=readingScroll;
+}
+
+async function shareVacancy(id,control){
+  const job=jobs.find(item=>item.id===id);
+  if(!job?.url)return;
+  const url=new URL(job.url,location.origin).href,title=$('#dialog-title').textContent;
+  if(navigator.share){
+    try{await navigator.share({title,url});return;}
+    catch(error){if(error?.name==='AbortError')return;}
+  }
+  if(navigator.clipboard?.writeText){
+    try{
+      await navigator.clipboard.writeText(url);
+      toast(t('Vacancy link copied.','Đã sao chép liên kết tin tuyển dụng.'));
+      return;
+    }catch{/* The selectable link remains available when clipboard access is denied. */}
+  }
+  if(!control.isConnected)return;
+  const fallback=control.closest('.vacancy-sidebar-actions').querySelector('.vacancy-share-link');
+  fallback.hidden=false;
+  const field=fallback.querySelector('input');
+  field.focus();
+  field.select();
 }
 
 function openApplication(id, subject) {
@@ -403,7 +586,13 @@ document.addEventListener('click',event=>{
   if(action==='theme')window.setGaryJobsTheme?.(control.dataset.jobsThemeChoice);
   if(action==='language'){
     const next=control.dataset.language||(state.lang==='en'?'vi':'en');
-    if(next!==state.lang){state.keyword=$('#keyword')?.value??state.keyword;state.location=$('#location')?.value??state.location;const y=window.scrollY;state.lang=next==='vi'?'vi':'en';persist('gary-language',state.lang);renderPage();window.scrollTo({top:y,behavior:'instant'});}
+    if(next!==state.lang){
+      const reference=$('#detail-dialog[open] .vacancy-workspace')?.dataset.vacancy;
+      state.keyword=$('#keyword')?.value??state.keyword;state.location=$('#location')?.value??state.location;
+      const y=window.scrollY;state.lang=next==='vi'?'vi':'en';persist('gary-language',state.lang);renderPage();
+      if(reference&&!routeDialog)openJob(reference,{navigate:false});
+      window.scrollTo({top:y,behavior:'instant'});
+    }
     ($('.dialog-job-language')||(preferencesOpen?$(`[data-language="${state.lang}"]`):$('#jobs-preferences-trigger')))?.focus({preventScroll:true});
   }
   if(action==='menu'){closePreferences();toggleMenu();}
@@ -411,9 +600,14 @@ document.addEventListener('click',event=>{
   if(action==='save')toggleShortlist(id);
   if(action==='more-jobs'){state.expanded=!state.expanded;renderJobs();if(!state.expanded)$('#opportunities').scrollIntoView({behavior:'smooth'});}
   if(action==='clear-search'||action==='reset-jobs'){state.keyword='';state.location='all';if(action==='reset-jobs')state.category='all';state.expanded=false;$('#keyword').value='';$('#location').value='all';renderJobs();}
-  if(action==='job'){if(control.tagName==='A'&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;event.preventDefault();openJob(id);}
+  if(action==='job'||action==='vacancy-listings'){
+    if(control.tagName==='A'&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;
+    event.preventDefault();
+    if(action==='job')openJob(id);else closeDialog();
+  }
+  if(action==='vacancy-browse')control.setAttribute('aria-expanded',String(control.getAttribute('aria-expanded')!=='true'));
+  if(action==='share-vacancy')void shareVacancy(id,control);
   if(action==='retry-vacancy')void loadPublishedContent();
-  if(action==='vacancy-listings'){event.preventDefault();closeDialog();}
   if(action==='apply'){toggleMenu(false);openApplication(id);}
   if(action==='close-dialog')closeDialog();
   if(action==='destination')openDestination(id);
@@ -425,6 +619,15 @@ document.addEventListener('click',event=>{
   if(action==='privacy')openDialog(`<p class="eyebrow">${t('YOUR INFORMATION','THÔNG TIN CỦA BẠN')}</p><h2 id="dialog-title">${t('A little about <em>privacy.</em>','Một chút về <em>quyền riêng tư.</em>')}</h2><p class="dialog-intro">${t('This page remembers your language and saved jobs on this device. The candidate portal stores applications and private documents only when you submit them while signed in. If the backend is unavailable, the fallback form only prepares an email draft; you decide whether to send it.','Trang lưu ngôn ngữ và mã công việc trên thiết bị. Cổng ứng viên chỉ lưu hồ sơ và tài liệu riêng tư khi bạn đăng nhập và gửi. Khi backend chưa khả dụng, biểu mẫu dự phòng chỉ chuẩn bị email nháp; bạn quyết định có gửi hay không.')}</p><p class="body-copy">${t('Contact links take you to third-party services such as Facebook, Zalo, Google Maps or your email provider. Their own privacy policies apply. You can clear locally saved preferences using the button below.','Liên kết liên hệ mở dịch vụ bên thứ ba như Facebook, Zalo, Google Maps hoặc nhà cung cấp email. Các dịch vụ áp dụng chính sách riêng. Bạn có thể xóa lựa chọn được lưu trên trình duyệt bằng nút bên dưới.')}</p><button class="button" data-action="clear-data">${t('Clear saved preferences','Xóa dữ liệu đã lưu')} ${icon('arrow')}</button>`);
   if(action==='clear-data'){shortlistToast?.dismiss();try{localStorage.removeItem('gary-language');localStorage.removeItem('gary-saved-jobs');}catch{}state.saved.clear();renderJobs();closeDialog();toast(t('Saved browser preferences cleared.','Đã xóa lựa chọn lưu trên trình duyệt.'));}
   if(action==='copy-email')copyPreparedEmail(control);
+});
+
+document.addEventListener('input',event=>{
+  if(event.target.id!=='vacancy-browse-search')return;
+  vacancyQuery=event.target.value;
+  renderVacancyResults(event.target.closest('.vacancy-workspace'));
+});
+document.addEventListener('change',event=>{
+  if(event.target.id==='vacancy-theme')window.setGaryJobsTheme?.(event.target.value);
 });
 
 document.addEventListener('submit',event=>{
@@ -450,7 +653,23 @@ async function copyPreparedEmail(control){
 }
 
 $('#detail-dialog').addEventListener('click',event=>{if(event.target===$('#detail-dialog')){const rect=event.target.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeDialog();}});
-$('#detail-dialog').addEventListener('close',()=>{if($('#detail-dialog').open)return;leaveVacancyRoute();document.body.classList.remove('dialog-open');if(dialogOpener?.isConnected)dialogOpener.focus({preventScroll:true});});
+$('#detail-dialog').addEventListener('close',event=>{
+  const dialog=event.currentTarget;
+  if(dialog.open)return;
+  leaveVacancyRoute();
+  document.body.classList.remove('dialog-open');
+  const workspace=dialog.classList.contains('is-vacancy-workspace');
+  if(workspace){
+    dialog.classList.remove('is-vacancy-workspace');
+    $('#dialog-content').replaceChildren();
+  }
+  if(dialogOpener?.isConnected&&dialogOpener!==document.body)dialogOpener.focus({preventScroll:true});
+  else if(workspace){
+    const heading=$('#opportunities h2');
+    heading?.setAttribute('tabindex','-1');
+    heading?.focus({preventScroll:true});
+  }
+});
 document.addEventListener('keydown',event=>{if(event.key==='Escape' && !event.target.closest('.gary-apps-menu[open]'))toggleMenu(false);});
 document.addEventListener('toggle',event=>{if(event.target.matches('.faq-item')&&event.target.open)$$('.faq-item[open]').filter(item=>item!==event.target).forEach(item=>item.open=false);},true);
 window.addEventListener('resize',()=>{if(window.innerWidth>1360)toggleMenu(false);},{passive:true});

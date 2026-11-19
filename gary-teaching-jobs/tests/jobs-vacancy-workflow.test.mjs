@@ -8,6 +8,9 @@ import {PGlite} from '@electric-sql/pglite';
 import {mountCms} from '../dist/cms-foundation/index.js';
 import {createJobsPublishingAdapter} from '../dist/jobs-publishing-adapter.js';
 import {emptyEntry} from '../dist/cms-foundation/content.js';
+import {mountVacancyImageEditor} from '../dist/jobs-vacancy-image.js';
+import {vacancyCard} from '../dist/jobs-public-content.js';
+import {vacancyImageHandler} from '../supabase/functions/jobs-vacancy-image/handler.mjs';
 
 const admin='41000000-0000-4000-8000-000000000001';
 const settle=async()=>{for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));};
@@ -65,10 +68,11 @@ function supabaseShape(pg,calls,reads,{failPublication}={}) {
     },
   };
 }
-async function setup({language='en',legacy=false,failPublication,prepare}={}) {
+async function setup({language='en',legacy=false,failPublication,prepare,mountVacancyImage}={}) {
   const pg=new PGlite();
-  await pg.exec(`create role anon;create role authenticated;create schema auth;create schema storage;
-    create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+  await pg.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
+    create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,
+      deleted_at timestamptz,is_anonymous boolean default false,banned_until timestamptz);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
@@ -97,7 +101,7 @@ async function setup({language='en',legacy=false,failPublication,prepare}={}) {
   await as(true);
   const collections=await actualCollections(),calls=[],reads=[],db=supabaseShape(pg,calls,reads,{failPublication});
   const publishing=createJobsPublishingAdapter(db,{collections});
-  const adapter={...publishing,...(prepare?{prepare:record=>prepare(record,publishing.prepare)}:{}),capabilities:async()=>(await db.rpc('jobs_capabilities')).data,list:async({kind})=>{const records=(await pg.query('select * from public.jobs_cms_entries where kind=$1 order by updated_at desc',[kind])).rows;return {records,total:records.length};},revisions:async()=>[]};
+  const adapter={...publishing,mountVacancyImage,...(prepare?{prepare:record=>prepare(record,publishing.prepare)}:{}),capabilities:async()=>(await db.rpc('jobs_capabilities')).data,list:async({kind})=>{const records=(await pg.query('select * from public.jobs_cms_entries where kind=$1 order by updated_at desc',[kind])).rows;return {records,total:records.length};},revisions:async()=>[]};
   const dom=new JSDOM('<main></main>',{url:'https://jobs.garyhome.vn/portal.html'}),root=dom.window.document.querySelector('main');
   bindFeedbackDom(dom.window);
 
@@ -176,6 +180,151 @@ test('end-to-end: editing a published vacancy preserves its public snapshot unti
     assert.equal(live.slug,before.slug);assert.equal(live.id,before.id);assert.equal(live.body_en,'Updated English teaching details.');
     assert.equal((await h.one("select count(*)::int n from public.jobs_cms_entries where kind='vacancy'")).n,1);
   }finally{await h.close();}
+});
+
+test('featured vacancy image survives drafts, replacement, archive, republication and removal',async()=>{
+  const bucket='jobs-vacancy-images', origin='https://supabase.example.test';
+  const files=new Map(), progressSeen=[];
+  let h;
+  const system=async(role, operation)=>{
+    await h.pg.exec('reset role');
+    if(role) await h.pg.exec('set role '+role);
+    try {return await operation();} finally {await h.as(true);}
+  };
+  const handler=vacancyImageHandler({
+    url:origin,publishableKey:'test-publishable',serviceKey:'test-server',cleanupKey:'test-cleanup',
+    async fetcher(url,options){
+      const name=url.split('/').pop(), args=options.body&&typeof options.body==='string'?JSON.parse(options.body):{};
+      if(name==='jobs_vacancy_image_reserve'){
+        assert.equal(options.headers.authorization,'Bearer test-staff');
+        const result=await h.one('select public.jobs_vacancy_image_reserve($1,$2,$3,$4,$5) as result',Object.values(args));
+        return Response.json(result.result);
+      }
+      assert.equal(options.headers.authorization,'Bearer test-server');
+      if(url.includes('/rpc/')) {
+        const query={
+          jobs_vacancy_image_ready:'select public.jobs_vacancy_image_ready($1) as result',
+          jobs_vacancy_image_published_mime:'select public.jobs_vacancy_image_published_mime($1) as result',
+          jobs_vacancy_image_cleanup_claim:'select coalesce(array_agg(id),array[]::uuid[]) result from public.jobs_vacancy_image_cleanup_claim() id',
+          jobs_vacancy_image_cleanup_finish:'select public.jobs_vacancy_image_cleanup_finish($1) as result',
+        }[name];
+        assert.ok(query,name);
+        const {result}=await system('service_role',()=>h.one(query,Object.values(args)));
+        return Response.json(result ?? null);
+      }
+      if(options.method==='POST'){
+        assert.equal(options.headers['x-upsert'],'false');
+        files.set(name,options.body);
+        await system('',()=>h.pg.query('insert into storage.objects(bucket_id,name) values($1,$2)',[bucket,name]));
+        return Response.json({Key:bucket+'/'+name});
+      }
+      if(options.method==='DELETE'){
+        for(const id of args.prefixes)files.delete(id);
+        await system('',()=>h.pg.query('delete from storage.objects where bucket_id=$1 and name=any($2::text[])',[bucket,args.prefixes]));
+        return Response.json([]);
+      }
+      return files.has(name)?new Response(files.get(name)):new Response(null,{status:404});
+    },
+  });
+  const call=(query,options)=>handler(new Request(origin+'/functions/v1/jobs-vacancy-image?'+query,options));
+  const send=(id,file)=>call('vacancy='+id,{method:'POST',body:file,headers:{authorization:'Bearer test-staff','content-type':file.type}});
+  h=await setup({mountVacancyImage:(root,options)=>mountVacancyImageEditor(root,{
+    ...options,preview:async id=>origin+'/'+id,
+    async upload(id,file,reportProgress){
+      reportProgress(.5);progressSeen.push(root.querySelector('progress').value);
+      const result=await send(id,file);
+      assert.equal(result.status,201);
+      return result.json();
+    },
+  })});
+  try {
+    const win=h.root.ownerDocument.defaultView;
+    win.URL.createObjectURL=()=> 'blob:test-selected-image';
+    win.URL.revokeObjectURL=()=>{};
+    const bytes=await readFile(new URL('../dist/assets/favicon-32.png',import.meta.url));
+    const file=new File([bytes],'school.png',{type:'image/png'});
+    const entry=()=>h.one("select * from public.jobs_cms_entries where kind='vacancy'");
+    const published=async()=>{
+      await h.as(false);
+      try {return await h.one("select * from public.jobs_public_content where kind='vacancy'");}
+      finally {await h.as(true);}
+    };
+    const select=async text=>{
+      const input=h.root.querySelector('[data-image-file]');
+      Object.defineProperty(input,'files',{value:[file]});
+      input.dispatchEvent(new win.Event('change',{bubbles:true}));
+      assert.equal(h.root.querySelector('[data-image-preview]').getAttribute('src'),'blob:test-selected-image');
+      const alt=h.root.querySelector('[data-image-alt="en"]');
+      alt.value=text;
+      alt.dispatchEvent(new win.Event('input',{bubbles:true}));
+      assert.equal(h.root.querySelector('[data-image-preview]').alt,text);
+      h.root.querySelector('[data-image-alt="vi"]').value='Lớp học';
+      h.root.querySelector('[data-image-upload]').click();
+      await until(async()=>(await entry()).data.vacancy_image?.alt_en===text,'vacancy image attached');
+      await settle();
+      return (await entry()).data.vacancy_image.id;
+    };
+    await h.click('new');
+    assert.equal(h.root.querySelector('[data-image-file]'),null,'image upload awaits saved draft');
+    h.fill();h.root.querySelector('button[type=submit]').click();
+    await until(async()=>Boolean(await entry()),'vacancy draft saved');
+    await settle();
+    const first=await select('First classroom');
+    assert.equal(await published(),undefined);
+    assert.equal((await call('image='+first)).status,404,'draft image is private');
+    await h.click('publish');
+    await until(async()=>Boolean(await published()),'vacancy published');
+    await settle();
+    const card=vacancyCard(await published(),0,[],'vi');
+    assert.match(card.image.url,new RegExp(first+'$'));
+    assert.equal(card.image.alt[1],'Lớp học');
+    const delivered=await call('image='+first);
+    assert.equal(delivered.status,200);
+    assert.equal(delivered.headers.get('content-type'),'image/png');
+    assert.deepEqual(Buffer.from(await delivered.arrayBuffer()),bytes);
+    assert.equal((await call('image='+first,{headers:{'if-none-match':delivered.headers.get('etag')}})).status,304);
+    await h.click('edit');
+    const second=await select('Replacement classroom');
+    assert.notEqual(first,second);
+    assert.equal((await published()).data.vacancy_image.id,first,'live snapshot keeps previous image');
+    await h.click('archive');
+    await until(async()=>!await published(),'vacancy unpublished');
+    await settle();
+    assert.equal((await call('image='+first,{headers:{'if-none-match':delivered.headers.get('etag')}})).status,404);
+    assert.equal((await entry()).data.vacancy_image.id,second);
+    await h.click('publish');
+    await until(async()=>Boolean(await published()),'vacancy republished');
+    await settle();
+    assert.equal((await published()).data.vacancy_image.id,second);
+    assert.equal((await call('image='+second)).status,200);
+    assert.equal((await call('image='+first)).status,404);
+    await h.click('edit');h.root.querySelector('[data-image-remove]').click();
+    await until(async()=>!(await entry()).data.vacancy_image,'draft image removed');
+    await settle();
+    await h.click('publish');
+    await until(async()=>!(await published()).data.vacancy_image,'public image removed');
+    await settle();
+    assert.equal((await call('image='+second)).status,404);
+    assert.deepEqual(progressSeen,[.5,.5]);
+
+    const saved=await entry();
+    await assert.rejects(()=>h.one('select public.jobs_vacancy_image_ready($1)',[first]),/permission/);
+    await assert.rejects(()=>h.pg.query('insert into storage.objects(bucket_id,name) values($1,$2)',[bucket,'arbitrary']),/policy/);
+    await assert.rejects(()=>h.one('select * from public.jobs_cms_save($1,$2)',[
+      {...saved,data:{...saved.data,vacancy_image:{id:first,width:1,height:1,alt_en:'Forged dimensions',alt_vi:''}}},saved.version,
+    ]),/vacancy_image_invalid/);
+    await assert.rejects(()=>h.one('select * from public.jobs_cms_save($1,0)',[
+      {...emptyEntry('vacancy'),slug:'another-draft',title_en:'Another vacancy',data:{vacancy_image:{
+        id:first,width:32,height:32,alt_en:'Image from another vacancy',alt_vi:'',
+      }}},
+    ]),/vacancy_image_invalid/);
+    const abandoned=await (await send(saved.id,file)).json();
+    await system('',()=>h.pg.query("update jobs_private.vacancy_images set created_at=now()-interval '2 days'"));
+    assert.equal((await call('cleanup=1',{method:'POST'})).status,403);
+    assert.deepEqual(await (await call('cleanup=1',{method:'POST',headers:{'x-jobs-cleanup-key':'test-cleanup'}})).json(),{processed:1});
+    assert.equal(files.has(abandoned.id),false);
+    assert.equal(files.has(first)&&files.has(second),true,'referenced revisions retain their files');
+  }finally {await h.close();}
 });
 
 test('end-to-end: old published vacancies survive migration and remain editable with preserved legacy values',async()=>{

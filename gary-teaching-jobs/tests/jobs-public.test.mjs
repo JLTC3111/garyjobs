@@ -19,6 +19,42 @@ w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.
 test('published vacancies replace reference cards and managed categories/locations survive filter changes',async()=>{
  const dom=await publicPage(records);try{const d=dom.window.document;assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.doesNotMatch(d.querySelector('#job-grid').textContent,/Bắc Giang/);assert.match(d.querySelector('#location').textContent,/Hanoi/);d.querySelector('[data-action="filter"][data-id="public"]').click();assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.equal(d.querySelectorAll('[data-action="filter"][data-id="public"]').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/Submit securely/);}finally{dom.window.close();}
 });
+test('published vacancy cards keep the location, bookmark and optional image without a house badge',async()=>{
+ const content=structuredClone(records),first=content[3];
+ const image={id:'10000000-0000-4000-8000-000000000003',width:800,height:450,alt_en:'Classroom windows',alt_vi:'Cửa sổ lớp học'};
+ first.data.vacancy_image=image;
+ const second={...first,id:'10000000-0000-4000-8000-000000000002',slug:'language-teacher',title_en:'Language teacher',data:{...first.data,category_slug:'centers',vacancy_image:null}};
+ content.push(second);
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document;
+  const card=record=>d.querySelector(`#job-grid h3 a[href="/jobs/${record.slug}"]`).closest('.job-card');
+  for(const record of [first,second]){
+   const vacancy=card(record);
+   assert.equal(vacancy.querySelector('h3 a').textContent,record.title_en);
+   assert.equal(vacancy.querySelector('.job-card-top').children.length,2);
+   assert.equal(vacancy.querySelector('.job-card-top .job-school-icon'),null);
+   assert.ok(vacancy.querySelector('.job-card-top .job-location svg'));
+   assert.ok(vacancy.querySelector('.job-card-top button[data-action="save"]'));
+  }
+  assert.equal(card(second).querySelector('img'),null);
+  assert.equal(card(first).querySelector('img').alt,image.alt_en);
+  d.querySelector('[data-language="vi"]').click();
+  assert.equal(card(first).querySelector('img').alt,image.alt_vi);
+ }finally{dom.window.close();}
+});
+test('the two reference vacancies also omit the house badge',async()=>{
+ const dom=await publicPage(new Error('not provisioned'));
+ try{
+  const d=dom.window.document;
+  d.querySelector('#more-jobs').click();
+  for(const id of ['hai-phong','thai-nguyen']){
+   const card=d.querySelector(`#job-grid [data-action="save"][data-id="${id}"]`).closest('.job-card');
+   assert.ok(card.querySelector('.job-card-top .job-location'));
+   assert.equal(card.querySelector('.job-school-icon'),null);
+  }
+ }finally{dom.window.close();}
+});
 test('missing backend remains an honest email fallback without a fake application receipt',async()=>{
  const dom=await publicPage(new Error('not provisioned'));try{const d=dom.window.document;assert.equal(d.querySelectorAll('.jobs-live-note').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/not available yet/);d.querySelector('[data-action="apply"]').click();assert.match(d.querySelector('#application-form').textContent,/Nothing is submitted/);assert.equal(d.querySelector('[data-action="copy-email"]'),null);}finally{dom.window.close();}
 });
@@ -38,6 +74,36 @@ test('public desktop and mobile navigation distinguish candidate and staff login
 test('CMS text cannot inject markup or unsafe source protocols into public vacancy cards',()=>{
  const card=vacancyCard({...records[3],title_en:'<img src=x onerror=alert(1)>',data:{...records[3].data,source_url:'javascript:alert(1)',requirements_en:'<script>bad()</script>'}},0,records,'en');
  assert.ok(card.title[0].startsWith('&lt;img'));assert.equal(card.source,'#opportunities');assert.ok(card.requirements[0][0].includes('&lt;script&gt;'));assert.equal(safeLink('https://example.org/jobs'),'https://example.org/jobs');assert.equal(safeLink('data:text/html,bad'),'');
+});
+test('vacancy images render on cards and detail routes with localized alt and no school glyph',async()=>{
+ const content=structuredClone(records), id='11000000-0000-4000-8000-000000000001';
+ content[3].data.vacancy_image={id,width:1120,height:740,alt_en:'Classroom "A"',alt_vi:'Lớp học A'};
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document, card=d.querySelector('.job-card'), photo=card.querySelector('.vacancy-photo img');
+  assert.equal(photo.alt,'Classroom "A"');
+  assert.equal(photo.getAttribute('loading'),'lazy');
+  assert.equal(photo.width,1120);
+  assert.equal(photo.height,740);
+  assert.match(photo.src,new RegExp('/functions/v1/jobs-vacancy-image\\?image='+id+'$'));
+  assert.equal(d.querySelector('.job-school-icon'),null);
+  d.querySelector('[data-language="vi"]').click();
+  assert.equal(d.querySelector('.job-card img').alt,'Lớp học A');
+  d.querySelector('.job-card h3 a').click();
+  const detail=d.querySelector('#detail-dialog .vacancy-photo img');
+  assert.equal(detail.alt,'Lớp học A');
+  assert.equal(detail.src,photo.src);
+  detail.dispatchEvent(new dom.window.Event('error'));
+  assert.equal(detail.parentElement.hidden,true);
+ }finally{dom.window.close();}
+ const invalid=vacancyCard({...content[3],data:{...content[3].data,vacancy_image:{...content[3].data.vacancy_image,id:'javascript:alert(1)'}}},0,content);
+ assert.equal(invalid.image,null);
+ const fallback=await publicPage(records);
+ try{
+  const card=fallback.window.document.querySelector('.job-card');
+  assert.equal(card.querySelector('.vacancy-photo, .job-school-icon'),null);
+  assert.match(card.querySelector('h3').textContent,/New teacher vacancy/);
+ }finally{fallback.window.close();}
 });
 test('published salary and employer profile fields are visible and translate on the public site',async()=>{
  const content=structuredClone(records);
@@ -111,6 +177,73 @@ test('vacancy browser back, forward and close restore listings and selected role
   assert.equal(w.location.pathname,'/jobs/teacher');assert.match(d.querySelector('#dialog-title').textContent,/New teacher vacancy/);
   d.querySelector('.dialog-close').click();await settle();await settle();
   assert.equal(w.location.pathname,'/');assert.equal(w.location.hash,'#opportunities');assert.equal(d.querySelector('#detail-dialog').open,false);
+ }finally{dom.window.close();}
+});
+
+test('vacancy workspace searches published roles and keeps Back, Forward and return-to-listings usable',async()=>{
+ const content=structuredClone(records);
+ content[0].data={website:'https://school.example.test/'};
+ content.push({...content[3],id:'10000000-0000-4000-8000-000000000002',slug:'science-teacher',title_en:'Science teacher',title_vi:'Giáo viên khoa học',body_en:'Teach laboratory safety.\n\nPlan practical classes.'});
+ const dom=await publicPage(content,{url:'https://jobs.garyhome.vn/?utm_source=test#opportunities'});
+ try{
+  const w=dom.window,d=w.document;
+  d.querySelector('#job-grid a[href="/jobs/teacher"]').click();
+  assert.ok(d.querySelector('#detail-dialog.is-vacancy-workspace[open]'));
+  assert.equal(d.querySelector('h1#dialog-title').textContent,'New teacher vacancy');
+  const toggle=d.querySelector('.vacancy-browse-toggle');
+  assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  toggle.click();
+  assert.equal(toggle.getAttribute('aria-expanded'),'true');
+  const search=d.querySelector('#vacancy-browse-search');
+  search.value='giao vien khoa hoc';
+  search.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.equal(d.querySelector('.vacancy-result-status').textContent,'1 vacancy');
+  const [result]=d.querySelectorAll('.vacancy-results a');
+  assert.equal(result.getAttribute('href'),'/jobs/science-teacher');
+  result.click();
+  assert.equal(w.location.pathname,'/jobs/science-teacher');
+  assert.equal(d.querySelector('.vacancy-results a').getAttribute('aria-current'),'page');
+  assert.equal(d.querySelector('.vacancy-article .vacancy-copy').textContent,'Teach laboratory safety.\n\nPlan practical classes.');
+  const apply=d.querySelector('.vacancy-sidebar a[href^="/portal.html"]').href;
+  assert.equal(d.querySelector('.vacancy-mobile-apply a').href,apply);
+  assert.equal(new URL(apply).searchParams.get('vacancy'),content.at(-1).id);
+  assert.equal(d.querySelector('.vacancy-sidebar a[href^="https://school.example.test"]').target,'_blank');
+  assert.equal(d.querySelector('.vacancy-workspace [data-action="publish"],.vacancy-workspace [data-action="edit"]'),null);
+  w.history.back();await settle();await settle();
+  assert.equal(w.location.pathname,'/jobs/teacher');
+  w.history.forward();await settle();await settle();
+  assert.equal(w.location.pathname,'/jobs/science-teacher');
+  d.querySelector('.vacancy-workspace [data-action="vacancy-listings"]').click();await settle();await settle();
+  assert.equal(w.location.href,'https://jobs.garyhome.vn/?utm_source=test#opportunities');
+  assert.equal(d.querySelector('#detail-dialog').open,false);
+ }finally{dom.window.close();}
+});
+
+test('vacancy workspace restores reading position across language changes and supports Share, Save and theme selection',async()=>{
+ const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
+ try{
+  const w=dom.window,d=w.document;
+  d.querySelector('.vacancy-reading').scrollTop=123;
+  d.querySelector('.dialog-job-language').click();
+  assert.equal(d.querySelector('.vacancy-reading').scrollTop,123);
+  assert.equal(d.querySelector('h1#dialog-title').textContent,'Tuyển giáo viên mới');
+  const share=d.querySelector('[data-action="share-vacancy"]');
+  share.click();
+  const link=d.querySelector('.vacancy-share-link');
+  assert.equal(link.hidden,false);
+  assert.equal(link.querySelector('input').value,'https://jobs.garyhome.vn/jobs/teacher');
+  assert.equal(d.activeElement,link.querySelector('input'));
+  const saved=d.querySelector('.vacancy-save');
+  saved.click();
+  assert.equal(saved.getAttribute('aria-pressed'),'true');
+  assert.ok(d.querySelector('#detail-dialog [data-action-toast-host]'));
+  const theme=d.querySelector('#vacancy-theme');
+  assert.deepEqual([...theme.options].map(option=>option.value),['system','light','dark']);
+  let preference;
+  w.setGaryJobsTheme=value=>{preference=value;};
+  theme.value='dark';
+  theme.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.equal(preference,'dark');
  }finally{dom.window.close();}
 });
 

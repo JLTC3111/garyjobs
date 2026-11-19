@@ -1,0 +1,141 @@
+.jobs-talent { min-width: 0; color: var(--jobs-portal-ink); }
+.talent-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: .85rem 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--jobs-portal-line);
+}
+.talent-header h1, .talent-header p { margin: 0; }
+.talent-header p { margin-top: .35rem; color: var(--jobs-portal-muted); }
+.talent-toolbar { margin-top: 1rem; }
+.talent-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr));
+  align-items: end;
+  gap: .65rem;
+}
+.talent-filters label, .talent-edit-fields label { display: grid; gap: .3rem; min-width: 0; color: var(--jobs-portal-ink); }
+.talent-filters :is(select,input), .talent-edit-fields :is(select,input,textarea) { width: 100%; min-width: 0; }
+.talent-filter-actions,
+.talent-views [role="group"],
+.talent-actions,
+.talent-pagination { display: flex; flex-wrap: wrap; gap: .5rem; }
+.talent-views { margin-top: .85rem; }
+.talent-views button[aria-pressed=true] {
+  background: var(--jobs-portal-selected);
+  border-color: var(--jobs-portal-action);
+  color: var(--jobs-portal-ink);
+  font-weight: 700;
+}
+.talent-count { margin: 1rem 0 .6rem; color: var(--jobs-portal-muted); }
+.talent-table {
+  overflow: auto;
+  border: 1px solid var(--jobs-portal-line);
+  border-radius: .75rem;
+  background: var(--jobs-portal-surface);
+}
+.talent-table table { width: 100%; min-width: 45rem; border-collapse: collapse; }
+.talent-table :is(th,td) { padding: .7rem .85rem; text-align: start; border-bottom: 1px solid var(--jobs-portal-line); }
+.talent-table tbody tr:last-child :is(th,td) { border-bottom: 0; }
+.talent-table thead { background: var(--jobs-portal-soft); }
+.talent-table tbody tr:hover,
+.talent-table tbody tr:focus-within { background: var(--jobs-portal-soft); }
+.talent-table-name, .talent-card-head, .talent-profile-head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  overflow-wrap: anywhere;
+}
+.talent-table-name button { border: 0; padding: .2rem 0; min-height: 2rem; background: none; text-align: start; text-decoration: underline; }
+.talent-table-name div > span, .talent-card-head p, .talent-linked small { display: block; color: var(--jobs-portal-muted); font-weight: 400; }
+.talent-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap: .9rem; }
+.talent-card {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: .7rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--jobs-portal-line);
+  border-radius: .85rem;
+  background: var(--jobs-portal-surface);
+}
+.talent-card:focus-within { border-color: var(--jobs-portal-action); }
+.talent-card-head :is(h2,p) { margin: 0; }
+.talent-card-head h2 { font-size: 1.22rem; }
+.talent-portrait {
+  display: grid;
+  place-items: center;
+  position: relative;
+  width: 2.4rem;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: .5rem;
+  overflow: hidden;
+  background: var(--jobs-portal-selected);
+  color: var(--jobs-portal-ink);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.talent-card .talent-portrait { width: 3.8rem; }
+.talent-profile-head .talent-portrait { width: 5.25rem; }
+.talent-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.talent-stage {
+  display: inline-block;
+  padding: .18rem .55rem;
+  border: 1px solid var(--jobs-portal-line);
+  border-radius: 1rem;
+  background: var(--jobs-portal-soft);
+  color: var(--jobs-portal-ink);
+  font-size: .83em;
+  font-weight: 650;
+}
+.talent-stage[data-stage=placed] { background: var(--jobs-success-bg); color: var(--jobs-success); }
+.talent-facts { width: 100%; margin: 0; }
+.talent-facts div {
+  display: grid;
+  grid-template-columns: minmax(6rem,1fr) minmax(0,1.3fr);
+  gap: .55rem;
+  padding: .42rem 0;
+  border-top: 1px solid var(--jobs-portal-line);
+  overflow-wrap: anywhere;
+}
+.talent-facts dt { color: var(--jobs-portal-muted); }
+.talent-facts dd { margin: 0; text-align: end; }
+.talent-pagination { justify-content: flex-end; margin-top: .9rem; }
+.talent-dialog {
+  width: min(43rem,calc(100% - 1.5rem));
+  max-width: none;
+  max-height: min(90dvh,54rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--jobs-portal-line);
+  border-radius: 1rem;
+  background: var(--jobs-portal-surface);
+  color: var(--jobs-portal-ink);
+  overflow: auto;
+}
+.talent-dialog::backdrop { background: var(--jobs-backdrop); }
+[data-talent-dialog-body] { display: grid; gap: .9rem; padding: clamp(.9rem, 4vw, 1.5rem); }
+.talent-dialog-header { display: flex; align-items: start; justify-content: space-between; gap: .7rem; }
+.talent-dialog-header h2 { margin: 0; overflow-wrap: anywhere; }
+.talent-linked, .talent-private-note, .talent-showcase-panel { padding-top: .85rem; border-top: 1px solid var(--jobs-portal-line); }
+.talent-linked :is(h3,ul), .talent-private-note h3, .talent-showcase-panel h3 { margin: 0 0 .5rem; }
+.talent-linked ul { list-style: none; padding: 0; }
+.talent-linked li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; padding: .55rem 0; }
+.talent-private-note p { white-space: pre-line; overflow-wrap: anywhere; margin: 0; }
+.talent-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,14rem),1fr));
+  gap: .8rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.talent-edit-fields label:has(textarea) { grid-column: 1/-1; }
+.talent-dialog .talent-actions { margin-top: .75rem; }
+.jobs-talent :focus-visible { outline: 2px solid var(--jobs-portal-action); outline-offset: 2px; }

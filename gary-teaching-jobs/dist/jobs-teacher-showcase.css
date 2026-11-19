@@ -1,0 +1,77 @@
+.teacher-showcase { color: var(--jobs-ink); background: var(--jobs-soft); }
+.teacher-showcase[hidden] { display: none; }
+.teacher-showcase h2 { margin: 0 0 1.75rem; }
+.teacher-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 22rem));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+}
+.teacher-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: .85rem;
+  min-width: 0;
+}
+.teacher-card-badge {
+  position: relative;
+  padding: 1.6rem .65rem .65rem;
+  border: 1px solid var(--jobs-line);
+  border-radius: 1.15rem;
+  background: var(--jobs-raised);
+  box-shadow: 0 .75rem 2rem #101d4520;
+}
+.teacher-card-badge::before {
+  content: '';
+  position: absolute;
+  top: .58rem;
+  left: 50%;
+  width: 2.6rem;
+  height: .3rem;
+  border-radius: 1rem;
+  background: var(--jobs-muted);
+  transform: translateX(-50%);
+}
+.teacher-card-portrait {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 14rem;
+  overflow: hidden;
+  border-radius: .65rem;
+  background: var(--jobs-surface);
+}
+.teacher-card-portrait img {
+  grid-area: 1/1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/5;
+  object-fit: cover;
+  object-position: center 28%;
+}
+.teacher-card-caption {
+  position: relative;
+  grid-area: 1/1;
+  align-self: end;
+  padding: 2.5rem .9rem .85rem;
+  background: linear-gradient(0deg, #081427 8%, #081427ed 60%, transparent);
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.teacher-card-caption h3,
+.teacher-card-caption p { margin: 0; color: inherit; }
+.teacher-card-caption p { margin-top: .25rem; }
+.teacher-card-story {
+  margin: 0;
+  padding: .95rem 1.05rem;
+  border: 1px solid var(--jobs-line);
+  border-radius: .85rem;
+  background: var(--jobs-surface);
+  color: var(--jobs-ink);
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .teacher-card-badge { transition: transform 220ms ease-out; }
+  .teacher-card:hover .teacher-card-badge { transform: perspective(64rem) rotateX(2deg) rotateY(-3deg) translateY(-.2rem); }
+}
