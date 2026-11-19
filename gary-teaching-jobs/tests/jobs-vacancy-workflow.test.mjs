@@ -68,7 +68,7 @@ function supabaseShape(pg,calls,reads,{failPublication}={}) {
     },
   };
 }
-async function setup({language='en',legacy=false,failPublication,prepare,mountVacancyImage}={}) {
+async function setup({language='en',legacy=false,failPublication,prepare,mountVacancyImage,staffEligibility=true}={}) {
   const pg=new PGlite();
   await pg.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,
@@ -79,10 +79,10 @@ async function setup({language='en',legacy=false,failPublication,prepare,mountVa
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
     alter table storage.objects enable row level security;grant select,insert,update,delete on storage.objects to anon,authenticated;`);
   await pg.query('insert into auth.users values($1,$2,now())',[admin,'vacancy-publisher@example.test']);
-  const migrations=(await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(file=>file.endsWith('.sql')).sort();
+  const migrations=(await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(file=>file.endsWith('.sql')&&(staffEligibility||file!=='20261117202945_staff_eligibility_assignment.sql')).sort();
   await pg.exec(await readFile(new URL('../supabase/migrations/'+migrations[0],import.meta.url),'utf8'));
   await pg.query("insert into jobs_private.staff_members(user_id,role) values($1,'admin')",[admin]);
-  const as=async signedIn=>{await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[signedIn?admin:'']);await pg.exec('set role '+(signedIn?'authenticated':'anon'));};
+  const as=async (signedIn,user=admin)=>{await pg.exec('reset role');await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[signedIn?user:'']);await pg.exec('set role '+(signedIn?'authenticated':'anon'));};
   await as(true);
   const one=async(sql,params=[])=>(await pg.query(sql,params)).rows[0];
   let original;
@@ -97,7 +97,9 @@ async function setup({language='en',legacy=false,failPublication,prepare,mountVa
     original=await publish(oldRecord('vacancy','legacy-teacher',{employer_slug:'legacy-employer',category_slug:'legacy-category',location_slug:'legacy-location',contact_email:'legacy@example.test',closes_on:'2099-12-31'}));
   }
   await pg.exec('reset role');
-  for(const filename of migrations.slice(1))await pg.exec(await readFile(new URL('../supabase/migrations/'+filename,import.meta.url),'utf8'));
+  try {
+    for(const filename of migrations.slice(1))await pg.exec(await readFile(new URL('../supabase/migrations/'+filename,import.meta.url),'utf8'));
+  }catch(error){await pg.close();throw error;}
   await as(true);
   const collections=await actualCollections(),calls=[],reads=[],db=supabaseShape(pg,calls,reads,{failPublication});
   const publishing=createJobsPublishingAdapter(db,{collections});
@@ -180,6 +182,51 @@ test('end-to-end: editing a published vacancy preserves its public snapshot unti
     assert.equal(live.slug,before.slug);assert.equal(live.id,before.id);assert.equal(live.body_en,'Updated English teaching details.');
     assert.equal((await h.one("select count(*)::int n from public.jobs_cms_entries where kind='vacancy'")).n,1);
   }finally{await h.close();}
+});
+
+test('featured image migration works without the optional staff eligibility migration',async()=>{
+  const h=await setup({staffEligibility:false});
+  const uploader='41000000-0000-4000-8000-000000000002';
+  try {
+    const dependency=await h.one("select to_regprocedure('jobs_private.staff_identity_eligible(uuid)') as helper");
+    assert.equal(dependency.helper,null);
+    await h.pg.exec('reset role');
+    await h.pg.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[uploader,'vacancy-editor@example.test']);
+    await h.pg.query("insert into jobs_private.staff_members(user_id,role) values($1,'editor')",[uploader]);
+    await h.as(true,uploader);
+    const draft=await h.one('select * from public.jobs_cms_save($1,null)',[
+      {...emptyEntry('vacancy'),slug:'image-migration-fixture',title_en:'Test vacancy'},
+    ]);
+    const {id}=await h.one("select public.jobs_vacancy_image_reserve($1,'image/png',128,32,32) as id",[draft.id]);
+    const finalize='select public.jobs_vacancy_image_ready($1) as ready';
+    await assert.rejects(()=>h.one(finalize,[id]),/permission denied/);
+    await h.pg.exec("reset role;select set_config('request.jwt.claim.sub','',false)");
+
+    async function ready() {
+      await h.pg.exec('set role service_role');
+      try {return (await h.one(finalize,[id])).ready;}
+      finally {await h.pg.exec('reset role');}
+    }
+    assert.equal(await ready(),false,'the Storage object must exist');
+    await h.pg.query("insert into storage.objects(bucket_id,name) values('jobs-vacancy-images',$1)",[id]);
+
+    for (const [column,blocked,eligible] of [
+      ['email_confirmed_at','null','now()'],
+      ['deleted_at','now()','null'],
+      ['is_anonymous','true','false'],
+      ['banned_until',"now()+interval '1 day'",'null'],
+    ]) {
+      await h.pg.query(`update auth.users set ${column}=${blocked} where id=$1`,[uploader]);
+      assert.equal(await ready(),false,`${column} blocks finalization`);
+      await h.pg.query(`update auth.users set ${column}=${eligible} where id=$1`,[uploader]);
+    }
+    await h.pg.query('update jobs_private.staff_members set active=false where user_id=$1',[uploader]);
+    assert.equal(await ready(),false,'an inactive staff membership blocks finalization');
+    await h.pg.query("update jobs_private.staff_members set active=true,role='recruiter' where user_id=$1",[uploader]);
+    assert.equal(await ready(),false,'a recruiter cannot finalize a CMS image');
+    await h.pg.query("update jobs_private.staff_members set role='editor' where user_id=$1",[uploader]);
+    assert.equal(await ready(),true);
+  }finally {await h.close();}
 });
 
 test('featured vacancy image survives drafts, replacement, archive, republication and removal',async()=>{

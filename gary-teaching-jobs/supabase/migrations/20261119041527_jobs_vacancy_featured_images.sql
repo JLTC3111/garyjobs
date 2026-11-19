@@ -1,4 +1,4 @@
--- Review before applying. Depends on the Jobs staff-eligibility migration.
+-- Review before applying. Uses the existing Jobs CMS and staff roster.
 begin;
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
@@ -49,14 +49,20 @@ grant execute on function jobs_private.reserve_vacancy_image(uuid,text,integer,i
  public.jobs_vacancy_image_reserve(uuid,text,integer,integer,integer) to authenticated;
 
 -- Only the upload function can finalize a validated object after Storage succeeds.
+-- Recheck the recorded uploader because this call uses the service role.
 create function public.jobs_vacancy_image_ready(p_image_id uuid)
 returns boolean language sql security definer set search_path='' as $$
  with verified as (
   update jobs_private.vacancy_images i set state='ready'
    where i.id=p_image_id and i.state='pending' and i.vacancy_id is not null
-    and jobs_private.staff_identity_eligible(i.uploaded_by)
-    and exists(select 1 from jobs_private.staff_members s
-      where s.user_id=i.uploaded_by and s.active and s.role in ('editor','publisher','admin'))
+    and exists(
+      select 1 from jobs_private.staff_members s
+      join auth.users u on u.id=s.user_id
+      where s.user_id=i.uploaded_by and s.active and s.role in ('editor','publisher','admin')
+        and u.email_confirmed_at is not null and u.deleted_at is null
+        and not coalesce(u.is_anonymous,false)
+        and (u.banned_until is null or u.banned_until<=now())
+    )
     and exists(select 1 from storage.objects o where o.bucket_id='jobs-vacancy-images' and o.name=i.id::text)
    returning 1
  )
