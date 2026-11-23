@@ -32,3 +32,8 @@
 .jobs-vacancy-image-actions { display:flex;flex-wrap:wrap;gap:8px; }
 .jobs-vacancy-image-editor progress { width:min(100%,360px);accent-color:var(--cms-action); }
 .jobs-vacancy-image-editor [hidden] { display:none; }
+.jobs-vacancy-image-list,.jobs-vacancy-image-pending { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
+.jobs-vacancy-image-item { display:grid; gap:8px; padding:12px; border:1px solid var(--cms-line); border-radius:8px; background:var(--cms-surface); }
+.jobs-vacancy-image-item img { width:min(100%,360px); max-height:215px; object-fit:contain; border-radius:4px; }
+.jobs-vacancy-image-cover { display:flex; align-items:center; gap:8px; }
+.jobs-vacancy-image-cover input { width:auto; flex:none; accent-color:var(--cms-action); }

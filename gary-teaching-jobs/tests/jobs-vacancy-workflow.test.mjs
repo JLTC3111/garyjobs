@@ -300,9 +300,10 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
       try {return await h.one("select * from public.jobs_public_content where kind='vacancy'");}
       finally {await h.as(true);}
     };
+    const photos=async()=>(await entry()).data.vacancy_images;
     const select=async text=>{
       const input=h.root.querySelector('[data-image-file]');
-      Object.defineProperty(input,'files',{value:[file]});
+      Object.defineProperty(input,'files',{configurable:true,value:[file]});
       input.dispatchEvent(new win.Event('change',{bubbles:true}));
       assert.equal(h.root.querySelector('[data-image-preview]').getAttribute('src'),'blob:test-selected-image');
       const alt=h.root.querySelector('[data-image-alt="en"]');
@@ -311,16 +312,19 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
       assert.equal(h.root.querySelector('[data-image-preview]').alt,text);
       h.root.querySelector('[data-image-alt="vi"]').value='Lớp học';
       h.root.querySelector('[data-image-upload]').click();
-      await until(async()=>(await entry()).data.vacancy_image?.alt_en===text,'vacancy image attached');
+      await until(async()=>(await photos())?.some(image=>image.alt_en===text),'vacancy image attached');
       await settle();
-      return (await entry()).data.vacancy_image.id;
+      return (await photos()).find(image=>image.alt_en===text).id;
     };
     await h.click('new');
     assert.equal(h.root.querySelector('[data-image-file]'),null,'image upload awaits saved draft');
     h.fill();h.root.querySelector('button[type=submit]').click();
     await until(async()=>Boolean(await entry()),'vacancy draft saved');
     await settle();
+    assert.equal(h.root.querySelector('[data-image-file]').multiple,true);
     const first=await select('First classroom');
+    assert.equal((await entry()).data.vacancy_image,undefined);
+    assert.equal((await photos())[0].cover,true);
     assert.equal(await published(),undefined);
     assert.equal((await call('image='+first)).status,404,'draft image is private');
     await h.click('publish');
@@ -329,31 +333,51 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     const card=vacancyCard(await published(),0,[],'vi');
     assert.match(card.image.url,new RegExp(first+'$'));
     assert.equal(card.image.alt[1],'Lớp học');
+    assert.equal(card.images.length,1);
     const delivered=await call('image='+first);
     assert.equal(delivered.status,200);
     assert.equal(delivered.headers.get('content-type'),'image/png');
     assert.deepEqual(Buffer.from(await delivered.arrayBuffer()),bytes);
     assert.equal((await call('image='+first,{headers:{'if-none-match':delivered.headers.get('etag')}})).status,304);
     await h.click('edit');
-    const second=await select('Replacement classroom');
+    const second=await select('Second classroom');
     assert.notEqual(first,second);
-    assert.equal((await published()).data.vacancy_image.id,first,'live snapshot keeps previous image');
+    assert.deepEqual((await photos()).map(image=>image.id),[first,second]);
+    assert.equal((await published()).data.vacancy_images[0].id,first,'live snapshot keeps the published gallery');
+    assert.equal((await call('image='+second)).status,404,'a draft photo is not public');
+    await until(()=>h.root.querySelectorAll('[data-image-cover]').length===2,'both photos shown');
+    h.root.querySelectorAll('[data-image-cover]')[1].click();
+    await until(async()=>(await photos()).find(image=>image.cover).id===second,'cover photo changed');
+    await settle();
+    assert.equal((await published()).data.vacancy_images[0].id,first);
     await h.click('archive');
     await until(async()=>!await published(),'vacancy unpublished');
     await settle();
     assert.equal((await call('image='+first,{headers:{'if-none-match':delivered.headers.get('etag')}})).status,404);
-    assert.equal((await entry()).data.vacancy_image.id,second);
+    assert.deepEqual((await photos()).map(image=>image.id),[first,second]);
     await h.click('publish');
     await until(async()=>Boolean(await published()),'vacancy republished');
     await settle();
-    assert.equal((await published()).data.vacancy_image.id,second);
+    const gallery=vacancyCard(await published(),0,[],'vi');
+    assert.deepEqual(gallery.images.map(image=>image.id),[second,first]);
+    assert.equal(gallery.image.id,second);
     assert.equal((await call('image='+second)).status,200);
-    assert.equal((await call('image='+first)).status,404);
-    await h.click('edit');h.root.querySelector('[data-image-remove]').click();
-    await until(async()=>!(await entry()).data.vacancy_image,'draft image removed');
+    assert.equal((await call('image='+first)).status,200);
+    await h.click('edit');
+    h.root.querySelector(`[data-saved-image="${first}"] [data-image-remove]`).click();
+    await until(async()=>(await photos()).length===1&&(await photos())[0].id===second,'one photo removed');
     await settle();
     await h.click('publish');
-    await until(async()=>!(await published()).data.vacancy_image,'public image removed');
+    await until(async()=>(await published()).data.vacancy_images?.length===1,'public gallery updated');
+    await settle();
+    assert.equal((await call('image='+first)).status,404);
+    assert.equal((await call('image='+second)).status,200);
+    await h.click('edit');
+    h.root.querySelector('[data-image-remove]').click();
+    await until(async()=>!(await entry()).data.vacancy_images,'draft photos removed');
+    await settle();
+    await h.click('publish');
+    await until(async()=>!(await published()).data.vacancy_images,'public photos removed');
     await settle();
     assert.equal((await call('image='+second)).status,404);
     assert.deepEqual(progressSeen,[.5,.5]);
@@ -375,6 +399,37 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     assert.deepEqual(await (await call('cleanup=1',{method:'POST',headers:{'x-jobs-cleanup-key':'test-cleanup'}})).json(),{processed:1});
     assert.equal(files.has(abandoned.id),false);
     assert.equal(files.has(first)&&files.has(second),true,'referenced revisions retain their files');
+
+    const legacy=await h.one('select * from public.jobs_cms_save($1,0)',[
+      {...emptyEntry('vacancy'),slug:'legacy-photo',title_en:'Legacy photo'},
+    ]);
+    const legacyUpload=await (await send(legacy.id,file)).json();
+    await h.one('select * from public.jobs_cms_save($1,$2)',[{
+      ...legacy,data:{vacancy_image:{...legacyUpload,alt_en:'Legacy room',alt_vi:'Phòng cũ'}},
+    },legacy.version]);
+    const legacyStored=await h.one('select * from public.jobs_cms_entries where id=$1',[legacy.id]);
+    assert.equal(legacyStored.data.vacancy_image,undefined);
+    assert.equal(legacyStored.data.vacancy_images[0].id,legacyUpload.id);
+    assert.equal(legacyStored.data.vacancy_images[0].cover,true);
+    assert.equal(legacyStored.data.vacancy_images[0].alt_en,'Legacy room');
+    await h.one('select * from public.jobs_cms_save($1,$2)',[
+      {...legacyStored,data:{...legacyStored.data,vacancy_images:[]}},legacyStored.version,
+    ]);
+    assert.equal((await h.one('select data from public.jobs_cms_entries where id=$1',[legacy.id])).data.vacancy_images,undefined);
+
+    const current=await h.one('select * from public.jobs_cms_entries where id=$1',[saved.id]);
+    const batch=[];
+    for(let n=0;n<9;n+=1)batch.push(await (await send(current.id,file)).json());
+    const items=batch.map((image,index)=>({...image,alt_en:'Room',alt_vi:'Phòng',cover:index===0}));
+    await assert.rejects(()=>h.one('select * from public.jobs_cms_save($1,$2)',[
+      {...current,data:{...current.data,vacancy_images:items}},current.version,
+    ]),/vacancy_image_gallery_full/);
+    await h.one('select * from public.jobs_cms_save($1,$2)',[
+      {...current,data:{...current.data,vacancy_images:items.slice(0,8)}},current.version,
+    ]);
+    const eight=await h.one('select data from public.jobs_cms_entries where id=$1',[current.id]);
+    assert.equal(eight.data.vacancy_images.length,8);
+    assert.equal(eight.data.vacancy_images.filter(image=>image.cover).length,1);
   }finally {await h.close();}
 });
 

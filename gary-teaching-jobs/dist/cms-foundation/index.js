@@ -213,7 +213,11 @@ export function mountCms(root, options) {
       dialog.querySelector('[data-cms-history]').closest('details').before(slot);
       releaseVacancyImage = adapter.mountVacancyImage(slot, {
         record: draft, language, editable: capabilities.edit && !busy,
-        changeAlt(alt) { Object.assign(draft.data.vacancy_image, alt); updateEditorChecks(); },
+        changeImages(images) {
+          if (Array.isArray(images) && images.length) { draft.data.vacancy_images = images; delete draft.data.vacancy_image; }
+          else { delete draft.data.vacancy_images; delete draft.data.vacancy_image; }
+          updateEditorChecks();
+        },
         save: saveVacancyImage,
       });
     }
@@ -324,10 +328,10 @@ export function mountCms(root, options) {
     if (!draft?.id || !capabilities.edit || busy || showIssues(validateEntry(draft, collection()))) return;
     const payload = structuredClone(draft), active = editorEpoch;
     return mutate(async () => {
-      const image = await operation();
+      const images = await operation();
       if (disposed || active !== editorEpoch) throw new Error('Editor changed before image save');
-      if (image) payload.data.vacancy_image = image;
-      else delete payload.data.vacancy_image;
+      if (Array.isArray(images) && images.length) { payload.data.vacancy_images = images; delete payload.data.vacancy_image; }
+      else { delete payload.data.vacancy_images; delete payload.data.vacancy_image; }
       return adapter.save(payload, {expectedVersion: payload.version});
     }, success);
   }

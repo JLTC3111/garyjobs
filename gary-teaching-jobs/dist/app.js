@@ -224,6 +224,7 @@ function renderPage() {
   mountHeaderApps();
   photoGalleryMount = mountPhotoGallery($('#photo-gallery'), { locale: state.lang, onExploreRegion: openDestination });
   syncVacancyRoute();
+  if($('#vacancy-gallery')?.open) renderVacancyGallery();
   if(preferencesOpen&&preferenceFocus)$(`[data-preference-focus="${preferenceFocus}"]`)?.focus({preventScroll:true});
 }
 
@@ -245,12 +246,105 @@ function managedCategoryLabels(){return [...new Map(jobs.filter(job=>job.categor
 function vacancyPhoto(job, detail = false) {
   const image = job.image;
   if (!image) return '';
-  return `<figure class="vacancy-photo${detail?' vacancy-photo--detail':''}"><img src="${esc(image.url)}" alt="${esc(pick(image.alt))}" width="${image.width}" height="${image.height}" decoding="async"${detail?'':' loading="lazy"'}></figure>`;
+  const count = job.images?.length || 1;
+  const img = `<img src="${esc(image.url)}" alt="${esc(pick(image.alt))}" width="${image.width}" height="${image.height}" decoding="async"${detail ? '' : ' loading="lazy"'}>`;
+  const label = count > 1
+    ? `${t(`View ${count} photos`, `Xem ${count} ảnh`)}: ${pick(image.alt)}`
+    : `${t('View full-size photo', 'Xem ảnh kích thước đầy đủ')}: ${pick(image.alt)}`;
+  const badge = count > 1 ? `<span class="vacancy-photo-count" aria-hidden="true">${count}</span>` : '';
+  const figure = detail ? 'vacancy-photo vacancy-photo--detail' : 'vacancy-photo';
+  return `<figure class="${figure}"><button type="button" class="vacancy-photo-open" data-action="vacancy-gallery" data-id="${esc(job.id)}" aria-label="${esc(label)}">${img}${badge}</button></figure>`;
 }
 
 document.addEventListener('error', event => {
-  if (event.target.matches?.('.vacancy-photo img')) event.target.parentElement.hidden = true;
+  if (event.target.matches?.('.vacancy-photo img')) event.target.closest('.vacancy-photo').hidden = true;
 }, true);
+
+let galleryJobId = null;
+let galleryIndex = 0;
+let galleryOpener = null;
+let gallerySwipe = null;
+
+function galleryJob() {
+  const job = jobs.find(item => item.id === galleryJobId && item.images?.length);
+  return job || null;
+}
+
+function ensureVacancyGallery() {
+  const existing = $('#vacancy-gallery');
+  if (existing) return existing;
+  const dialog = document.createElement('dialog');
+  dialog.id = 'vacancy-gallery';
+  dialog.className = 'vacancy-gallery';
+  dialog.setAttribute('aria-labelledby', 'vacancy-gallery-status');
+  dialog.innerHTML = `<header class="vacancy-gallery-bar"><button type="button" class="vacancy-gallery-control vacancy-gallery-prev" data-action="vacancy-gallery-step" data-id="-1">${icon('chevron')}</button><p id="vacancy-gallery-status" role="status"></p><button type="button" class="vacancy-gallery-control vacancy-gallery-next" data-action="vacancy-gallery-step" data-id="1">${icon('chevron')}</button><button type="button" class="vacancy-gallery-control" data-action="close-vacancy-gallery">${icon('close')}</button></header><div class="vacancy-gallery-stage"><figure><img class="vacancy-gallery-photo" alt="" decoding="async"><figcaption class="vacancy-gallery-caption"></figcaption></figure></div>`;
+  document.body.append(dialog);
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('dialog-open');
+    const jobId = galleryJobId;
+    galleryJobId = null;
+    const opener = galleryOpener;
+    galleryOpener = null;
+    const restored = jobId && [...document.querySelectorAll('[data-action="vacancy-gallery"]')].find(button => button.dataset.id === jobId);
+    (opener?.isConnected ? opener : restored)?.focus({preventScroll: true});
+  });
+  dialog.addEventListener('pointerdown', event => {
+    if (event.button || event.target.closest('button')) return;
+    gallerySwipe = {x: event.clientX, y: event.clientY};
+  });
+  dialog.addEventListener('pointerup', event => {
+    if (!gallerySwipe) return;
+    const dx = event.clientX - gallerySwipe.x, dy = event.clientY - gallerySwipe.y;
+    gallerySwipe = null;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+    stepVacancyGallery(dx < 0 ? 1 : -1);
+  });
+  dialog.addEventListener('pointercancel', () => { gallerySwipe = null; });
+  return dialog;
+}
+
+function renderVacancyGallery() {
+  const dialog = $('#vacancy-gallery');
+  const job = galleryJob();
+  const images = job?.images || [];
+  if (!dialog || !images.length) { dialog?.close(); return; }
+  galleryIndex = Math.min(galleryIndex, images.length - 1);
+  const image = images[galleryIndex], several = images.length > 1;
+  const photo = $('.vacancy-gallery-photo', dialog);
+  photo.src = image.url;
+  photo.alt = pick(image.alt);
+  photo.width = image.width;
+  photo.height = image.height;
+  $('.vacancy-gallery-caption', dialog).innerHTML = `${pick(job.title)}${job.location ? ` · ${job.location}` : ''}`;
+  const status = $('#vacancy-gallery-status', dialog);
+  status.textContent = t(`${galleryIndex + 1} of ${images.length}`, `${galleryIndex + 1} / ${images.length}`);
+  for (const [id, label] of [['-1', t('Previous photo', 'Ảnh trước')], ['1', t('Next photo', 'Ảnh sau')]]) {
+    const control = $(`[data-action="vacancy-gallery-step"][data-id="${id}"]`, dialog);
+    control.setAttribute('aria-label', label);
+    control.hidden = !several;
+  }
+  $('[data-action="close-vacancy-gallery"]', dialog).setAttribute('aria-label', t('Close photos', 'Đóng ảnh'));
+}
+
+function openVacancyGallery(id, opener) {
+  const job = jobs.find(item => item.id === id && item.images?.length);
+  if (!job) return;
+  galleryJobId = job.id;
+  galleryIndex = 0;
+  galleryOpener = opener || null;
+  const dialog = ensureVacancyGallery();
+  renderVacancyGallery();
+  if (!dialog.open) dialog.showModal();
+  document.body.classList.add('dialog-open');
+  $('[data-action="close-vacancy-gallery"]', dialog)?.focus({preventScroll: true});
+}
+
+function stepVacancyGallery(delta) {
+  const total = galleryJob()?.images.length || 0;
+  if (total < 2) return;
+  galleryIndex = (galleryIndex + delta + total) % total;
+  renderVacancyGallery();
+}
 
 function renderJobs() {
   const results = filteredJobs();
@@ -575,6 +669,7 @@ document.addEventListener('focusin',event=>{
   if(preferencesOpen&&!event.target.closest('.jobs-preferences'))closePreferences();
 });
 document.addEventListener('keydown',event=>{
+  if($('#vacancy-gallery')?.open&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();stepVacancyGallery(event.key==='ArrowRight'?1:-1);return;}
   if(event.key==='Escape'&&preferencesOpen){event.preventDefault();closePreferences(true);}
 });
 document.addEventListener('click',event=>{
@@ -600,6 +695,9 @@ document.addEventListener('click',event=>{
   if(action==='save')toggleShortlist(id);
   if(action==='more-jobs'){state.expanded=!state.expanded;renderJobs();if(!state.expanded)$('#opportunities').scrollIntoView({behavior:'smooth'});}
   if(action==='clear-search'||action==='reset-jobs'){state.keyword='';state.location='all';if(action==='reset-jobs')state.category='all';state.expanded=false;$('#keyword').value='';$('#location').value='all';renderJobs();}
+  if(action==='vacancy-gallery')openVacancyGallery(id, control);
+  if(action==='vacancy-gallery-step')stepVacancyGallery(Number(id));
+  if(action==='close-vacancy-gallery')$('#vacancy-gallery')?.close();
   if(action==='job'||action==='vacancy-listings'){
     if(control.tagName==='A'&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;
     event.preventDefault();

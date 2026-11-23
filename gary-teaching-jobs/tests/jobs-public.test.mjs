@@ -94,7 +94,7 @@ test('vacancy images render on cards and detail routes with localized alt and no
   assert.equal(detail.alt,'Lớp học A');
   assert.equal(detail.src,photo.src);
   detail.dispatchEvent(new dom.window.Event('error'));
-  assert.equal(detail.parentElement.hidden,true);
+  assert.equal(detail.closest('.vacancy-photo').hidden,true);
  }finally{dom.window.close();}
  const invalid=vacancyCard({...content[3],data:{...content[3].data,vacancy_image:{...content[3].data.vacancy_image,id:'javascript:alert(1)'}}},0,content);
  assert.equal(invalid.image,null);
@@ -104,6 +104,67 @@ test('vacancy images render on cards and detail routes with localized alt and no
   assert.equal(card.querySelector('.vacancy-photo, .job-school-icon'),null);
   assert.match(card.querySelector('h3').textContent,/New teacher vacancy/);
  }finally{fallback.window.close();}
+});
+test('a job-card photo opens that vacancy gallery and does not step into another job',async()=>{
+ const content=structuredClone(records);
+ const first={id:'11000000-0000-4000-8000-000000000011',width:1120,height:740,alt_en:'Classroom "A"',alt_vi:'Lớp học A',cover:false};
+ const second={id:'11000000-0000-4000-8000-000000000012',width:800,height:1200,alt_en:'School gate',alt_vi:'Cổng trường',cover:true};
+ const other={id:'11000000-0000-4000-8000-000000000014',width:640,height:480,alt_en:'Other campus',alt_vi:'Cơ sở khác',cover:true};
+ content[3].data.vacancy_images=[first,second];
+ content.push({...content[3],id:'10000000-0000-4000-8000-000000000002',slug:'language-teacher',title_en:'Language teacher',title_vi:'Giáo viên ngôn ngữ',data:{...content[3].data,vacancy_images:[other]}});
+ const dom=await publicPage(content);
+ try{
+  const d=dom.window.document, w=dom.window;
+  const cards=[...d.querySelectorAll('.job-card')];
+  assert.equal(cards[0].querySelector('.vacancy-photo-count').textContent,'2');
+  assert.equal(cards[1].querySelector('.vacancy-photo-count'),null);
+  assert.match(cards[0].querySelector('.vacancy-photo img').src,/000000000012$/);
+  const opener=cards[0].querySelector('[data-action="vacancy-gallery"]');
+  assert.match(opener.getAttribute('aria-label'),/View 2 photos/);
+  opener.click();
+  const gallery=d.querySelector('#vacancy-gallery');
+  assert.equal(gallery.open,true);
+  assert.equal(d.querySelector('#detail-dialog').open,false);
+  const photo=gallery.querySelector('.vacancy-gallery-photo');
+  assert.equal(photo.alt,'School gate');
+  assert.match(photo.src,/000000000012$/);
+  assert.equal(photo.getAttribute('width'),'800');
+  assert.equal(gallery.querySelector('.vacancy-gallery-caption').textContent,'New teacher vacancy · Hanoi');
+  assert.equal(gallery.querySelector('#vacancy-gallery-status').textContent,'1 of 2');
+  gallery.querySelector('[data-action="vacancy-gallery-step"][data-id="1"]').click();
+  assert.equal(photo.alt,'Classroom "A"');
+  assert.match(photo.src,/000000000011$/);
+  assert.equal(gallery.querySelector('#vacancy-gallery-status').textContent,'2 of 2');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+  assert.equal(photo.alt,'School gate');
+  const pointer=(type,x,y)=>{const event=new w.Event(type,{bubbles:true});Object.defineProperties(event,{clientX:{value:x},clientY:{value:y}});return event;};
+  const stage=gallery.querySelector('.vacancy-gallery-stage');
+  stage.dispatchEvent(pointer('pointerdown',240,80));
+  stage.dispatchEvent(pointer('pointerup',40,84));
+  assert.equal(photo.alt,'Classroom "A"');
+  d.querySelector('[data-language="vi"]').click();
+  assert.equal(d.querySelector('#vacancy-gallery .vacancy-gallery-photo').alt,'Lớp học A');
+  assert.equal(d.querySelector('#vacancy-gallery-status').textContent,'2 / 2');
+  assert.equal(d.querySelector('[data-action="vacancy-gallery-step"][data-id="-1"]').getAttribute('aria-label'),'Ảnh trước');
+  d.querySelector('[data-action="close-vacancy-gallery"]').click();
+  assert.equal(d.querySelector('#vacancy-gallery').open,false);
+  assert.equal(d.activeElement,d.querySelector('[data-action="vacancy-gallery"][data-id="10000000-0000-4000-8000-000000000001"]'));
+  d.querySelector('.job-card h3 a').click();
+  d.querySelector('#detail-dialog [data-action="vacancy-gallery"]').click();
+  assert.equal(d.querySelector('#vacancy-gallery').open,true);
+  assert.equal(d.querySelector('#vacancy-gallery .vacancy-gallery-photo').alt,'Cổng trường');
+ }finally{dom.window.close();}
+ const single=structuredClone(records);
+ single[3].data.vacancy_image={id:'11000000-0000-4000-8000-000000000013',width:640,height:480,alt_en:'One classroom',alt_vi:'Một lớp học'};
+ const alone=await publicPage(single);
+ try{
+  const d=alone.window.document;
+  d.querySelector('[data-action="vacancy-gallery"]').click();
+  assert.equal(d.querySelector('[data-action="vacancy-gallery-step"][data-id="1"]').hidden,true);
+  const src=d.querySelector('.vacancy-gallery-photo').src;
+  d.dispatchEvent(new alone.window.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));
+  assert.equal(d.querySelector('.vacancy-gallery-photo').src,src);
+ }finally{alone.window.close();}
 });
 test('published salary and employer profile fields are visible and translate on the public site',async()=>{
  const content=structuredClone(records);

@@ -16,15 +16,51 @@ export function vacancyImage(value) {
   return {id:value.id, width:value.width, height:value.height, alt_en:en, alt_vi:vi};
 }
 
+const maxImages = 8;
+
+export function editableVacancyImages(data = {}) {
+  const legacy = data?.vacancy_image;
+  const source = Array.isArray(data?.vacancy_images) ? data.vacancy_images
+    : legacy && typeof legacy === 'object' && !Array.isArray(legacy) ? [{...legacy, cover:true}] : [];
+  const images = [];
+  const seen = new Set();
+  for (const item of source) {
+    const image = vacancyImage(item);
+    if (!image || seen.has(image.id)) continue;
+    seen.add(image.id);
+    images.push({...image, cover:item?.cover === true});
+  }
+  if (!images.length) return [];
+  if (!images.some(image => image.cover)) images[0].cover = true;
+  let covered = false;
+  for (const image of images) {
+    if (image.cover && !covered) covered = true;
+    else image.cover = false;
+  }
+  return images;
+}
+
+function presentVacancyImage(image) {
+  return {...image, url:`${endpoint}?image=${image.id}`, alt:[image.alt_en || image.alt_vi, image.alt_vi || image.alt_en]};
+}
+
+// Cover first, then the other photos in their saved order.
+export function publishedVacancyImages(data) {
+  const images = editableVacancyImages(data).map(presentVacancyImage);
+  const cover = images.find(image => image.cover) || images[0];
+  return cover ? [cover, ...images.filter(image => image.id !== cover.id)] : [];
+}
+
 export function publishedVacancyImage(value) {
   const image = vacancyImage(value);
-  return image && {...image, url:`${endpoint}?image=${image.id}`, alt:[image.alt_en || image.alt_vi, image.alt_vi || image.alt_en]};
+  return image && presentVacancyImage({...image, cover:true});
 }
 
 const messages = {
   invalid: ['Choose an intact JPG, PNG or WebP image up to 4096 px on either side.', 'Chọn ảnh JPG, PNG hoặc WebP hợp lệ, mỗi chiều tối đa 4096 px.'],
   file_size: ['Choose an image of 4 MB or less.', 'Chọn ảnh có dung lượng tối đa 4 MB.'],
   alt_required: ['Enter a short description of the image in at least one language.', 'Nhập mô tả ngắn cho ảnh bằng ít nhất một ngôn ngữ.'],
+  gallery_full: ['A vacancy can have up to 8 photos.', 'Mỗi tin tuyển dụng có tối đa 8 ảnh.'],
   draft_required: ['Save the vacancy as a draft before uploading an image.', 'Lưu bản nháp tin tuyển dụng trước khi tải ảnh lên.'],
   upload_limit: ['The image upload limit was reached. Try again later.', 'Đã đạt giới hạn tải ảnh lên. Vui lòng thử lại sau.'],
   upload_failed: ['The image could not be uploaded. Try again.', 'Không thể tải ảnh lên. Vui lòng thử lại.'],
@@ -83,96 +119,287 @@ async function cropToLandscape(file, win) {
   finally { win.URL.revokeObjectURL(url); }
 }
 
-export function mountVacancyImageEditor(root, {record, language, editable, preview, upload, changeAlt, save}) {
+function galleryPayload(images) {
+  const clean = [];
+  for (const image of images) {
+    const parsed = vacancyImage(image);
+    if (!parsed) return null;
+    clean.push({...parsed, cover:image.cover === true});
+  }
+  if (!clean.length) return [];
+  if (clean.length > maxImages) return null;
+  let covered = false;
+  for (const image of clean) {
+    if (image.cover && !covered) covered = true;
+    else image.cover = false;
+  }
+  if (!covered) clean[0].cover = true;
+  return clean;
+}
+
+export function mountVacancyImageEditor(root, {record, language, editable, preview, upload, changeImages, save}) {
   const t = (en, vi) => language === 'vi' ? vi : en, win = root.ownerDocument.defaultView;
-  const current = vacancyImage(record.data?.vacancy_image);
-  const heading = t('Featured image','Ảnh đại diện');
+  const message = code => vacancyImageErrorText(imageError(code), language);
+  const localizedAlt = ({alt_en, alt_vi}) => (language === 'vi' ? alt_vi : alt_en) || alt_en || alt_vi || '';
+  const saved = editableVacancyImages(record.data);
+  let disposed = false, pending = [];
   root.className = 'jobs-vacancy-image-editor';
-  root.innerHTML = `<h3>${heading}</h3><img data-image-preview alt="" hidden><p class="cms-hint">${record.id ?
-    t('JPG, PNG or WebP · Up to 4 MB. Describe the image in at least one language. Changes go live when you publish.','JPG, PNG hoặc WebP · Tối đa 4 MB. Mô tả ảnh bằng ít nhất một ngôn ngữ. Thay đổi ảnh hiển thị khi bạn xuất bản.') :
-    t('Save the vacancy as a draft before uploading an image.','Lưu bản nháp tin tuyển dụng trước khi tải ảnh lên.')}</p>`;
-  if (editable && record.id) root.insertAdjacentHTML('beforeend', `
-    <label class="cms-field"><span>${t('Choose image','Chọn ảnh')}</span><input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" data-image-file></label>
-    <label class="jobs-vacancy-image-crop"><input type="checkbox" data-image-crop> ${t('Center crop to 16:9','Cắt giữa ảnh theo tỷ lệ 16:9')}</label>
-    <div class="jobs-vacancy-image-alts">
-      <label class="cms-field"><span>${t('Image description (English)','Mô tả ảnh (tiếng Anh)')}</span><input lang="en" maxlength="500" data-image-alt="en"></label>
-      <label class="cms-field"><span>${t('Image description (Vietnamese)','Mô tả ảnh (tiếng Việt)')}</span><input lang="vi" maxlength="500" data-image-alt="vi"></label>
-    </div>
-    <div class="jobs-vacancy-image-actions">
-      <button type="button" data-image-upload data-button-variant="save-draft" disabled>${t('Upload and save draft','Tải ảnh và lưu bản nháp')}</button>
-      ${current ? `<button type="button" data-image-remove data-button-variant="danger">${t('Remove image from draft','Xóa ảnh khỏi bản nháp')}</button>` : ''}
-    </div>
-    <progress data-image-progress max="1" aria-label="${t('Image upload progress','Tiến độ tải ảnh')}" hidden></progress>`);
-  root.insertAdjacentHTML('beforeend','<p class="cms-hint" data-image-status role="status"></p>');
+  root.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = t('Vacancy photos', 'Ảnh tin tuyển dụng');
+  const hint = document.createElement('p');
+  hint.className = 'cms-hint';
+  hint.textContent = record.id
+    ? t('Up to 8 photos. JPG, PNG or WebP, 4 MB each. Describe each photo in at least one language. Choose one cover for the job card. Changes go live when you publish.', 'Tối đa 8 ảnh. JPG, PNG hoặc WebP, mỗi ảnh 4 MB. Mô tả mỗi ảnh bằng ít nhất một ngôn ngữ. Chọn một ảnh bìa cho thẻ việc làm. Thay đổi hiển thị khi bạn xuất bản.')
+    : t('Save the vacancy as a draft before uploading photos.', 'Lưu bản nháp tin tuyển dụng trước khi tải ảnh lên.');
+  const list = document.createElement('ul');
+  list.className = 'jobs-vacancy-image-list';
+  list.dataset.imageList = '';
+  const status = document.createElement('p');
+  status.className = 'cms-hint';
+  status.dataset.imageStatus = '';
+  status.setAttribute('role', 'status');
+  root.append(heading, hint, list);
+  const canEdit = editable && record.id;
+  let fileInput, uploadButton, progress, crop;
+  if (canEdit) {
+    const fileLabel = document.createElement('label');
+    fileLabel.className = 'cms-field';
+    const fileText = document.createElement('span');
+    fileText.textContent = t('Add photos', 'Thêm ảnh');
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+    fileInput.dataset.imageFile = '';
+    fileLabel.append(fileText, fileInput);
+    const cropLabel = document.createElement('label');
+    cropLabel.className = 'jobs-vacancy-image-crop';
+    crop = document.createElement('input');
+    crop.type = 'checkbox';
+    crop.dataset.imageCrop = '';
+    cropLabel.append(crop, document.createTextNode(' ' + t('Center crop to 16:9', 'Cắt giữa ảnh theo tỷ lệ 16:9')));
+    const pendingHost = document.createElement('div');
+    pendingHost.className = 'jobs-vacancy-image-pending';
+    pendingHost.dataset.imagePending = '';
+    const actions = document.createElement('div');
+    actions.className = 'jobs-vacancy-image-actions';
+    uploadButton = document.createElement('button');
+    uploadButton.type = 'button';
+    uploadButton.dataset.imageUpload = '';
+    uploadButton.dataset.buttonVariant = 'save-draft';
+    uploadButton.disabled = true;
+    uploadButton.textContent = t('Upload and save draft', 'Tải ảnh và lưu bản nháp');
+    actions.append(uploadButton);
+    progress = document.createElement('progress');
+    progress.max = 1;
+    progress.dataset.imageProgress = '';
+    progress.setAttribute('aria-label', t('Image upload progress', 'Tiến độ tải ảnh'));
+    progress.hidden = true;
+    root.append(fileLabel, cropLabel, pendingHost, actions, progress);
+  }
+  root.append(status);
   const find = selector => root.querySelector(selector);
-  const image = find('[data-image-preview]'), fileInput = find('[data-image-file]');
-  const altEn = find('[data-image-alt="en"]'), altVi = find('[data-image-alt="vi"]');
-  const status = find('[data-image-status]');
-  const localizedAlt = ({alt_en,alt_vi}) => (language === 'vi' ? alt_vi : alt_en) || alt_en || alt_vi || '';
-  const alt = () => ({alt_en:altEn.value.trim(), alt_vi:altVi.value.trim()});
-  const previewUnavailable = () => { if (!disposed) status.textContent = t('Image preview unavailable.','Chưa thể xem trước ảnh.'); };
-  let disposed = false, localUrl = '', storedUrl = '';
-  const show = (url, alt = '') => {
-    if (disposed) return;
-    if (url) image.src = url; else image.removeAttribute('src');
-    image.alt = alt; image.hidden = !url;
+  const altField = (locale, value, savedField) => {
+    const label = document.createElement('label');
+    label.className = 'cms-field';
+    const span = document.createElement('span');
+    span.textContent = locale === 'en' ? t('Image description (English)', 'Mô tả ảnh (tiếng Anh)') : t('Image description (Vietnamese)', 'Mô tả ảnh (tiếng Việt)');
+    const input = document.createElement('input');
+    input.lang = locale;
+    input.maxLength = 500;
+    input.value = value || '';
+    if (savedField) input.dataset.savedAlt = locale;
+    else input.dataset.imageAlt = locale;
+    label.append(span, input);
+    return label;
   };
-  const clearLocal = () => { if (localUrl) win.URL.revokeObjectURL(localUrl); localUrl = ''; };
-  image.addEventListener('error', () => { image.hidden = true; previewUnavailable(); });
-  if (current) void preview(current.id).then(url => {
-    storedUrl = url;
-    if (!localUrl) show(storedUrl, localizedAlt(fileInput ? alt() : current));
-  }).catch(() => { if (!localUrl) previewUnavailable(); });
-  if (fileInput) {
-    const uploadButton = find('[data-image-upload]'), progress = find('[data-image-progress]');
-    const crop = find('[data-image-crop]');
-    const showCrop = () => image.classList.toggle('is-cropped', !!localUrl && crop.checked);
-    crop.addEventListener('change', showCrop);
-    altEn.value = record.data?.vacancy_image?.alt_en || '';
-    altVi.value = record.data?.vacancy_image?.alt_vi || '';
-    const message = code => vacancyImageErrorText(imageError(code), language);
-    const updateDescription = () => {
-      const description = alt();
-      image.alt = localizedAlt(description);
-      if (current && !fileInput.files?.length) changeAlt(description);
-    };
-    altEn.addEventListener('input', updateDescription); altVi.addEventListener('input', updateDescription);
+  const textButton = (name, value, label, danger = false) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset[name] = value;
+    if (danger) button.dataset.buttonVariant = 'danger';
+    button.textContent = label;
+    return button;
+  };
+  const previewUnavailable = () => { if (!disposed) status.textContent = t('Image preview unavailable.', 'Chưa thể xem trước ảnh.'); };
+  const savedFromDom = () => [...root.querySelectorAll('[data-saved-image]')].map(item => ({
+    id:item.dataset.savedImage,
+    width:Number(item.dataset.width),
+    height:Number(item.dataset.height),
+    alt_en:item.querySelector('[data-saved-alt="en"]').value.trim(),
+    alt_vi:item.querySelector('[data-saved-alt="vi"]').value.trim(),
+    cover:item.querySelector('[data-image-cover]').checked,
+  }));
+  const remember = images => { if (changeImages) changeImages(images); };
+  const persist = (images, success) => {
+    if (images.length > maxImages) { status.textContent = message('gallery_full'); return; }
+    const payload = galleryPayload(images);
+    if (!payload) { status.textContent = message('alt_required'); root.querySelector('[data-saved-alt="en"]')?.focus(); return; }
+    return save(() => payload, success);
+  };
+  const showCrop = () => {
+    const cropped = !!pending.length && !!crop?.checked;
+    root.querySelectorAll('[data-image-preview]').forEach(image => image.classList.toggle('is-cropped', cropped));
+  };
+  const clearPending = () => {
+    for (const item of pending) win.URL.revokeObjectURL(item.url);
+    pending = [];
+    find('[data-image-pending]')?.replaceChildren();
+    if (uploadButton) uploadButton.disabled = true;
+    showCrop();
+  };
+  const renderPending = () => {
+    const host = find('[data-image-pending]');
+    host.replaceChildren();
+    pending.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = 'jobs-vacancy-image-item';
+      row.dataset.pendingRow = String(index);
+      const image = document.createElement('img');
+      image.dataset.imagePreview = '';
+      image.src = item.url;
+      image.alt = '';
+      row.append(image, altField('en', '', false), altField('vi', '', false));
+      host.append(row);
+    });
+    showCrop();
+  };
+  const renderSaved = () => {
+    list.replaceChildren();
+    saved.forEach((image, index) => {
+      const item = document.createElement('li');
+      item.className = 'jobs-vacancy-image-item';
+      item.dataset.savedImage = image.id;
+      item.dataset.width = String(image.width);
+      item.dataset.height = String(image.height);
+      const photo = document.createElement('img');
+      photo.alt = localizedAlt(image);
+      photo.hidden = true;
+      item.append(photo);
+      if (canEdit) {
+        const cover = document.createElement('label');
+        cover.className = 'jobs-vacancy-image-cover';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'vacancy-image-cover';
+        radio.dataset.imageCover = '';
+        radio.checked = image.cover;
+        const coverText = document.createElement('span');
+        coverText.textContent = t('Cover photo', 'Ảnh bìa');
+        cover.append(radio, coverText);
+        const toolbar = document.createElement('div');
+        toolbar.className = 'jobs-vacancy-image-actions';
+        const earlier = textButton('imageMove', '-1', t('Earlier', 'Trước'));
+        const later = textButton('imageMove', '1', t('Later', 'Sau'));
+        const remove = textButton('imageRemove', '', t('Remove photo', 'Xóa ảnh'), true);
+        earlier.disabled = index === 0;
+        later.disabled = index === saved.length - 1;
+        earlier.setAttribute('aria-label', `${t('Move earlier', 'Đưa lên trước')}: ${localizedAlt(image)}`);
+        later.setAttribute('aria-label', `${t('Move later', 'Đưa xuống sau')}: ${localizedAlt(image)}`);
+        remove.setAttribute('aria-label', `${t('Remove photo', 'Xóa ảnh')}: ${localizedAlt(image)}`);
+        toolbar.append(earlier, later, remove);
+        item.append(cover, altField('en', image.alt_en, true), altField('vi', image.alt_vi, true), toolbar);
+      }
+      list.append(item);
+      void preview(image.id).then(url => {
+        if (disposed || !photo.isConnected) return;
+        photo.src = url;
+        photo.hidden = false;
+      }).catch(() => { if (!disposed && photo.isConnected) previewUnavailable(); });
+    });
+    if (fileInput) fileInput.disabled = saved.length >= maxImages;
+  };
+  const pendingEntries = () => [...root.querySelectorAll('[data-pending-row]')].map(row => ({
+    file:pending[Number(row.dataset.pendingRow)]?.file,
+    alt_en:row.querySelector('[data-image-alt="en"]').value.trim(),
+    alt_vi:row.querySelector('[data-image-alt="vi"]').value.trim(),
+    altInput:row.querySelector('[data-image-alt="en"]'),
+  }));
+  renderSaved();
+  if (canEdit) {
+    const accepted = file => file?.size >= 1 && file.size <= maxBytes && (types.includes(file.type) || mimeByExtension[file.name?.split('.').pop().toLowerCase()]);
     fileInput.addEventListener('change', () => {
-      clearLocal();
-      const file = fileInput.files?.[0];
-      uploadButton.disabled = !file;
+      clearPending();
       status.textContent = '';
-      if (!file) { show(storedUrl, localizedAlt(alt())); showCrop(); return; }
-      if (!file.size || file.size > maxBytes || !types.includes(file.type) && !mimeByExtension[file.name.split('.').pop().toLowerCase()]) {
+      const selected = [...(fileInput.files || [])];
+      if (!selected.length) return;
+      const room = maxImages - root.querySelectorAll('[data-saved-image]').length;
+      if (selected.length > room) { fileInput.value = ''; status.textContent = message('gallery_full'); return; }
+      const invalid = selected.find(file => !accepted(file));
+      if (invalid) {
         fileInput.value = '';
-        show(storedUrl, localizedAlt(alt())); showCrop();
-        status.textContent = message(file.size > maxBytes ? 'file_size' : 'invalid');
-        uploadButton.disabled = true;
+        status.textContent = message(invalid.size > maxBytes ? 'file_size' : 'invalid');
         return;
       }
-      localUrl = win.URL.createObjectURL(file);
-      show(localUrl, localizedAlt(alt())); showCrop();
-      status.textContent = t('Ready to upload and save to the draft.','Sẵn sàng tải ảnh lên và lưu vào bản nháp.');
+      pending = selected.map(file => ({file, url:win.URL.createObjectURL(file)}));
+      renderPending();
+      uploadButton.disabled = false;
+      status.textContent = t('Ready to upload and save to the draft.', 'Sẵn sàng tải ảnh lên và lưu vào bản nháp.');
+    });
+    crop.addEventListener('change', showCrop);
+    root.addEventListener('input', event => {
+      const pendingAlt = event.target.closest('[data-pending-row]');
+      if (pendingAlt && event.target.matches('[data-image-alt]')) {
+        const image = pendingAlt.querySelector('[data-image-preview]');
+        image.alt = localizedAlt({
+          alt_en:pendingAlt.querySelector('[data-image-alt="en"]').value.trim(),
+          alt_vi:pendingAlt.querySelector('[data-image-alt="vi"]').value.trim(),
+        });
+        return;
+      }
+      if (event.target.matches('[data-saved-alt]')) remember(savedFromDom());
+    });
+    root.addEventListener('change', event => {
+      if (!event.target.matches('[data-image-cover]')) return;
+      void persist(savedFromDom(), t('Cover photo saved to draft.', 'Đã lưu ảnh bìa vào bản nháp.'));
+    });
+    root.addEventListener('click', event => {
+      const move = event.target.closest('[data-image-move]');
+      const remove = event.target.closest('[data-image-remove]');
+      if (!move && !remove) return;
+      const images = savedFromDom();
+      if (remove) {
+        const id = remove.closest('[data-saved-image]')?.dataset.savedImage;
+        const next = images.filter(image => image.id !== id);
+        void persist(next, t('Photo removed from draft.', 'Đã xóa ảnh khỏi bản nháp.'));
+        return;
+      }
+      const index = images.findIndex(image => image.id === move.closest('[data-saved-image]')?.dataset.savedImage);
+      const target = index + Number(move.dataset.imageMove);
+      if (index < 0 || target < 0 || target >= images.length) return;
+      const [image] = images.splice(index, 1);
+      images.splice(target, 0, image);
+      void persist(images, t('Photo order saved to draft.', 'Đã lưu thứ tự ảnh vào bản nháp.'));
     });
     uploadButton.addEventListener('click', async () => {
-      const file = fileInput.files?.[0], description = alt();
-      if (!file) return;
-      if (Math.max(description.alt_en.length, description.alt_vi.length) < 2) { status.textContent = message('alt_required'); altEn.focus(); return; }
+      const entries = pendingEntries();
+      if (!entries.length) return;
+      const missing = entries.find(entry => Math.max(entry.alt_en.length, entry.alt_vi.length) < 2);
+      if (missing) { status.textContent = message('alt_required'); missing.altInput.focus(); return; }
+      const existing = galleryPayload(savedFromDom());
+      if (!existing) { status.textContent = message('alt_required'); root.querySelector('[data-saved-alt="en"]')?.focus(); return; }
+      if (existing.length + entries.length > maxImages) { status.textContent = message('gallery_full'); return; }
       const shouldCrop = crop.checked;
       await save(async () => {
-        progress.hidden = false; progress.removeAttribute('value');
-        status.textContent = t('Uploading image…','Đang tải ảnh lên…');
-        const normalized = shouldCrop ? await cropToLandscape(file, win) : file;
-        const uploaded = await upload(record.id, normalized, fraction => { progress.value = fraction; });
-        const attached = vacancyImage({...uploaded,...description});
-        if (!attached) throw imageError('upload_failed');
-        status.textContent = t('Saving draft…','Đang lưu bản nháp…');
-        return attached;
-      }, t('Featured image saved to draft.','Đã lưu ảnh đại diện vào bản nháp.'));
-      progress.hidden = true; status.textContent = '';
+        progress.hidden = false;
+        progress.removeAttribute('value');
+        status.textContent = t('Uploading image…', 'Đang tải ảnh lên…');
+        const added = [];
+        for (let index = 0; index < entries.length; index += 1) {
+          const normalized = shouldCrop ? await cropToLandscape(entries[index].file, win) : entries[index].file;
+          const uploaded = await upload(record.id, normalized, fraction => { progress.value = (index + fraction) / entries.length; });
+          const attached = vacancyImage({...uploaded, alt_en:entries[index].alt_en, alt_vi:entries[index].alt_vi});
+          if (!attached) throw imageError('upload_failed');
+          added.push({...attached, cover:false});
+        }
+        const next = galleryPayload([...existing, ...added]);
+        if (!next?.length) throw imageError('upload_failed');
+        status.textContent = t('Saving draft…', 'Đang lưu bản nháp…');
+        return next;
+      }, t('Vacancy photos saved to draft.', 'Đã lưu ảnh vào bản nháp.'));
+      if (!disposed) { progress.hidden = true; status.textContent = ''; }
     });
-    find('[data-image-remove]')?.addEventListener('click', () =>
-      save(() => null, t('Featured image removed from draft.','Đã xóa ảnh đại diện khỏi bản nháp.')));
   }
-  return () => { disposed = true; clearLocal(); };
+  return () => { disposed = true; clearPending(); };
 }
