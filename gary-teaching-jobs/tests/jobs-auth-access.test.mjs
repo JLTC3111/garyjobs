@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
+import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const candidate={id:'10000000-0000-4000-8000-000000000001',email:'candidate@example.test'};
@@ -16,6 +17,7 @@ async function portal({access,view,user=candidate,caps={},getUser,getCapabilitie
   bindFeedbackDom(dom.window);
 
  const w=dom.window,calls={cms:0,destroy:0,applications:0,applicationOptions:[],rpc:[],users:0,signIns:[],registrations:[]};
+ w.mountJobsAccountMenu=mountJobsAccountMenu;
  let currentUser=user,authListener;
  if(fastTimeout){const schedule=w.setTimeout.bind(w);w.setTimeout=(fn,delay,...args)=>schedule(fn,delay>=1000?25:delay,...args);}
  w.HTMLElement.prototype.scrollIntoView=function(){};
@@ -81,8 +83,13 @@ test('staff entry opens content management for an authorized editor',async()=>{
  try{
   await h.settle();
   assert.equal(h.calls.cms,1);
+  const menu=h.w.document.querySelector('#portal-account');
+  assert.equal(menu.hidden,false);
+  assert.match(menu.textContent,/Staff · Editor/);
+  assert.match(menu.textContent,/Staff Dashboard.*Candidate Dashboard/s);
   assert.equal(h.w.document.querySelector('[data-collection="media"]').getAttribute('aria-label'),'Media Library');
   h.w.document.querySelector('#portal-language').click();
+  assert.match(menu.textContent,/Bảng điều khiển nhân viên.*Bảng điều khiển ứng viên/s);
   assert.equal(h.w.document.querySelector('[data-collection="media"]').getAttribute('aria-label'),'Thư viện tư liệu');
   assert.match(h.w.document.querySelector('#workspace-view').textContent,/Private CMS workspace/);
   assert.ok(visible(h.w.document.querySelector('#portal-access')));
@@ -123,6 +130,8 @@ test('an account without Jobs membership receives an explicit staff-access state
  try{
   await h.settle();
   assert.match(text(h),/Staff access not assigned/);
+  assert.equal(h.w.document.querySelector('#portal-account a[href="portal.html?access=staff"]'),null);
+  assert.match(h.w.document.querySelector('#portal-account').textContent,/Candidate Dashboard/);
   assert.ok(visible(h.w.document.querySelector('#workspace-view [data-action="retry"]')));
   assert.equal(h.calls.cms,0);
   assert.equal(h.calls.applications,0);
@@ -350,5 +359,5 @@ test('access denial followed by focus cannot lose the forced refresh',async()=>{
 
 test('refocus clears Jobs private data when Auth reports a missing session',async()=>{
  const h=await portal({access:'staff',caps:{read:true,role:'editor'},getUser:n=>n===1?{data:{user:candidate}}:{error:{name:'AuthSessionMissingError',status:400}}});
- try{await h.settle();h.w.dispatchEvent(new h.w.Event('focus'));await h.settle();assert.equal(h.calls.destroy,1);assert.equal(h.w.document.querySelector('[data-private-content]'),null);assert.equal(h.w.document.querySelector('#sign-out').hidden,true);}finally{h.dom.window.close();}
+ try{await h.settle();h.w.dispatchEvent(new h.w.Event('focus'));await h.settle();assert.equal(h.calls.destroy,1);assert.equal(h.w.document.querySelector('[data-private-content]'),null);assert.equal(h.w.document.querySelector('#portal-account').hidden,true);assert.equal(h.w.document.querySelector('#sign-out'),null);}finally{h.dom.window.close();}
 });

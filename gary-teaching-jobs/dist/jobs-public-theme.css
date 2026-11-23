@@ -115,10 +115,6 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-preferences-options button:active { transform:translateY(1px); }
 .jobs-public .jobs-preferences-help { margin:10px 0 0;color:var(--jobs-muted);font-size:12px;line-height:1.6; }
 .jobs-public .site-header:has(.jobs-preferences-panel:not([hidden])) { z-index:50; }
-.jobs-public .jobs-login-menu>summary { color:var(--jobs-ink);font-size:12px;min-height:40px; }
-.jobs-public .jobs-login-options { background:var(--jobs-surface);border-color:var(--jobs-line);color:var(--jobs-ink); }
-.jobs-public .jobs-login-options a { color:var(--jobs-ink); }
-.jobs-public .jobs-login-options a:hover { background:var(--jobs-raised); }
 .jobs-public .mobile-nav { background:var(--jobs-surface);border-color:var(--jobs-line); }
 .jobs-public .mobile-nav>a { color:var(--jobs-ink); }
 .jobs-public .nav-actions #gary-apps-header summary { width:34px;min-width:34px;padding:8px;min-height:40px;border:0;background:transparent;color:var(--jobs-ink);gap:0; }
@@ -252,7 +248,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 @media(max-width:1200px) { .jobs-public .desktop-nav,.jobs-public .nav-actions .nav-cta { display:none; }.jobs-public .menu-toggle { display:inline-flex; } }
 @media(max-width:1000px) { .jobs-public .hero.jobs-final-hero { grid-template-columns:minmax(0,1fr);padding-top:46px;padding-bottom:120px;gap:48px;min-height:0; }.jobs-public .jobs-final-hero .hero-copy { max-width:700px; }.jobs-public .jobs-final-hero h1 { font-size:58px; }.jobs-public .jobs-final-hero h1 em { font-size:62px; }.jobs-public .jobs-final-hero .hero-description { max-width:640px; }.jobs-public .jobs-hub { padding:30px 0 36px; }.jobs-public .hero-waves { height:100px; } }
 @media(max-width:720px) {
- .jobs-public .nav-wrap { height:76px;padding:6px 24px;position:relative;gap:12px; }.jobs-public .brand-logo { width:122px;max-height:64px; }.jobs-public .nav-actions { gap:5px; }.jobs-public .nav-actions .jobs-login-menu { display:none; }
+ .jobs-public .nav-wrap { height:76px;padding:6px 24px;position:relative;gap:12px; }.jobs-public .brand-logo { width:122px;max-height:64px; }.jobs-public .nav-actions { gap:5px; }
  .jobs-public .nav-actions #gary-apps-header { display:flex; }.jobs-public .nav-actions #gary-apps-header summary { width:36px;min-width:36px;min-height:44px;padding:8px; }.jobs-public .menu-toggle { width:40px;height:44px; }.jobs-public .mobile-nav { max-height:calc(100svh - 76px); }
  .jobs-public .jobs-preferences-panel { position:fixed;top:76px;right:16px;max-height:calc(100dvh - 92px); }
  .jobs-public #gary-apps-header .gary-apps-menu-panel { position:fixed;top:76px;right:16px;left:16px;width:auto;max-height:calc(100dvh - 92px); }
@@ -267,7 +263,6 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 @media(prefers-reduced-motion:reduce) { .jobs-public *, .jobs-public *:before,.jobs-public *:after { animation:none!important;transition:none!important;scroll-behavior:auto!important; } }
 
 @media(max-width:380px){.jobs-public .nav-wrap {padding-inline:20px;}.jobs-public .brand-logo{width:114px;}}
-@media(max-width:360px){.jobs-public .nav-actions .jobs-login-menu{display:none;}}
 
 @media(min-width:721px) and (max-width:1000px){.jobs-public .nav-actions #gary-apps-header{display:flex;}}
 

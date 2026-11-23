@@ -1,0 +1,126 @@
+.jobs-login-menu {
+  --account-ink: var(--jobs-portal-ink);
+  --account-muted: var(--jobs-portal-muted);
+  --account-line: var(--jobs-portal-line);
+  --account-surface: var(--jobs-portal-surface);
+  --account-hover: var(--jobs-portal-raised);
+  position: relative;
+  flex: none;
+  color: var(--account-ink);
+}
+.jobs-public .jobs-login-menu {
+  --account-ink: var(--jobs-ink);
+  --account-muted: var(--jobs-muted);
+  --account-line: var(--jobs-line);
+  --account-surface: var(--jobs-surface);
+  --account-hover: var(--jobs-raised);
+}
+.jobs-login-menu[hidden] { display: none; }
+.jobs-portal-header:has(#portal-account[open]) { z-index: 31; }
+.jobs-login-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  min-height: 44px;
+  padding-inline: .35rem;
+  border-radius: 8px;
+  font-size: .8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+}
+.jobs-login-menu > summary::-webkit-details-marker { display: none; }
+.jobs-login-menu > summary::after { content: '▾'; }
+.jobs-login-menu > summary[aria-disabled="true"] { cursor: wait; }
+.jobs-login-menu[open] > summary { background: var(--account-hover); }
+.jobs-login-menu .jobs-login-options {
+  position: absolute;
+  inset: 100% 0 auto auto;
+  z-index: 32;
+  display: grid;
+  gap: 2px;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(29rem, calc(100dvh - 8rem));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: .5rem;
+  border: 1px solid var(--account-line);
+  border-radius: 12px;
+  background: var(--account-surface);
+  color: var(--account-ink);
+  box-shadow: var(--jobs-popover-shadow);
+  font-size: .875rem;
+}
+.jobs-login-menu .jobs-account-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 100%;
+  background: var(--account-hover);
+  font-weight: 700;
+}
+.jobs-login-menu .jobs-account-identity {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .55rem .45rem .75rem;
+  margin-bottom: .3rem;
+  border-bottom: 1px solid var(--account-line);
+  overflow-wrap: anywhere;
+}
+.jobs-account-identity .jobs-account-avatar { width: 2.5rem; height: 2.5rem; }
+.jobs-login-menu .jobs-account-identity > div { display: grid; gap: 3px; min-width: 0; }
+.jobs-account-identity strong { font-size: 1rem; }
+.jobs-account-identity small { color: var(--account-muted); font-size: .8125rem; }
+.jobs-login-menu .jobs-account-badges { display: flex; gap: .25rem; flex-wrap: wrap; }
+.jobs-account-badges span {
+  padding: .12rem .5rem;
+  border-radius: 20px;
+  background: var(--account-hover);
+  font-size: .75rem;
+}
+.jobs-login-menu .jobs-login-options :is(a, button) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .6rem;
+  width: 100%;
+  min-height: 44px;
+  max-width: none;
+  padding: .45rem .6rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--account-ink);
+  font: inherit;
+  text-align: start;
+  white-space: normal;
+  text-decoration: none;
+}
+.jobs-login-options svg { flex: none; }
+.jobs-login-options footer { padding-top: .3rem; margin-top: .3rem; border-top: 1px solid var(--account-line); }
+.jobs-login-menu .jobs-login-options #sign-out { color: var(--jobs-error); }
+.jobs-login-options button:disabled { cursor: wait; }
+.jobs-login-options p { margin: .4rem .6rem; color: var(--account-muted); font-size: .8125rem; }
+.jobs-login-menu :is(summary, a, button):focus-visible { outline: 2px solid var(--jobs-focus); outline-offset: -2px; }
+.jobs-login-menu .jobs-login-options :is(a, button:not(:disabled)):active { background: var(--account-hover); }
+.jobs-login-menu .jobs-login-options #sign-out:active { background: var(--jobs-error-bg); }
+@media (hover: hover) {
+  .jobs-login-menu > summary:not([aria-disabled]):hover,
+  .jobs-login-menu .jobs-login-options :is(a, button:not(:disabled)):hover { background: var(--account-hover); }
+  .jobs-login-menu .jobs-login-options #sign-out:not(:disabled):hover { background: var(--jobs-error-bg); }
+}
+@media (max-width: 760px) {
+  .jobs-login-menu { position: static; }
+  .jobs-login-menu > summary { width: 44px; justify-content: center; padding-inline: 0; }
+  .jobs-login-menu > summary::after, .jobs-account-trigger-label { display: none; }
+  .jobs-login-menu .jobs-login-options { inset-inline-end: 1rem; }
+}
+@media (max-width: 380px) {
+  .jobs-public .nav-wrap { padding-inline: 12px; gap: 8px; }
+  .jobs-public .brand-logo { width: 106px; }
+  .jobs-public .nav-actions { gap: 3px; }
+}

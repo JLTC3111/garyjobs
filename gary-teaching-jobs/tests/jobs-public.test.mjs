@@ -5,16 +5,19 @@ import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
+import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function publicPage(result,{url='https://jobs.garyhome.vn/'}={}){
+async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({})}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;
   bindFeedbackDom(dom.window);
 w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
  w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
- vm.runInContext(source,dom.getInternalVMContext());await settle();return dom;
+ vm.runInContext(source,dom.getInternalVMContext());
+ mountJobsPublicAccount(w.document,auth,loadCapabilities);
+ await settle();return dom;
 }
 test('published vacancies replace reference cards and managed categories/locations survive filter changes',async()=>{
  const dom=await publicPage(records);try{const d=dom.window.document;assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.doesNotMatch(d.querySelector('#job-grid').textContent,/Bắc Giang/);assert.match(d.querySelector('#location').textContent,/Hanoi/);d.querySelector('[data-action="filter"][data-id="public"]').click();assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.equal(d.querySelectorAll('[data-action="filter"][data-id="public"]').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/Submit securely/);}finally{dom.window.close();}
@@ -64,11 +67,95 @@ test('public desktop and mobile navigation distinguish candidate and staff login
   const d=dom.window.document;
   for(const [language,candidate,staff] of [['en','Candidate login','Staff login'],['vi','Đăng nhập ứng viên','Đăng nhập nhân viên']]){
    if(language==='vi')d.querySelector('[data-language="vi"]').click();
-   for(const root of [d.querySelector('.jobs-login-menu'),d.querySelector('#mobile-nav')]){
-    assert.equal(root.querySelector('a[href="portal.html?access=candidate"]').textContent,candidate);
-    assert.equal(root.querySelector('a[href="portal.html?access=staff"]').textContent,staff);
-   }
+   const root=d.querySelector('.nav-actions #public-account');
+   assert.equal(root.querySelector('a[href="portal.html?access=candidate"]').textContent,candidate);
+   assert.equal(root.querySelector('a[href="portal.html?access=staff"]').textContent,staff);
+   assert.equal(d.querySelector('#mobile-nav a[href^="portal.html"]'),null);
   }
+ }finally{dom.window.close();}
+});
+test('public account restores verified dual access and removes revoked staff links without a reload',async()=>{
+ const user={id:'jobs-user',email:'teacher@example.test',user_metadata:{full_name:'Teacher <One>',role:'admin'}};
+ let notify,finishIdentity,users=0,caps={read:true,role:'editor'};
+ const restoring=new Promise(resolve=>{finishIdentity=resolve;});
+ const auth={
+  onAuthStateChange(callback){notify=callback;callback('INITIAL_SESSION',{user});},
+  getUser(){users++;return restoring;},
+ };
+ const dom=await publicPage(records,{auth,loadCapabilities:async()=>caps});
+ try{
+  const {document:d}=dom.window,menu=d.getElementById('public-account');
+  assert.equal(menu.querySelector('summary').getAttribute('aria-disabled'),'true');
+  assert.equal(menu.querySelector('a'),null);
+  finishIdentity({data:{user}});await settle();
+  assert.equal(menu.querySelector('strong').textContent,'Teacher <One>');
+  assert.equal(menu.querySelector('small').textContent,user.email);
+  assert.match(menu.textContent,/Staff · Editor/);
+  assert.doesNotMatch(menu.textContent,/Admin/);
+  assert.equal(menu.querySelector('a[href="portal.html?access=staff"]').textContent,'Staff Dashboard');
+  assert.equal(menu.querySelector('a[href="portal.html?access=candidate"]').textContent,'Candidate Dashboard');
+  d.querySelector('[data-language=vi]').click();
+  assert.equal(d.getElementById('public-account'),menu);
+  assert.match(menu.textContent,/Bảng điều khiển nhân viên/);
+  assert.match(menu.textContent,/Bảng điều khiển ứng viên/);
+  assert.equal(users,1);
+  menu.open=true;
+  menu.querySelector('a').focus();
+  menu.querySelector('a').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(menu.open,false);
+  assert.equal(d.activeElement,menu.querySelector('summary'));
+  caps={read:false,recruit:false,role:null};
+  notify('TOKEN_REFRESHED',{user});await settle();
+  assert.equal(menu.querySelector('a[href="portal.html?access=staff"]'),null);
+  assert.match(menu.textContent,/Bảng điều khiển ứng viên/);
+ }finally{dom.window.close();}
+});
+test('public account rechecks a restored page and signs out after backend confirmation',async()=>{
+ const user={id:'jobs-user',email:'candidate@example.test'};
+ let signedIn=false,finishSignOut;
+ const auth={
+  onAuthStateChange:callback=>callback('INITIAL_SESSION',null),
+  getUser:async()=>({data:{user:signedIn?user:null}}),
+  signOut(options){
+   assert.equal(options.scope,'local');
+   return new Promise(resolve=>{finishSignOut=resolve;});
+  },
+ };
+ const dom=await publicPage(records,{auth});
+ try{
+  const w=dom.window,menu=w.document.getElementById('public-account');
+  assert.equal(menu.querySelector('summary').textContent,'Sign in');
+  signedIn=true;
+  w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));
+  assert.equal(menu.querySelector('a'),null);
+  await settle();
+  assert.match(menu.textContent,/Candidate Dashboard/);
+  assert.equal(menu.querySelectorAll('a').length,1);
+  menu.querySelector('#sign-out').click();
+  assert.equal(menu.querySelector('#sign-out').disabled,true);
+  assert.match(menu.textContent,/Candidate Dashboard/);
+  finishSignOut({});await settle();
+  assert.equal(menu.querySelector('#sign-out'),null);
+  assert.match(menu.textContent,/Candidate login/);
+  assert.match(menu.textContent,/Staff login/);
+ }finally{dom.window.close();}
+});
+test('public account ignores permission results from a session signed out during verification',async()=>{
+ const user={id:'jobs-user',email:'staff@example.test'};
+ let notify,finishCapabilities;
+ const permissions=new Promise(resolve=>{finishCapabilities=resolve;});
+ const auth={
+  onAuthStateChange(callback){notify=callback;callback('INITIAL_SESSION',{user});},
+  getUser:async()=>({data:{user}}),
+ };
+ const dom=await publicPage(records,{auth,loadCapabilities:()=>permissions});
+ try{
+  const menu=dom.window.document.getElementById('public-account');
+  assert.equal(menu.querySelector('a'),null);
+  notify('SIGNED_OUT',null);
+  finishCapabilities({read:true,role:'admin'});await settle();
+  assert.match(menu.textContent,/Staff login/);
+  assert.doesNotMatch(menu.textContent,/Dashboard|Admin|staff@example/);
  }finally{dom.window.close();}
 });
 test('CMS text cannot inject markup or unsafe source protocols into public vacancy cards',()=>{

@@ -146,6 +146,8 @@ document.addEventListener('gary-jobs:theme',renderThemeControls);
 function renderPage() {
   const preferenceFocus=$('.jobs-preferences-panel')?.contains(document.activeElement)?document.activeElement.dataset.preferenceFocus:null;
   const previousHub=$('#jobs-glass-hero');
+  const previousAccount=$('#public-account');
+  const accountFocus=previousAccount?.contains(document.activeElement)?document.activeElement:null;
   if(managedRecords)jobs=managedRecords.filter(r=>r.kind==='vacancy').map((r,i)=>vacancyCard(r,i,managedRecords,state.lang));
   photoGalleryMount?.unmount();
   photoGalleryMount = null;
@@ -159,14 +161,14 @@ function renderPage() {
       <nav class="desktop-nav" aria-label="${t('Main navigation', 'Điều hướng chính')}">
         <a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a>
       </nav>
-      <div class="nav-actions"><details class="jobs-login-menu"><summary>${t('Sign in','Đăng nhập')}</summary><div class="jobs-login-options"><a href="portal.html?access=candidate">${t('Candidate login','Đăng nhập ứng viên')}</a><a href="portal.html?access=staff">${t('Staff login','Đăng nhập nhân viên')}</a></div></details><div id="gary-apps-header" class="gary-apps-slot"></div>
+      <div class="nav-actions"><details id="public-account" class="jobs-login-menu" hidden></details><div id="gary-apps-header" class="gary-apps-slot"></div>
         <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('globe')}</button>
           <div id="jobs-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="jobs-preferences-title" ${preferencesOpen?'':'hidden'}><div class="jobs-preferences-heading"><h2 id="jobs-preferences-title">${t('Website preferences','Tùy chọn website')}</h2><button type="button" class="jobs-preferences-close" data-action="close-preferences" data-preference-focus="close" aria-label="${t('Close preferences','Đóng tùy chọn')}">${icon('close')}</button></div>
             <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options"><button type="button" data-action="language" data-language="en" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
             <fieldset><legend>${t('Appearance','Giao diện')}</legend><div class="jobs-preferences-options">${[['light','Light','Sáng'],['dark','Dark','Tối'],['system','System','Hệ thống']].map(([value,en,vi])=>`<button type="button" data-action="theme" data-jobs-theme-choice="${value}" data-preference-focus="theme-${value}" aria-pressed="false">${t(en,vi)}</button>`).join('')}</div><p class="jobs-preferences-help">${t('System follows your device settings.','Hệ thống theo cài đặt thiết bị của bạn.')}</p></fieldset>
           </div>
         </div><a class="button button-primary button-small nav-cta" href="portal.html?access=staff&amp;view=cms">${t('Post a Job', 'Đăng tuyển')}</a><button class="icon-button button-utility menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
-    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><a href="portal.html?access=candidate">${t('Candidate login','Đăng nhập ứng viên')}</a><a href="portal.html?access=staff">${t('Staff login','Đăng nhập nhân viên')}</a><button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
+    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
     <main id="main">
       <section class="jobs-hero-shell" aria-labelledby="hero-title"><div class="hero container career-hero jobs-final-hero">
         <div class="hero-copy"><p class="eyebrow">${t('VIETNAM ENGLISH TEACHING JOBS', 'VIỆC LÀM GIẢNG DẠY TIẾNG ANH TẠI VIỆT NAM')}<span aria-hidden="true"></span></p>
@@ -214,6 +216,10 @@ function renderPage() {
     </main>
     <footer id="contact" class="site-footer"><div class="container"><div class="footer-main"><div class="footer-brand"><p>${t('Good work. Great adventures.<br>A little more life in Vietnam.', 'Công việc tốt. Hành trình tuyệt vời.<br>Cuộc sống trọn vẹn hơn ở Việt Nam.')}</p><div class="footer-social"><a href="https://www.facebook.com/vnenglishteachingjobs/" target="_blank" rel="noopener noreferrer" aria-label="Gary Agency on Facebook">${icon('facebook')}</a><a href="https://zalo.me/84356175046" target="_blank" rel="noopener noreferrer" aria-label="Gary Agency on Zalo"><span class="zalo-word">Zalo</span></a><a href="mailto:thuyylingg2107@gmail.com" aria-label="${t('Email Gary Agency', 'Gửi email đến Gary Agency')}">${icon('mail')}</a></div></div><div class="footer-column"><h3>${t('Your next chapter', 'Chương tiếp theo')}</h3><a href="#opportunities">${t('Find a teaching job', 'Tìm việc giảng dạy')}</a><a href="#why-gary">${t('Why Gary Agency', 'Vì sao chọn Gary Agency')}</a><a href="#life">${t('Explore Vietnam', 'Khám phá Việt Nam')}</a><a href="#services">${t('Our support', 'Hỗ trợ của chúng tôi')}</a></div><div class="footer-column"><h3>${t('Let’s talk', 'Cùng trò chuyện')}</h3><a href="tel:+84356175046">+84 356 175 046</a><a href="tel:+84977654134">+84 977 654 134</a><button class="footer-link" data-action="contact">${t('Say hello to the team', 'Chào đội ngũ Gary')} ${arrow()}</button><span class="office-note">${t('Based in Hanoi. Here for you.', 'Tại Hà Nội. Luôn bên bạn.')}</span></div><div class="footer-column footer-office"><h3>${t('Find us in Hanoi', 'Gặp chúng tôi tại Hà Nội')}</h3><p>${t('Eurowindow Building<br>27 Trần Duy Hưng, Trung Hòa<br>Cầu Giấy, Hanoi, Vietnam', 'Tòa nhà Eurowindow<br>27 Trần Duy Hưng, Trung Hòa<br>Cầu Giấy, Hà Nội, Việt Nam')}</p><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Eurowindow+27+Tran+Duy+Hung+Hanoi" target="_blank" rel="noopener noreferrer">${t('Get directions', 'Chỉ đường')} ${arrow()}</a></div></div><div class="footer-bottom"><span>© ${new Date().getFullYear()} Gary Agency · G-CONNECT VIETNAM</span><div><button data-action="privacy">${t('Privacy', 'Quyền riêng tư')}</button><a href="https://garyagency.com/hotel-term-condition/" target="_blank" rel="noopener noreferrer">${t('Terms & conditions', 'Điều khoản & điều kiện')}</a><a href="#">${t('Back to top', 'Về đầu trang')} ↑</a></div></div></div></footer>
     <button class="floating-contact" data-action="contact" aria-label="${t('Talk to Gary Agency', 'Trò chuyện với Gary Agency')}">${icon('chat')}<span>${t('Let’s talk', 'Trò chuyện')}</span><i aria-hidden="true" data-availability="unknown"></i></button>`;
+  if(previousAccount){
+    $('#public-account').replaceWith(previousAccount);
+    accountFocus?.focus({preventScroll:true});
+  }
   if(previousHub&&glassHeroMount){$('#jobs-glass-hero').replaceWith(previousHub);glassHeroMount.update?.({locale:state.lang,guidesTarget:managedRecords?.some(record=>record.kind==='guide')?'#published-guides':'#questions'})}
   else if(typeof mountGlassHero==='function')glassHeroMount=mountGlassHero($('#jobs-glass-hero'),{locale:state.lang,guidesTarget:managedRecords?.some(record=>record.kind==='guide')?'#published-guides':'#questions'});
   renderThemeControls();
@@ -777,7 +783,13 @@ $('#detail-dialog').addEventListener('close',event=>{
   }
 });
 document.addEventListener('keydown',event=>{if(event.key==='Escape' && !event.target.closest('.gary-apps-menu[open]'))toggleMenu(false);});
-document.addEventListener('toggle',event=>{if(event.target.matches('.faq-item')&&event.target.open)$$('.faq-item[open]').filter(item=>item!==event.target).forEach(item=>item.open=false);},true);
+document.addEventListener('toggle',event=>{
+  if(event.target.id==='public-account'&&event.target.open){
+    toggleMenu(false);
+    closePreferences();
+    $$('.site-header details[open]').filter(menu=>menu!==event.target).forEach(menu=>menu.open=false);
+  }
+  if(event.target.matches('.faq-item')&&event.target.open)$$('.faq-item[open]').filter(item=>item!==event.target).forEach(item=>item.open=false);},true);
 window.addEventListener('resize',()=>{if(window.innerWidth>1360)toggleMenu(false);},{passive:true});
 renderPage();
 

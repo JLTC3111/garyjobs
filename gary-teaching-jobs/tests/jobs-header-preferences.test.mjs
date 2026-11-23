@@ -5,12 +5,18 @@ import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-public-content.js';
+import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const init = await readFile(new URL('../dist/jobs-theme-init.js', import.meta.url), 'utf8');
 const app = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8')).split('\n').filter(line => !line.startsWith('import ')).join('\n');
 async function page({ stored = {}, dark = false } = {}) {
   const dom = new JSDOM(html, { url: 'https://jobs.garyhome.vn/', runScripts: 'outside-only', pretendToBeVisual: true });
-  const w = dom.window, query = { matches: dark, listeners: [], addEventListener(_,fn) { this.listeners.push(fn); } };
+  const w = dom.window, query = {
+    matches: dark,
+    listeners: [],
+    addEventListener(_, fn) { this.listeners.push(fn); },
+    removeEventListener(_, fn) { this.listeners = this.listeners.filter(listener => listener !== fn); },
+  };
   bindFeedbackDom(dom.window);
 
   for (const [key,value] of Object.entries(stored)) w.localStorage.setItem(key,value);
@@ -22,6 +28,7 @@ async function page({ stored = {}, dark = false } = {}) {
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
   Object.assign(w, { mountGaryApps: element => { element.innerHTML='<details class="gary-apps-menu"><summary>Shared platforms</summary><a href="https://garyhome.vn/">Gary Home</a></details>';return { unmount() {} }; }, mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [{kind:"location",slug:"hanoi",title_en:"Hanoi",title_vi:"Hà Nội"}] });
   w.eval(init);vm.runInContext(app,dom.getInternalVMContext());
+  mountJobsPublicAccount(w.document,{onAuthStateChange:callback=>callback('INITIAL_SESSION',null)});
   await new Promise(resolve=>setTimeout(resolve,10));
   return {dom,w,d:w.document,query};
 }

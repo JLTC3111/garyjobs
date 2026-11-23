@@ -4,10 +4,12 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
+import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
 const settle=()=>new Promise(r=>setTimeout(r,15));
 async function portal({caps={},view='mine',canLeave=()=>true,listApplications,stats={}}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/portal.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/portal.html?view='+view,runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window;
   bindFeedbackDom(dom.window);
+ w.mountJobsAccountMenu=mountJobsAccountMenu;
 
  let currentUser={id:'10000000-0000-4000-8000-000000000001',email:'candidate@example.test'};const calls={submissions:[],cms:[],destroy:[]};
  w.HTMLElement.prototype.scrollIntoView=function(){};w.errorText=e=>e.message;w.unwrap=r=>{if(r.error)throw r.error;return r.data;};w.capabilities=async()=>caps;w.collections=[];w.createCmsAdapter=()=>({});w.STAGES=['submitted','screening'];w.STAGE_LABELS={submitted:['Submitted','Đã nộp'],screening:['Screening','Sàng lọc']};w.jobsConfig={cvBucket:'jobs-cv'};
@@ -37,10 +39,14 @@ test('candidate submission displays durable backend receipt and includes consent
 test('signout destroys shared CMS private state forcibly and removes application workspace',async()=>{
  const h=await portal({view:'cms',caps:{read:true,edit:true,publish:true}});try{assert.equal(h.calls.cms.length,1);h.w.document.querySelector('#sign-out').click();await settle();assert.ok(h.calls.destroy.some(c=>c?.force===true));assert.equal(h.w.document.querySelector('#signed-panel').hidden,true);assert.equal(h.w.document.querySelector('#workspace-view').textContent,'');assert.match(h.w.document.querySelector('#auth-panel').textContent,/Sign in/);}finally{h.dom.window.close();}
 });
-test('browser history honors the CMS dirty guard and tears down discarded private editor state',async()=>{
+test('account links and browser history honor the CMS dirty guard',async()=>{
  let allow=false;
  const h=await portal({view:'cms',caps:{read:true,edit:true},canLeave:()=>allow});
  try{
+  const link=h.w.document.querySelector('#portal-account a[href="portal.html?access=candidate"]');
+  const click=new h.w.MouseEvent('click',{bubbles:true,cancelable:true});
+  link.dispatchEvent(click);
+  assert.equal(click.defaultPrevented,true);
   h.w.history.pushState({},'','/portal.html?view=mine');h.w.dispatchEvent(new h.w.PopStateEvent('popstate'));await settle();
   assert.equal(new URL(h.w.location.href).searchParams.get('view'),'cms','Cancelled history navigation restores the current workspace URL');
   assert.equal(h.calls.cms.length,1);assert.equal(h.calls.destroy.length,0,'Cancelled departure keeps the live draft/controller');

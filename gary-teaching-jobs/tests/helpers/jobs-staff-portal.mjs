@@ -4,6 +4,7 @@ import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './feedback-dom.mjs';
 import {mountCms} from '../../dist/cms-foundation/index.js';
 import {mountJobsStaffSidebar} from '../../dist/jobs-staff-sidebar.js';
+import {mountJobsAccountMenu} from '../../dist/jobs-account-menu.js';
 import {mountStaffManagement} from '../../dist/jobs-staff-management.js';
 import {mountTalentPool} from '../../dist/jobs-talent-pool.js';
 import * as vacancyOptions from '../../dist/jobs-vacancy-options.js';
@@ -14,6 +15,7 @@ export const settle=async()=>{for(let i=0;i<16;i++)await new Promise(resolve=>se
 export async function staffPortal({caps={read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},access='staff',view='cms',width=1440,height=960,records=[],confirm=()=>false,theme='light',staff=null,talent=null}={}){
  const dom=new JSDOM(await readFile(new URL('../../dist/portal.html',import.meta.url),'utf8'),{url:`https://jobs.garyhome.vn/portal.html?access=${access}&view=${view}`,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,doc=w.document;
   bindFeedbackDom(dom.window);
+ w.mountJobsAccountMenu=mountJobsAccountMenu;
 
  Object.defineProperty(w,'innerWidth',{value:width,writable:true});Object.defineProperty(w,'innerHeight',{value:height,writable:true});doc.documentElement.dataset.jobsTheme=theme;
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=confirm;

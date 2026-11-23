@@ -6,6 +6,7 @@ import {mountStaffManagement} from './jobs-staff-management.js';
 import {showActionToast,setCounterValues,clearCounterValues} from './action-toast.js';
 import {createTalentAdapter} from './jobs-talent-data.js';
 import {mountTalentPool} from './jobs-talent-pool.js';
+import {mountJobsAccountMenu} from './jobs-account-menu.js';
 
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
@@ -23,7 +24,7 @@ function renderChrome(){
  document.title=`${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')} | Vietnam English Teaching Jobs`;
  $('.skip-link').textContent=t('Skip to content','Chuyển đến nội dung');
  $('#portal-language').textContent=language==='vi'?'English':'Tiếng Việt';$('#portal-language').lang=language==='vi'?'en':'vi';
- $('#sign-out').textContent=t('Sign out','Đăng xuất');$('#sign-out').hidden=!user;
+ accountMenu.update({language,user:recovery?null:user,caps,loading});
  $('#portal-access').setAttribute('aria-label',t('Choose your portal','Chọn cổng đăng nhập'));
  $('#portal-access').innerHTML=[['candidate',t('Candidate portal','Cổng ứng viên')],['staff',t('Staff portal','Cổng nhân viên')]].map(([id,label])=>`<button type="button" data-action="access" data-access="${id}" ${access===id?'aria-current="page"':''}>${label}</button>`).join('');
  $('#portal-loading').textContent=t('Checking your session…','Đang kiểm tra phiên đăng nhập…');$('#portal-loading').hidden=!loading;
@@ -217,7 +218,19 @@ async function authenticate(){
  }
 }
 $('#portal-language').addEventListener('click',()=>{language=language==='en'?'vi':'en';try{localStorage.setItem('gary-language',JSON.stringify(language));}catch{}renderChrome();renderAuth();if(user&&!loading&&!recovery)nav();if(cms)cms.setLanguage(language);else if(staffPage)staffPage.setLanguage(language);else if(talentPage)talentPage.setLanguage(language);else if(user&&!loading&&!recovery)void renderView().catch(e=>status(errorText(e,language),true,true));});
-$('#sign-out').addEventListener('click',()=>{void guarded(async()=>{unwrap(await deadline(db.auth.signOut({scope:'local'})));generation++;user=null;caps={};roster=[];recovery=false;loading=false;clearWorkspace();status('');renderChrome();renderAuth();}).catch(()=>{});});
+const accountMenu=mountJobsAccountMenu($('#portal-account'),{
+ showGuest:false,
+ canNavigate:mayLeave,
+ async signOut(){
+  const actor=user.id;
+  unwrap(await deadline(db.auth.signOut({scope:'local'})));
+  if(user?.id===actor)showSignedOut();
+ },
+});
+function showSignedOut(){
+ clearTimeout(authSyncTimer);
+ generation++;clearWorkspace();user=null;caps={};roster=[];recovery=false;loading=false;status('');renderChrome();renderAuth();
+}
 document.addEventListener('click',event=>{
  const b=event.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;
  if(action==='access')setAccess(b.dataset.access);
@@ -297,7 +310,7 @@ window.addEventListener('jobs:access-denied',()=>schedulePermissionRefresh(true)
 let authSyncTimer;
 db.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){clearTimeout(authSyncTimer);generation++;clearWorkspace();recovery=true;loading=false;user=session?.user||user;renderChrome();renderAuth();return;}
- if(event==='SIGNED_OUT'){clearTimeout(authSyncTimer);generation++;clearWorkspace();user=null;caps={};roster=[];recovery=false;loading=false;status('');renderChrome();renderAuth();return;}
+ if(event==='SIGNED_OUT'){showSignedOut();return;}
  if(!['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)||recovery)return;
  // Supabase may emit SIGNED_IN again on tab focus. Keep an active editor intact.
  if(session?.user?.id===user?.id&&!loading){schedulePermissionRefresh();return;}
