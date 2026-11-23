@@ -243,16 +243,20 @@ function filteredJobs() {
 // when a published vacancy actually uses them. Unrelated taxonomy never becomes a job filter.
 function managedCategoryLabels(){return [...new Map(jobs.filter(job=>job.category).map(job=>[job.category,[job.category,pick(job.type)||esc(job.category)]])).values()];}
 
+function photoFrame(image) {
+  return typeof image?.frame === 'string' && /^left:-?\d+(?:\.\d+)?%;top:-?\d+(?:\.\d+)?%;width:\d+(?:\.\d+)?%;height:\d+(?:\.\d+)?%$/.test(image.frame) ? image.frame : '';
+}
 function vacancyPhoto(job, detail = false) {
   const image = job.image;
   if (!image) return '';
   const count = job.images?.length || 1;
-  const img = `<img src="${esc(image.url)}" alt="${esc(pick(image.alt))}" width="${image.width}" height="${image.height}" decoding="async"${detail ? '' : ' loading="lazy"'}>`;
+  const frame = photoFrame(image);
+  const img = `<img src="${esc(image.url)}" alt="${esc(pick(image.alt))}" width="${image.width}" height="${image.height}" decoding="async"${detail ? '' : ' loading="lazy"'}${frame ? ` style="${esc(frame)}"` : ''}>`;
   const label = count > 1
     ? `${t(`View ${count} photos`, `Xem ${count} ảnh`)}: ${pick(image.alt)}`
     : `${t('View full-size photo', 'Xem ảnh kích thước đầy đủ')}: ${pick(image.alt)}`;
   const badge = count > 1 ? `<span class="vacancy-photo-count" aria-hidden="true">${count}</span>` : '';
-  const figure = detail ? 'vacancy-photo vacancy-photo--detail' : 'vacancy-photo';
+  const figure = `${detail ? 'vacancy-photo vacancy-photo--detail' : 'vacancy-photo'}${frame ? ' is-framed' : ''}`;
   return `<figure class="${figure}"><button type="button" class="vacancy-photo-open" data-action="vacancy-gallery" data-id="${esc(job.id)}" aria-label="${esc(label)}">${img}${badge}</button></figure>`;
 }
 
@@ -277,7 +281,7 @@ function ensureVacancyGallery() {
   dialog.id = 'vacancy-gallery';
   dialog.className = 'vacancy-gallery';
   dialog.setAttribute('aria-labelledby', 'vacancy-gallery-status');
-  dialog.innerHTML = `<header class="vacancy-gallery-bar"><button type="button" class="vacancy-gallery-control vacancy-gallery-prev" data-action="vacancy-gallery-step" data-id="-1">${icon('chevron')}</button><p id="vacancy-gallery-status" role="status"></p><button type="button" class="vacancy-gallery-control vacancy-gallery-next" data-action="vacancy-gallery-step" data-id="1">${icon('chevron')}</button><button type="button" class="vacancy-gallery-control" data-action="close-vacancy-gallery">${icon('close')}</button></header><div class="vacancy-gallery-stage"><figure><img class="vacancy-gallery-photo" alt="" decoding="async"><figcaption class="vacancy-gallery-caption"></figcaption></figure></div>`;
+  dialog.innerHTML = `<header class="vacancy-gallery-bar"><button type="button" class="vacancy-gallery-control vacancy-gallery-prev" data-action="vacancy-gallery-step" data-id="-1">${icon('chevron')}</button><p id="vacancy-gallery-status" role="status"></p><button type="button" class="vacancy-gallery-control vacancy-gallery-next" data-action="vacancy-gallery-step" data-id="1">${icon('chevron')}</button><button type="button" class="vacancy-gallery-control" data-action="close-vacancy-gallery">${icon('close')}</button></header><div class="vacancy-gallery-stage"><figure><div class="vacancy-gallery-frame"><img class="vacancy-gallery-photo" alt="" decoding="async"></div><figcaption class="vacancy-gallery-caption"></figcaption></figure></div>`;
   document.body.append(dialog);
   dialog.addEventListener('close', () => {
     document.body.classList.remove('dialog-open');
@@ -311,10 +315,14 @@ function renderVacancyGallery() {
   galleryIndex = Math.min(galleryIndex, images.length - 1);
   const image = images[galleryIndex], several = images.length > 1;
   const photo = $('.vacancy-gallery-photo', dialog);
+  const frameStyle = photoFrame(image);
   photo.src = image.url;
   photo.alt = pick(image.alt);
   photo.width = image.width;
   photo.height = image.height;
+  $('.vacancy-gallery-frame', dialog).classList.toggle('is-framed', Boolean(frameStyle));
+  if (frameStyle) photo.setAttribute('style', frameStyle);
+  else photo.removeAttribute('style');
   $('.vacancy-gallery-caption', dialog).innerHTML = `${pick(job.title)}${job.location ? ` · ${job.location}` : ''}`;
   const status = $('#vacancy-gallery-status', dialog);
   status.textContent = t(`${galleryIndex + 1} of ${images.length}`, `${galleryIndex + 1} / ${images.length}`);
@@ -463,7 +471,7 @@ function vacancyHeader(){
   return `<header class="vacancy-workspace-header">
     <a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>
     <div class="vacancy-preferences">
-      <button type="button" class="text-button dialog-job-language" data-action="language" lang="${t('vi','en')}">${t('Tiếng Việt','English')}</button>
+      <button type="button" class="text-button dialog-job-language" data-action="language" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button>
       <select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
         <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
       </select>

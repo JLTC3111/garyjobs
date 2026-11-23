@@ -22,7 +22,7 @@ function renderChrome(){
  document.body.dataset.jobsStaff=String(!!user&&access==='staff'&&!loading&&!recovery&&(caps.read||caps.recruit));
  document.title=`${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')} | Vietnam English Teaching Jobs`;
  $('.skip-link').textContent=t('Skip to content','Chuyển đến nội dung');
- $('#portal-language').textContent=language==='vi'?'English':'Tiếng Việt';
+ $('#portal-language').textContent=language==='vi'?'English':'Tiếng Việt';$('#portal-language').lang=language==='vi'?'en':'vi';
  $('#sign-out').textContent=t('Sign out','Đăng xuất');$('#sign-out').hidden=!user;
  $('#portal-access').setAttribute('aria-label',t('Choose your portal','Chọn cổng đăng nhập'));
  $('#portal-access').innerHTML=[['candidate',t('Candidate portal','Cổng ứng viên')],['staff',t('Staff portal','Cổng nhân viên')]].map(([id,label])=>`<button type="button" data-action="access" data-access="${id}" ${access===id?'aria-current="page"':''}>${label}</button>`).join('');

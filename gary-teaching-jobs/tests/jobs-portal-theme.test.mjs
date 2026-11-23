@@ -64,13 +64,18 @@ function contrast(a,b){const x=luminance(a),y=luminance(b);return(Math.max(x,y)+
 test('portal semantic pairs and actual public vacancy metadata meet AA contrast in both palettes',()=>{
  for(const dark of [false,true]){
   const p=palette(dark),color=name=>resolve(p[name],p),mode=dark?'dark':'light';
-  const pairs=[['--jobs-portal-ink','--jobs-portal-bg'],['--jobs-portal-muted','--jobs-portal-bg'],['--jobs-portal-ink','--jobs-portal-surface'],['--jobs-portal-muted','--jobs-portal-surface'],['--jobs-portal-muted','--jobs-portal-soft'],['--jobs-portal-action','--jobs-portal-surface'],['--jobs-action-ink','--jobs-portal-action'],['--jobs-portal-accent','--jobs-portal-selected'],['--jobs-success','--jobs-success-bg'],['--jobs-error','--jobs-error-bg'],['--jobs-warning','--jobs-warning-bg'],['--jobs-muted','--jobs-surface'],['--jobs-muted','--jobs-soft'],['--jobs-ink','--jobs-surface']];
+  const pairs=[['--jobs-portal-ink','--jobs-portal-bg'],['--jobs-portal-muted','--jobs-portal-bg'],['--jobs-portal-ink','--jobs-portal-surface'],['--jobs-portal-muted','--jobs-portal-surface'],['--jobs-portal-muted','--jobs-portal-soft'],['--jobs-portal-action','--jobs-portal-surface'],['--jobs-action-ink','--jobs-portal-action'],['--jobs-portal-accent','--jobs-portal-selected'],['--jobs-success','--jobs-success-bg'],['--jobs-error','--jobs-error-bg'],['--jobs-warning','--jobs-warning-bg'],['--jobs-muted','--jobs-surface'],['--jobs-muted','--jobs-soft'],['--jobs-ink','--jobs-surface'],['--jobs-text','--jobs-bg'],['--jobs-text','--jobs-surface'],['--jobs-text','--jobs-soft'],['--jobs-text','--jobs-raised'],['--jobs-text-secondary','--jobs-bg'],['--jobs-text-secondary','--jobs-surface'],['--jobs-text-secondary','--jobs-soft'],['--jobs-text-secondary','--jobs-raised']];
   for(const [fg,bg]of pairs)assert.ok(contrast(color(fg),color(bg))>=4.5,`${mode} ${fg}/${bg}: ${contrast(color(fg),color(bg))}`);
   for(const fg of ['--jobs-control-line','--jobs-focus'])assert.ok(contrast(color(fg),color('--jobs-portal-surface'))>=3,`${mode} ${fg}`);
  }
- assert.match(publicCss,/\.job-location,\.job-employer,\.job-workplace,\.job-benefit\) \{ color:var\(--jobs-muted\)/);
- assert.match(publicCss,/\.job-card-bottom strong,.*color:var\(--jobs-ink\)/);
- assert.match(publicCss,/\.job-tags>span \{ color:var\(--jobs-muted\);background:var\(--jobs-soft\)/);
+ assert.match(publicCss,/\.job-location,\.job-employer,\.job-workplace\) \{ color:var\(--jobs-text-secondary\)/);
+ assert.match(publicCss,/\.job-benefit \{ color:var\(--jobs-text\)/);
+ assert.match(publicCss,/\.job-card-bottom strong \{ color:var\(--jobs-text\)/);
+ assert.match(publicCss,/\.job-card h3 :is\(a,button\) \{ color:var\(--jobs-ink\)/);
+ assert.match(publicCss,/\.job-tags>span \{ color:var\(--jobs-text-secondary\);background:var\(--jobs-soft\)/);
+ assert.match(publicCss,/\.check-list>li,\.dialog-small,\.application-note,\.contact-options small/);
+ assert.match(publicCss,/color:var\(--jobs-text-secondary\)/);
+ assert.match(publicCss,/\.body-copy,\.section-intro,\.hero-description,\.dialog-intro,\.benefit-row p,\.process-step p,\.faq-item p,\.support-card p\) \{ color:var\(--jobs-text\)/);
  for(const r of [...parse(componentCss),...parse(sidebarCss),...parse(cmsCss)])if(r.style)for(let i=0;i<r.style.length;i++){
   const property=r.style[i];if(property.startsWith('--'))continue;
   assert.doesNotMatch(r.style.getPropertyValue(property),/#[\da-f]{3,8}\b|\bwhite\b|\bblack\b/i,`${r.selectorText} ${property} must consume semantic roles`);

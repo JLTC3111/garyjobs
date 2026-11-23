@@ -11,6 +11,7 @@ import {emptyEntry} from '../dist/cms-foundation/content.js';
 import {mountVacancyImageEditor} from '../dist/jobs-vacancy-image.js';
 import {vacancyCard} from '../dist/jobs-public-content.js';
 import {vacancyImageHandler} from '../supabase/functions/jobs-vacancy-image/handler.mjs';
+import {inspectImage} from '../supabase/functions/jobs-vacancy-image/image.mjs';
 
 const admin='41000000-0000-4000-8000-000000000001';
 const settle=async()=>{for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));};
@@ -251,6 +252,16 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
         const result=await h.one('select public.jobs_vacancy_image_reserve($1,$2,$3,$4,$5) as result',Object.values(args));
         return Response.json(result.result);
       }
+      if(name==='jobs_vacancy_image_forget'){
+        assert.equal(options.headers.authorization,'Bearer test-staff');
+        try {
+          const result=await h.one('select public.jobs_vacancy_image_forget($1) as result',[args.p_image_id]);
+          return Response.json(result.result);
+        } catch (error) {
+          const message=String(error.message||'');
+          return Response.json({message:message.includes('vacancy_image_in_use')?'jobs.vacancy_image_in_use':'jobs.vacancy_image_invalid'},{status:400});
+        }
+      }
       assert.equal(options.headers.authorization,'Bearer test-server');
       if(url.includes('/rpc/')) {
         const query={
@@ -258,6 +269,8 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
           jobs_vacancy_image_published_mime:'select public.jobs_vacancy_image_published_mime($1) as result',
           jobs_vacancy_image_cleanup_claim:'select coalesce(array_agg(id),array[]::uuid[]) result from public.jobs_vacancy_image_cleanup_claim() id',
           jobs_vacancy_image_cleanup_finish:'select public.jobs_vacancy_image_cleanup_finish($1) as result',
+          jobs_vacancy_image_release:'select public.jobs_vacancy_image_release($1) as result',
+          jobs_vacancy_image_forgotten:'select public.jobs_vacancy_image_forgotten($1) as result',
         }[name];
         assert.ok(query,name);
         const {result}=await system('service_role',()=>h.one(query,Object.values(args)));
@@ -286,6 +299,13 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
       const result=await send(id,file);
       assert.equal(result.status,201);
       return result.json();
+    },
+    async removed(id){return (await h.pg.query('select * from public.jobs_vacancy_removed_images($1)',[id])).rows;},
+    async forget(id){
+      const result=await call('forget='+id,{method:'POST',headers:{authorization:'Bearer test-staff'}});
+      const body=await result.json().catch(()=>({}));
+      if(!result.ok) throw new Error(`jobs.vacancy_image_${body.code||'delete_failed'}`);
+      return body;
     },
   })});
   try {
@@ -336,8 +356,9 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     assert.equal(card.images.length,1);
     const delivered=await call('image='+first);
     assert.equal(delivered.status,200);
-    assert.equal(delivered.headers.get('content-type'),'image/png');
-    assert.deepEqual(Buffer.from(await delivered.arrayBuffer()),bytes);
+    assert.equal(delivered.headers.get('content-type'),'image/webp');
+    const stored=new Uint8Array(await delivered.arrayBuffer());
+    assert.deepEqual(inspectImage(stored,'image/webp'),{width:32,height:32});
     assert.equal((await call('image='+first,{headers:{'if-none-match':delivered.headers.get('etag')}})).status,304);
     await h.click('edit');
     const second=await select('Second classroom');
@@ -366,6 +387,15 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     await h.click('edit');
     h.root.querySelector(`[data-saved-image="${first}"] [data-image-remove]`).click();
     await until(async()=>(await photos()).length===1&&(await photos())[0].id===second,'one photo removed');
+    await settle();
+    await until(()=>h.root.querySelector(`[data-removed-image="${first}"] [data-image-forget]`)?.disabled===true,'published photo cannot be deleted yet');
+    assert.match(h.root.querySelector(`[data-removed-image="${first}"]`).textContent,/Publish the removal/);
+    await assert.rejects(()=>h.one('select public.jobs_vacancy_image_forget($1)',[first]),/vacancy_image_in_use/);
+    h.root.querySelector(`[data-removed-image="${first}"] [data-image-restore]`).click();
+    await until(async()=>(await photos()).some(image=>image.id===first&&image.alt_en==='First classroom'),'removed photo restored');
+    await settle();
+    h.root.querySelector(`[data-saved-image="${first}"] [data-image-remove]`).click();
+    await until(async()=>(await photos()).length===1&&(await photos())[0].id===second,'restored photo removed again');
     await settle();
     await h.click('publish');
     await until(async()=>(await published()).data.vacancy_images?.length===1,'public gallery updated');
@@ -399,6 +429,14 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     assert.deepEqual(await (await call('cleanup=1',{method:'POST',headers:{'x-jobs-cleanup-key':'test-cleanup'}})).json(),{processed:1});
     assert.equal(files.has(abandoned.id),false);
     assert.equal(files.has(first)&&files.has(second),true,'referenced revisions retain their files');
+    await h.click('edit');
+    await until(()=>h.root.querySelector(`[data-removed-image="${first}"] [data-image-forget]`)?.disabled===false,'removed photo can be deleted');
+    h.root.querySelector(`[data-removed-image="${first}"] [data-image-forget]`).click();
+    await until(async()=>!(await system('',()=>h.one('select id from jobs_private.vacancy_images where id=$1',[first]))),'deleted photo row removed');
+    await settle();
+    assert.equal(files.has(first),false);
+    assert.equal(files.has(second),true);
+    assert.equal(h.root.querySelector(`[data-removed-image="${first}"]`),null);
 
     const legacy=await h.one('select * from public.jobs_cms_save($1,0)',[
       {...emptyEntry('vacancy'),slug:'legacy-photo',title_en:'Legacy photo'},
@@ -430,6 +468,17 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     const eight=await h.one('select data from public.jobs_cms_entries where id=$1',[current.id]);
     assert.equal(eight.data.vacancy_images.length,8);
     assert.equal(eight.data.vacancy_images.filter(image=>image.cover).length,1);
+    const revision=await h.one(`select id,snapshot from public.jobs_cms_revisions where entry_id=$1
+      and exists(select 1 from jsonb_array_elements(coalesce(snapshot->'data'->'vacancy_images','[]'::jsonb)) item where item->>'id'=$2)
+      and exists(select 1 from jsonb_array_elements(coalesce(snapshot->'data'->'vacancy_images','[]'::jsonb)) item where item->>'id'=$3)
+      order by version desc limit 1`,[saved.id,first,second]);
+    assert.match(JSON.stringify(revision.snapshot),new RegExp(first));
+    const latest=await h.one('select version from public.jobs_cms_entries where id=$1',[saved.id]);
+    await h.one('select * from public.jobs_cms_restore($1,$2,$3)',[saved.id,revision.id,latest.version]);
+    const skipped=await h.one('select data from public.jobs_cms_entries where id=$1',[saved.id]);
+    assert.equal(skipped.data.vacancy_images.some(image=>image.id===first),false);
+    assert.equal(skipped.data.vacancy_images.some(image=>image.id===second),true);
+    assert.equal(skipped.data.vacancy_images.filter(image=>image.cover).length,1);
   }finally {await h.close();}
 });
 

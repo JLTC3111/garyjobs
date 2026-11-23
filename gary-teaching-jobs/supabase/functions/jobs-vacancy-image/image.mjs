@@ -1,4 +1,7 @@
+import {Image} from 'imagescript';
+
 export const maxImageBytes = 4 * 1024 * 1024;
+const webpQualities = [88, 75, 60, 45, 30];
 
 export function imageType(value) {
   const type = (value || '').split(';', 1)[0].trim().toLowerCase();
@@ -71,6 +74,33 @@ export function inspectImage(bytes, type) {
   if (!size || size.width < 1 || size.height < 1 || size.width > 4096 || size.height > 4096 ||
       size.width * size.height > 12000000) return;
   return size;
+}
+
+function pixelLimits(width, height) {
+  return width >= 1 && height >= 1 && width <= 4096 && height <= 4096 && width * height <= 12000000;
+}
+
+// JPEG and PNG are stored once as lossy WebP. Camera orientation is applied, which can swap
+// width and height, and the pixels are not scaled. An existing WebP is stored unchanged.
+export async function storedVacancyImage(bytes, type, encode) {
+  const source = inspectImage(bytes, type);
+  if (!source) return {error: 'invalid_file'};
+  if (type === 'image/webp') return {bytes, type, width: source.width, height: source.height};
+  let image;
+  try { image = await Image.decode(bytes); } catch { return {error: 'invalid_file'}; }
+  const width = image?.width, height = image?.height;
+  if (!pixelLimits(width, height) || typeof image.encodeWebP !== 'function') return {error: 'invalid_file'};
+  const encodeWebP = encode || (quality => image.encodeWebP({quality, threads: 1}));
+  try {
+    for (const quality of webpQualities) {
+      const encoded = new Uint8Array(await encodeWebP(quality));
+      if (encoded.byteLength > maxImageBytes) continue;
+      const size = inspectImage(encoded, 'image/webp');
+      if (!size || size.width !== width || size.height !== height) return {error: 'invalid_file'};
+      return {bytes: encoded, type: 'image/webp', width, height};
+    }
+  } catch { return {error: 'invalid_file'}; }
+  return {error: 'file_size'};
 }
 
 export async function boundedImageBody(request) {

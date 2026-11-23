@@ -2,7 +2,7 @@ import {createClient} from './vendor/supabase.js';
 import {jobsConfig} from './jobs-config.js';
 import {createJobsPublishingAdapter} from './jobs-publishing-adapter.js';
 import {categoryOptions, locationOptions} from './jobs-vacancy-options.js';
-import {mountVacancyImageEditor, uploadVacancyImage, vacancyImageErrorText} from './jobs-vacancy-image.js';
+import {forgetVacancyImage, mountVacancyImageEditor, uploadVacancyImage, vacancyImageErrorText} from './jobs-vacancy-image.js';
 // Observe only this app's data/Storage denials; Auth login failures are unrelated.
 async function permissionFetch(input,options){
  const response=await globalThis.fetch(input,options);
@@ -42,6 +42,8 @@ export function createCmsAdapter(){return {
   return mountVacancyImageEditor(root,{
    ...options,
    upload:(id,file,progress)=>uploadVacancyImage(db,id,file,progress),
+   removed:async id=>unwrap(await db.rpc('jobs_vacancy_removed_images',{p_vacancy_id:id})),
+   forget:id=>forgetVacancyImage(db,id),
    async preview(id){return unwrap(await db.storage.from('jobs-vacancy-images').createSignedUrl(id,120)).signedUrl;},
   });
  },

@@ -1,6 +1,6 @@
 /* Shared Jobs palette; public and portal components consume the same resolved theme. */
-html { --jobs-bg:#ffffff;--jobs-soft:#f0f6ff;--jobs-surface:#ffffff;--jobs-raised:#e7effc;--jobs-ink:#0b2457;--jobs-muted:#435575;--jobs-accent:#0565e7;--jobs-action:#083d91;--jobs-action-ink:#ffffff;--jobs-line:#cddaf0;--jobs-focus:#075dc9;--jobs-hero-bg:#f8fbff;--jobs-hero-weight:600;--jobs-glass-light:transparent;--jobs-waves-1:#e6f0ff;--jobs-waves-2:#eef5ff; }
-html[data-jobs-theme=dark] { --jobs-bg:#090b16;--jobs-soft:#101727;--jobs-surface:#151d30;--jobs-raised:#202c45;--jobs-ink:#f7f5fb;--jobs-muted:#bfc2d5;--jobs-accent:#c2a0f5;--jobs-action:#b3bfff;--jobs-action-ink:#111c37;--jobs-line:#30394f;--jobs-focus:#ccb2ff;--jobs-hero-bg:#0c0b15;--jobs-hero-weight:400;--jobs-glass-light:#7770cf19;--jobs-waves-1:transparent;--jobs-waves-2:transparent; }
+html { --jobs-bg:#ffffff;--jobs-soft:#f0f6ff;--jobs-surface:#ffffff;--jobs-raised:#e7effc;--jobs-ink:#0b2457;--jobs-muted:#435575;--jobs-text:#26354D;--jobs-text-secondary:#52637A;--jobs-check:#748a5c;--jobs-accent:#0565e7;--jobs-action:#083d91;--jobs-action-ink:#ffffff;--jobs-line:#cddaf0;--jobs-focus:#075dc9;--jobs-hero-bg:#f8fbff;--jobs-hero-weight:600;--jobs-glass-light:transparent;--jobs-waves-1:#e6f0ff;--jobs-waves-2:#eef5ff; }
+html[data-jobs-theme=dark] { --jobs-bg:#090b16;--jobs-soft:#101727;--jobs-surface:#151d30;--jobs-raised:#202c45;--jobs-ink:#f7f5fb;--jobs-muted:#bfc2d5;--jobs-text:#E2EAF5;--jobs-text-secondary:#AABBD1;--jobs-check:#9aaf7c;--jobs-accent:#c2a0f5;--jobs-action:#b3bfff;--jobs-action-ink:#111c37;--jobs-line:#30394f;--jobs-focus:#ccb2ff;--jobs-hero-bg:#0c0b15;--jobs-hero-weight:400;--jobs-glass-light:#7770cf19;--jobs-waves-1:transparent;--jobs-waves-2:transparent; }
 /* Portal roles preserve the established light surfaces and share the dark palette. */
 html {
   --jobs-portal-bg:#f5f7fb;
@@ -109,6 +109,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-preferences-panel legend { float:left;width:100%;margin:0 0 10px;padding:0;font-size:13px;font-weight:600;line-height:1.5;color:var(--jobs-ink); }
 .jobs-public .jobs-preferences-options { clear:both;display:flex;gap:5px;padding:4px;background:var(--jobs-soft);border:1px solid var(--jobs-line);border-radius:9px; }
 .jobs-public .jobs-preferences-options button { flex:1;min-width:0;min-height:44px;padding:9px 7px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--jobs-muted);font-size:13px;line-height:1.4;cursor:pointer; }
+.jobs-public .jobs-preferences-options button:lang(vi) { font-family:"Be Vietnam Pro",Arial,sans-serif;line-height:1.6; }
 .jobs-public .jobs-preferences-options button:hover { background:var(--jobs-raised);color:var(--jobs-ink); }
 .jobs-public .jobs-preferences-options button[aria-pressed=true] { background:var(--jobs-surface);border-color:var(--jobs-focus);color:var(--jobs-accent);font-weight:700; }
 .jobs-public .jobs-preferences-options button:active { transform:translateY(1px); }
@@ -130,7 +131,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-final-hero .eyebrow>span { width:70px;height:2px;background:var(--jobs-accent);flex:none; }
 .jobs-public .jobs-final-hero h1 { font:var(--jobs-hero-weight) clamp(44px,4.15vw,67px)/1.1 var(--sans);letter-spacing:-.035em;margin:0;max-width:780px;color:var(--jobs-ink); }
 .jobs-public .jobs-final-hero h1 em { font:italic 400 clamp(46px,4.45vw,72px)/1.08 var(--serif);letter-spacing:-.04em;color:var(--jobs-accent);white-space:normal; }
-.jobs-public .jobs-final-hero .hero-description { font-size:17px;line-height:1.65;max-width:610px;margin-top:30px;color:var(--jobs-muted); }
+.jobs-public .jobs-final-hero .hero-description { font-size:17px;line-height:1.65;max-width:610px;margin-top:30px;color:var(--jobs-text); }
 .jobs-public .jobs-final-hero .career-discovery { margin-top:34px; }
 .jobs-public .jobs-final-hero .job-search { display:grid;grid-template-columns:minmax(0,1fr) 68px;gap:0;padding:0;border:0;background:transparent;border-radius:0;box-shadow:none; }
 .jobs-public .jobs-final-hero .keyword-field { grid-column:1;grid-row:1;background:var(--jobs-raised);border:1px solid var(--jobs-line);border-right:0;border-radius:2px 0 0 2px;min-height:64px;padding:12px 18px;gap:17px; }
@@ -165,16 +166,22 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-hub-fallback a:is(:hover,:focus-visible)>span { opacity:1; }
 .jobs-public .hero-waves { position:absolute;bottom:0;left:0;width:100%;height:130px;z-index:0;pointer-events:none; }
 .jobs-public .hero-waves path:first-child { fill:var(--jobs-waves-1); }.jobs-public .hero-waves path:last-child { fill:var(--jobs-waves-2); }
-.jobs-public :is(.body-copy,.section-intro,.job-count,.job-type,.job-card-bottom>div>span,.listing-note,.benefit-row p,.process-step p,.life-bottom p,.community-bottom,.faq-item p,.footer-brand>p,.footer-column>a,.footer-link,.office-note,.footer-office p,.footer-bottom,.dialog-intro,.dialog-location>span,.role-facts>div>span,.check-list>li,.dialog-small,.application-note,.contact-options small,.partner-caption) { color:var(--jobs-muted); }
+.jobs-public :is(.body-copy,.section-intro,.hero-description,.dialog-intro,.benefit-row p,.process-step p,.faq-item p,.support-card p) { color:var(--jobs-text); }
+.jobs-public :is(.job-count,.job-type,.job-card-bottom>div>span,.listing-note,.life-bottom p,.community-bottom,.footer-brand>p,.footer-column>a,.footer-link,.office-note,.footer-office p,.footer-bottom,.dialog-location,.dialog-location>span,.role-facts>div>span,.check-list>li,.dialog-small,.application-note,.contact-options small,.partner-caption,.role-note) { color:var(--jobs-text-secondary); }
 .jobs-public .opportunities,.jobs-public .life-section,.jobs-public .faq-section,.jobs-public .managed-public-content { background:var(--jobs-bg); }
 .jobs-public :is(.job-card,.role-facts,.contact-options>a,.contact-options>button,.role-note,.email-fallback,.form-notice) { background:var(--jobs-surface);border-color:var(--jobs-line);color:var(--jobs-ink); }
+.jobs-public .role-note,.jobs-public .email-fallback { color:var(--jobs-text-secondary); }
 .jobs-public .job-card:hover { border-color:var(--jobs-accent); }
-.jobs-public :is(.job-location,.job-employer,.job-workplace,.job-benefit) { color:var(--jobs-muted); }
-.jobs-public .job-tags>span { color:var(--jobs-muted);background:var(--jobs-soft); }
-.jobs-public .job-card-bottom strong,.jobs-public .job-card h3 :is(a,button) { color:var(--jobs-ink); }
+.jobs-public :is(.job-location,.job-employer,.job-workplace) { color:var(--jobs-text-secondary); }
+.jobs-public .job-benefit { color:var(--jobs-text); }
+.jobs-public .job-tags>span { color:var(--jobs-text-secondary);background:var(--jobs-soft); }
+.jobs-public .job-card-bottom strong { color:var(--jobs-text); }
+.jobs-public .job-card h3 :is(a,button) { color:var(--jobs-ink); }
 .jobs-public .job-tab { color:var(--jobs-muted); }.jobs-public .job-tab.is-active { background:var(--jobs-raised);color:var(--jobs-ink);border-color:var(--jobs-line); }
 .jobs-public .job-tab:hover { color:var(--jobs-ink);background:var(--jobs-soft); }
-.jobs-public .job-card-top .job-type,.jobs-public .job-card h3,.jobs-public .role-salary,.jobs-public .dialog-location,.jobs-public .role-facts strong { color:var(--jobs-ink); }
+.jobs-public .job-card h3 { color:var(--jobs-ink); }
+.jobs-public :is(.role-salary,.role-facts strong,.vacancy-facts dd) { color:var(--jobs-text); }
+.jobs-public .check-list .icon,.jobs-public .role-note>.icon { color:var(--jobs-check); }
 .jobs-public :is(.job-card-bottom,.job-toolbar,.jobs-footer,.benefit-row,.process-step,.faq-item,.footer-bottom) { border-color:var(--jobs-line); }
 .jobs-public .job-icon { background:var(--jobs-raised);color:var(--jobs-action); }
 /* The card bookmark is a theme control. Shared save/publish green stays on form commits. */
@@ -233,7 +240,10 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .floating-contact>.icon { color:inherit;stroke:currentColor; }
 .jobs-public .floating-contact>i { background:var(--jobs-contact-indicator); }
 .jobs-public #detail-dialog { background:var(--jobs-surface);color:var(--jobs-ink);border:1px solid var(--jobs-line); }.jobs-public #detail-dialog::backdrop { background:#050918a8; }
-.jobs-public .dialog-close { background:var(--jobs-raised);color:var(--jobs-ink); }.jobs-public .contact-options :is(a,button) { color:var(--jobs-ink); }
+.jobs-public .dialog-close { background:var(--jobs-raised);color:var(--jobs-ink); }
+.jobs-public .contact-options :is(a,button),.jobs-public .contact-options strong,.jobs-public .application-role,.jobs-public .email-fallback strong,.jobs-public :is(.form-grid label,.form-message) { color:var(--jobs-text); }
+.jobs-public .contact-options :is(a,button) .icon { color:var(--jobs-action); }
+.jobs-public .application-role { background:var(--jobs-soft); }
 .jobs-public :is(.form-grid input,.form-grid select,.form-message textarea,.email-copy-area) { background:var(--jobs-bg);color:var(--jobs-ink);border-color:var(--jobs-line); }.jobs-public :is(.form-grid input,.form-message textarea)::placeholder { color:var(--jobs-muted); }
 .jobs-public .toast { background:var(--jobs-ink);color:var(--jobs-bg); }.jobs-public .jobs-live-note { background:var(--jobs-soft);border-color:var(--jobs-line);color:var(--jobs-muted); }
 @media(min-width:1001px) { .jobs-public .jobs-hub { align-self:start;padding-top:28px; } }
@@ -278,7 +288,7 @@ html[data-jobs-theme=dark] {
 .jobs-public .why-copy h2 em{color:var(--jobs-accent)}
 .jobs-public .why-copy>.eyebrow{color:var(--jobs-action);font-size:11px;line-height:1.6;letter-spacing:.12em}
 html[data-jobs-theme=dark] .jobs-public .why-copy>.eyebrow{color:var(--jobs-accent)}
-.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{color:var(--jobs-muted);font-size:14px;line-height:1.8}
+.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{color:var(--jobs-text);font-size:14px;line-height:1.8}
 .jobs-public .benefit-row h3{font-size:16px;line-height:1.5;margin-bottom:5px}
 .jobs-public .benefit-icon{border-color:var(--journey-line);background:var(--journey-icon-bg);color:var(--journey-detail)}
 @media(max-width:720px){.jobs-public .why-copy>.eyebrow{font-size:10px}.jobs-public .why-copy>.body-copy,.jobs-public .benefit-row p{font-size:14px}.jobs-public .benefit-row h3{font-size:16px}}

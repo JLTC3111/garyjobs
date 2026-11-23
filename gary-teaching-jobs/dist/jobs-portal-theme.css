@@ -35,6 +35,7 @@ html:has(.jobs-portal-body){scrollbar-color:var(--jobs-scrollbar) var(--jobs-por
 html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-light{display:none}
 html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-dark{display:block}
 .jobs-portal-header .jobs-portal-tools{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;flex:1}
+#portal-language:lang(vi){font-family:"Be Vietnam Pro",Arial,sans-serif;line-height:1.6}
 .jobs-portal-appearance{position:relative;display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--jobs-portal-muted)}
 .jobs-portal-appearance select{min-height:44px;max-width:168px;padding:.5rem 1.7rem .5rem .7rem;border:1px solid var(--jobs-control-line);border-radius:8px;background:var(--jobs-portal-surface);color:var(--jobs-portal-ink);font:inherit;cursor:pointer;appearance:none}
 .jobs-portal-appearance::after{content:"";position:absolute;right:14px;top:50%;width:7px;height:7px;border-right:1.6px solid var(--jobs-portal-ink);border-bottom:1.6px solid var(--jobs-portal-ink);transform:translateY(-65%) rotate(45deg);pointer-events:none}

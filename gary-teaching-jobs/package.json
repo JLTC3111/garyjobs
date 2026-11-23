@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Vietnam English Teaching Jobs \u2014 bilingual publishing and recruitment",
+  "description": "Vietnam English Teaching Jobs — bilingual publishing and recruitment",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "start": "node server.mjs",
@@ -15,6 +15,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
     "esbuild": "0.28.2",
+    "imagescript": "3.20.5",
     "lucide-react": "^1.31.0",
     "ogl": "1.0.11",
     "react": "19.3.1",

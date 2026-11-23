@@ -40,3 +40,4 @@
 .gary-cms .cms-dialog .cms-editor-actions.gw-editor-actions{position:relative;bottom:auto;padding:14px 24px;margin:0;flex:none}
 .gary-cms .cms-dialog>.gw-editor-header{position:relative;top:auto}
 @container editor-workspace (max-width:760px){.gary-cms .cms-dialog .cms-language-columns,.gary-cms .cms-dialog .cms-editor-meta{grid-template-columns:minmax(0,1fr);gap:12px}.gary-cms .cms-dialog .cms-editor-body{padding:16px}.gary-cms .cms-dialog .cms-editor-actions{padding:12px 16px}}
+.gary-cms .cms-language-columns > section:lang(vi) { font-family: "Be Vietnam Pro", Arial, sans-serif; }

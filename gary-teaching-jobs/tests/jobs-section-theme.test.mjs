@@ -191,7 +191,7 @@ const LIGHT_BASELINE = {
     ]
   },
   "#services .section-intro": {
-    "ink": "67,85,117",
+    "ink": "38,53,77",
     "surface": [
       "237,242,246"
     ]

@@ -1,4 +1,4 @@
-import {boundedImageBody, imageType, inspectImage} from './image.mjs';
+import {boundedImageBody, imageType, storedVacancyImage} from './image.mjs';
 
 const bucket = 'jobs-vacancy-images';
 const idPattern = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
@@ -10,7 +10,7 @@ const cors = {
 const json = (body, status = 200) => Response.json(body, {status, headers: {...cors, 'cache-control': 'no-store'}});
 const error = (code, status) => json({code}, status);
 
-export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey, fetcher = fetch}) {
+export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey, fetcher = fetch, prepareImage = storedVacancyImage}) {
   const system = {apikey: serviceKey, authorization: `Bearer ${serviceKey}`};
   const rpc = (name, payload, headers = system) => fetcher(`${url}/rest/v1/rpc/jobs_vacancy_image_${name}`, {
     method: 'POST', headers: {...headers, 'content-type': 'application/json'}, body: JSON.stringify(payload),
@@ -24,13 +24,14 @@ export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey
     if (!type) return error('invalid_file', 415);
     const bytes = await boundedImageBody(request);
     if (!bytes) return error('file_size', 413);
-    const dimensions = inspectImage(bytes, type);
-    if (!dimensions) return error('invalid_file', 422);
+    const prepared = await prepareImage(bytes, type);
+    if (prepared?.error === 'file_size') return error('file_size', 413);
+    if (!prepared || prepared.error) return error('invalid_file', 422);
     // The caller's JWT goes to PostgREST for verification and the existing
     // CMS role check. Only the server key can write to the managed bucket.
     const reservation = await rpc('reserve', {
-      p_vacancy_id: vacancy, p_mime: type, p_bytes: bytes.length,
-      p_width: dimensions.width, p_height: dimensions.height,
+      p_vacancy_id: vacancy, p_mime: prepared.type, p_bytes: prepared.bytes.length,
+      p_width: prepared.width, p_height: prepared.height,
     }, {apikey: publishableKey, authorization});
     if (!reservation.ok) {
       if ([401, 403].includes(reservation.status)) return error('forbidden', reservation.status);
@@ -42,13 +43,13 @@ export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey
     const id = await reservation.json();
     if (typeof id !== 'string' || !idPattern.test(id)) return error('upload_failed', 502);
     const stored = await fetcher(`${url}/storage/v1/object/${bucket}/${id}`, {
-      method: 'POST', headers: {...system, 'content-type': type, 'x-upsert': 'false'}, body: bytes,
+      method: 'POST', headers: {...system, 'content-type': prepared.type, 'x-upsert': 'false'}, body: prepared.bytes,
     });
     if (!stored.ok) return error('upload_failed', 502);
     const ready = await rpc('ready', {p_image_id: id});
     if (!ready.ok) return error('upload_failed', 502);
     if (!await ready.json()) return error('forbidden', 403);
-    return json({id, ...dimensions}, 201);
+    return json({id, width: prepared.width, height: prepared.height}, 201);
   }
 
   async function serve(request, parameters) {
@@ -82,12 +83,55 @@ export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey
     return finished.ok ? json({processed: ids.length}) : error('cleanup_failed', 502);
   }
 
+  async function forget(request, parameters) {
+    const authorization = request.headers.get('authorization') || '';
+    if (!authorization.startsWith('Bearer ')) return error('forbidden', 401);
+    const id = parameters.get('forget') || '';
+    if (!idPattern.test(id)) return error('invalid_file', 422);
+    const claimed = await rpc('forget', {p_image_id: id}, {apikey: publishableKey, authorization});
+    if (!claimed.ok) {
+      if ([401, 403].includes(claimed.status)) return error('forbidden', claimed.status);
+      const result = await claimed.json().catch(() => ({}));
+      if (result.message === 'jobs.vacancy_image_in_use') return error('in_use', 409);
+      return error('delete_failed', 502);
+    }
+    const claimedId = await claimed.json();
+    if (claimedId !== id) return error('delete_failed', 502);
+    const deleted = await fetcher(`${url}/storage/v1/object/${bucket}`, {
+      method: 'DELETE', headers: {...system, 'content-type': 'application/json'}, body: JSON.stringify({prefixes: [id]}),
+    });
+    const release = () => rpc('release', {p_image_id: id});
+    if (!deleted.ok || !await storedObjectGone(id)) {
+      await release();
+      return error('delete_failed', 502);
+    }
+    const finished = await rpc('cleanup_finish', {p_image_ids: [id]});
+    const checked = finished.ok ? await rpc('forgotten', {p_image_id: id}) : null;
+    if (!checked?.ok || await checked.json() !== true) {
+      await release();
+      return error('delete_failed', 502);
+    }
+    return json({id});
+  }
+
+  async function storedObjectGone(id) {
+    const stored = await fetcher(`${url}/storage/v1/object/authenticated/${bucket}/${id}`, {method: 'GET', headers: system});
+    if (stored.status === 404) return true;
+    if (stored.status !== 400) return false;
+    const body = await stored.json().catch(() => ({}));
+    return String(body.statusCode) === '404' || body.error === 'not_found';
+  }
+
   return async request => {
     if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers: cors});
     try {
       const parameters = new URL(request.url).searchParams;
       if (request.method === 'GET' || request.method === 'HEAD') return await serve(request, parameters);
-      if (request.method === 'POST') return await (parameters.has('cleanup') ? cleanup(request) : upload(request, parameters));
+      if (request.method === 'POST') {
+        if (parameters.has('cleanup')) return await cleanup(request);
+        if (parameters.has('forget')) return await forget(request, parameters);
+        return await upload(request, parameters);
+      }
       return error('method', 405);
     } catch { return error('unavailable', 503); }
   };
