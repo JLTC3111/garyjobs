@@ -9,6 +9,18 @@ import {mountTalentPool} from './jobs-talent-pool.js';
 import {mountJobsAccountMenu} from './jobs-account-menu.js';
 
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function startLattice(target,{pattern,grid,label,cellSize=5,gap=2,fontSize=12,status=false,reserve=false}={}){
+ const api=globalThis.garyLattice;if(!api||!target)return ()=>{};
+ const slot=document.createElement('div');slot.className='lattice-slot';if(reserve)slot.dataset.reserve='';target.append(slot);
+ const cancel=api.showDelayedLattice(slot,{pattern,grid,label,cellSize,gap,fontSize,status});
+ return ()=>{cancel();if(slot.isConnected)slot.remove()};
+}
+function startWorkspaceLattice(target){
+ const slot=document.createElement('div');slot.className='lattice-slot';slot.dataset.reserve='';target.replaceChildren(slot);
+ const api=globalThis.garyLattice;if(!api)return ()=>{if(slot.isConnected)slot.remove()};
+ const cancel=api.showDelayedLattice(slot,{pattern:'ripple',grid:4,label:t('Loading workspace…','Đang tải không gian làm việc…'),cellSize:5,gap:2,fontSize:12,status:true});
+ return ()=>{cancel();if(slot.isConnected)slot.remove()};
+}
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
 const accessFromUrl=url=>url.searchParams.get('access')==='staff'||(!url.searchParams.has('access')&&['cms','applications','talent','staff'].includes(url.searchParams.get('view')))?'staff':'candidate';
 let language=locale(),user=null,caps={},view=new URL(location.href).searchParams.get('view')||'',access=accessFromUrl(new URL(location.href)),page=1,selected=null,cms=null,staffPage=null,recovery=false,roster=[],generation=0,loading=true,capabilityError=false;
@@ -98,7 +110,7 @@ function setAccess(next){
  void authenticate();
 }
 async function renderView(){
- if(!user)return;nav();const target=$('#workspace-view');target.replaceChildren();
+ if(!user)return;nav();const target=$('#workspace-view');const stopWorkspace=startWorkspaceLattice(target);try{
  if(access==='staff'&&(!caps.read&&!caps.recruit||capabilityError)){
   target.innerHTML=`<div class="jobs-auth-card"><h1>${capabilityError?t('Staff access could not be checked','Chưa thể kiểm tra quyền nhân viên'):t('Staff access not assigned','Chưa được cấp quyền nhân viên')}</h1><p>${capabilityError?t('We could not load your Jobs permissions. Check your connection and try again.','Chưa thể tải quyền Jobs của bạn. Kiểm tra kết nối rồi thử lại.'):t('You are signed in, but this account has no active Jobs staff assignment. Ask your Jobs administrator to assign content or recruitment access to this email.','Bạn đã đăng nhập nhưng tài khoản chưa có quyền nhân viên Jobs đang hoạt động. Hãy nhờ quản trị viên Jobs cấp quyền nội dung hoặc tuyển dụng cho email này.')}</p><div class="jobs-row-actions"><button type="button" data-action="retry">${t('Check access again','Kiểm tra lại quyền')}</button><button type="button" data-action="access" data-access="candidate">${t('Open candidate portal','Mở cổng ứng viên')}</button></div><p class="jobs-meta">${t('To use another assigned account, sign out above and sign in again.','Để dùng tài khoản khác đã được cấp quyền, đăng xuất ở trên rồi đăng nhập lại.')}</p></div>`;return;
  }
@@ -124,6 +136,7 @@ async function renderView(){
  if(view==='apply'){await renderApplicationForm();return;}
  if(view==='applications'&&!caps.recruit){setView('mine');return;}
  await renderApplications();
+ }finally{stopWorkspace();}
 }
 async function renderApplicationForm(){
  const currentGeneration=generation;
@@ -174,9 +187,13 @@ async function renderApplications(){
 let filterValues={},total=0;
 async function loadApplications(){
  const currentGeneration=generation;
+ const list=$('#applications-list');
+ const stop=list&&list.childElementCount===0?startLattice(list,{pattern:'ripple',grid:4,label:t('Loading applications…','Đang tải hồ sơ…'),status:false,reserve:true}):()=>{};
+ try{
  const r=await deadline(applicationList({page,...(view==='applications'?filterValues:{candidateId:user.id})}));if(currentGeneration!==generation||!user)return;total=r.total;
  $('#applications-list').innerHTML=r.records.length?r.records.map(a=>`<article class="jobs-record"><header><div><h2>${esc(a.vacancy_title)}</h2><p class="jobs-meta">${esc(a.receipt_code)} · ${new Date(a.created_at).toLocaleDateString(language==='vi'?'vi-VN':'en-GB')}${view==='applications'?` · ${esc(a.jobs_candidates?.full_name)}`:''}</p></div><span class="jobs-stage">${stageLabel(a.stage)}</span></header><button data-action="open-application" data-id="${a.id}" type="button">${t('View application','Xem hồ sơ')}</button></article>`).join(''):view==='applications'?`<p class="jobs-empty">${t('No applications match this view.','Chưa có hồ sơ phù hợp.')}</p>`:`<div class="jobs-empty"><h2>${t('No applications yet','Bạn chưa có hồ sơ ứng tuyển')}</h2><p>${t('Your submitted applications and recruitment updates will appear here. Find an open vacancy or introduce yourself to the Jobs team.','Hồ sơ đã nộp và cập nhật tuyển dụng sẽ xuất hiện tại đây. Hãy tìm vị trí đang tuyển hoặc giới thiệu bản thân với đội ngũ Jobs.')}</p><div class="jobs-row-actions"><a class="jobs-link-button" href="./#opportunities">${t('Find vacancies','Tìm việc làm')}</a><a class="jobs-link-button" href="portal.html?access=candidate&view=apply">${t('Introduce yourself','Giới thiệu bản thân')}</a></div></div>`;
  $('#page-count').textContent=t(`Page ${page} · ${total} applications`,`Trang ${page} · ${total} hồ sơ`);$('[data-action="previous"]').disabled=page<=1;$('[data-action="next"]').disabled=page*20>=total;
+ }finally{stop();}
 }
 const allowedStages=s=>({submitted:['submitted','screening','rejected','withdrawn'],screening:['screening','shortlisted','rejected','withdrawn'],shortlisted:['shortlisted','interview','rejected','withdrawn'],interview:['interview','offer','rejected','withdrawn'],offer:['offer','hired','rejected','withdrawn']}[s]||[s]);
 async function openApplication(id,{scroll=true,preserveStage=false}={}){
@@ -243,10 +260,10 @@ document.addEventListener('click',event=>{
  if(action==='document')void guarded(async()=>{const r=unwrap(await db.storage.from(jobsConfig.cvBucket).createSignedUrl(b.dataset.path,60));const a=document.createElement('a');a.href=r.signedUrl;a.target='_blank';a.rel='noopener noreferrer';a.click();}).catch(()=>{});
  if(action==='register'||action==='reset')void guarded(async()=>{
   const f=$('#auth-form');if(!f||recovery||action==='register'&&access==='staff')return;if(action==='register'&&!f.reportValidity())return;if(action==='register'&&f.elements.password.value.length<12){status(t('Use at least 12 characters for a new password.','Mật khẩu mới cần có ít nhất 12 ký tự.'),true);return;}const email=f.elements.email.value;if(!email||!f.elements.email.checkValidity()){f.elements.email.reportValidity();return;}
-  b.disabled=true;try{const redirect=new URL('./portal.html',location.href).href;
+  b.disabled=true;const stopConnection=startLattice(f,{pattern:'dots',grid:3,label:t('Connecting securely…','Đang kết nối an toàn…'),status:true});try{const redirect=new URL('./portal.html',location.href).href;
    if(action==='register'){unwrap(await db.auth.signUp({email,password:f.elements.password.value,options:{emailRedirectTo:redirect}}));status(t('Check your email to confirm your account, then sign in.','Kiểm tra email để xác minh tài khoản, sau đó đăng nhập.'));}
    else {unwrap(await db.auth.resetPasswordForEmail(email,{redirectTo:redirect}));status(t('If this account exists, a recovery email will arrive shortly.','Nếu tài khoản tồn tại, email khôi phục sẽ sớm được gửi.'));}
-  }finally{b.disabled=false;}
+  }finally{b.disabled=false;stopConnection();}
  }).catch(()=>{});
 });
 document.addEventListener('submit',event=>{
@@ -256,8 +273,11 @@ document.addEventListener('submit',event=>{
   if(button)button.disabled=true;
   try{
    if(form.id==='auth-form'){
+    const stopConnection=startLattice(form,{pattern:'dots',grid:3,label:t('Connecting securely…','Đang kết nối an toàn…'),status:true});
+    try{
     if(recovery){unwrap(await deadline(db.auth.updateUser({password:String(data.get('password'))})));recovery=false;success(t('Password saved.','Đã lưu mật khẩu.'));await authenticate();}
     else{unwrap(await deadline(db.auth.signInWithPassword({email:String(data.get('email')),password:String(data.get('password'))})));await authenticate();}
+    }finally{stopConnection();}
    }
    if(form.id==='persistent-application'){
     const vacancy=form.dataset.vacancy||null,cv=data.get('cv');if(cv?.size) {const {validateCv}=await import('./jobs-backend.js');validateCv(cv);}
