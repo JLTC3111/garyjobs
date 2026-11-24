@@ -17,6 +17,7 @@ const text = value => typeof value === 'string' ? value.trim() : '';
 
 export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGuest = true}) {
   const doc = root.ownerDocument;
+  const signoutDescriptionId = `${root.id}-signout-description`;
   root.innerHTML = '<summary></summary><div class="jobs-login-options"></div>';
   const [trigger, panel] = root.children;
   let state = {}, signingOut = false, signOutFailed = false, triggerMarkup = '', panelMarkup = '';
@@ -32,7 +33,7 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
     const avatar = `<span class="jobs-account-avatar" aria-hidden="true">${initials ? escapeText(initials) : icon('user')}</span>`;
     const staff = caps?.read === true || caps?.recruit === true;
     const role = staff && Object.hasOwn(roles, caps.role) ? t(...roles[caps.role]) : '';
-    const destination = (access, label) => `<a href="portal.html?access=${access}">${icon(access)}${label}</a>`;
+    const destination = (access, label) => `<a href="portal.html?access=${access}">${icon(access)}<span class="jobs-account-item-label">${label}</span></a>`;
     const candidate = t('Candidate', 'Ứng viên');
     const summary = `${avatar}<span class="jobs-account-trigger-label">${label}</span>`;
     root.hidden = !showGuest && (!user || loading);
@@ -51,13 +52,14 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
         <div class="jobs-account-badges">${role ? `<span>${t('Staff', 'Nhân viên')} · ${role}</span>` : ''}<span>${candidate}</span></div></div></div>
         ${staff ? destination('staff', t('Staff Dashboard', 'Bảng điều khiển nhân viên')) : ''}
         ${destination('candidate', t('Candidate Dashboard', 'Bảng điều khiển ứng viên'))}
-        <footer><button id="sign-out" type="button" ${signingOut ? 'disabled' : ''}>${icon('signOut')}${signingOut ? t('Signing out…', 'Đang đăng xuất…') : t('Sign out', 'Đăng xuất')}</button>
+        <footer><button id="sign-out" type="button" aria-describedby="${signoutDescriptionId}" ${signingOut ? 'disabled' : ''}>${icon('signOut')}<span class="jobs-account-item-label">${signingOut ? t('Signing out…', 'Đang đăng xuất…') : t('Sign out', 'Đăng xuất')}</span></button>
+        <p class="jobs-account-signout-description" id="${signoutDescriptionId}">${t('End your session on this website.', 'Kết thúc phiên đăng nhập trên trang web này.')}</p>
         ${signOutFailed ? `<p role="alert">${t('Sign-out failed. Try again.', 'Đăng xuất chưa thành công. Vui lòng thử lại.')}</p>` : ''}</footer>`;
     } else if (!loading && !failed && showGuest) {
       content = destination('candidate', t('Candidate login', 'Đăng nhập ứng viên')) + destination('staff', t('Staff login', 'Đăng nhập nhân viên'));
     }
     if (!loading && failed && retry) {
-      content += `<p role="status">${t('Account access could not be checked.', 'Chưa thể kiểm tra quyền truy cập tài khoản.')}</p><button type="button" data-jobs-account-retry>${t('Try again', 'Thử lại')}</button>`;
+      content += `<p role="status">${t('Account access could not be checked.', 'Chưa thể kiểm tra quyền truy cập tài khoản.')}</p><button type="button" data-jobs-account-retry><span class="jobs-account-item-label">${t('Try again', 'Thử lại')}</span></button>`;
     }
     // Rechecks often return identical access. Keep the currently focused row.
     if (panelMarkup !== content) {

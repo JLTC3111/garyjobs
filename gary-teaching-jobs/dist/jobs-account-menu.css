@@ -4,6 +4,7 @@
   --account-line: var(--jobs-portal-line);
   --account-surface: var(--jobs-portal-surface);
   --account-hover: var(--jobs-portal-raised);
+  --account-danger: color-mix(in srgb, var(--color-red-500, #fb2c36) 75%, var(--account-ink));
   position: relative;
   flex: none;
   color: var(--account-ink);
@@ -15,6 +16,7 @@
   --account-surface: var(--jobs-surface);
   --account-hover: var(--jobs-raised);
 }
+html[data-jobs-theme="dark"] .jobs-login-menu { --account-danger: #E99491; }
 .jobs-login-menu[hidden] { display: none; }
 .jobs-portal-header:has(#portal-account[open]) { z-index: 31; }
 .jobs-login-menu > summary {
@@ -101,10 +103,28 @@
   text-decoration: none;
 }
 .jobs-login-options svg { flex: none; }
+.jobs-account-item-label { position: relative; display: inline-block; }
+.jobs-account-item-label::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -2px;
+  block-size: 1px;
+  background: currentColor;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 200ms ease-out;
+}
+.jobs-login-options :is(a, button:not(:disabled)):focus-visible > .jobs-account-item-label::after { transform: scaleX(1); }
 .jobs-login-options footer { padding-top: .3rem; margin-top: .3rem; border-top: 1px solid var(--account-line); }
-.jobs-login-menu .jobs-login-options #sign-out { color: var(--jobs-error); }
+.jobs-login-menu .jobs-login-options #sign-out { color: var(--account-danger); }
 .jobs-login-options button:disabled { cursor: wait; }
 .jobs-login-options p { margin: .4rem .6rem; color: var(--account-muted); font-size: .8125rem; }
+.jobs-login-options .jobs-account-signout-description {
+  margin: 0 .6rem .25rem;
+  font-size: .75rem;
+}
 .jobs-login-menu :is(summary, a, button):focus-visible { outline: 2px solid var(--jobs-focus); outline-offset: -2px; }
 .jobs-login-menu .jobs-login-options :is(a, button:not(:disabled)):active { background: var(--account-hover); }
 .jobs-login-menu .jobs-login-options #sign-out:active { background: var(--jobs-error-bg); }
@@ -112,6 +132,10 @@
   .jobs-login-menu > summary:not([aria-disabled]):hover,
   .jobs-login-menu .jobs-login-options :is(a, button:not(:disabled)):hover { background: var(--account-hover); }
   .jobs-login-menu .jobs-login-options #sign-out:not(:disabled):hover { background: var(--jobs-error-bg); }
+  .jobs-login-options :is(a, button:not(:disabled)):hover > .jobs-account-item-label::after { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jobs-account-item-label::after { transition: none; }
 }
 @media (max-width: 760px) {
   .jobs-login-menu { position: static; }

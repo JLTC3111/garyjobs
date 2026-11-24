@@ -93,12 +93,16 @@ test('public account restores verified dual access and removes revoked staff lin
   assert.equal(menu.querySelector('small').textContent,user.email);
   assert.match(menu.textContent,/Staff · Editor/);
   assert.doesNotMatch(menu.textContent,/Admin/);
-  assert.equal(menu.querySelector('a[href="portal.html?access=staff"]').textContent,'Staff Dashboard');
+  assert.equal(menu.querySelector('a[href="portal.html?access=staff"] > .jobs-account-item-label').textContent,'Staff Dashboard');
   assert.equal(menu.querySelector('a[href="portal.html?access=candidate"]').textContent,'Candidate Dashboard');
+  const signout=menu.querySelector('#sign-out');
+  assert.equal(signout.nextElementSibling,d.getElementById(signout.getAttribute('aria-describedby')));
+  assert.equal(signout.nextElementSibling.textContent,'End your session on this website.');
   d.querySelector('[data-language=vi]').click();
   assert.equal(d.getElementById('public-account'),menu);
   assert.match(menu.textContent,/Bảng điều khiển nhân viên/);
   assert.match(menu.textContent,/Bảng điều khiển ứng viên/);
+  assert.equal(menu.querySelector('#sign-out + p').textContent,'Kết thúc phiên đăng nhập trên trang web này.');
   assert.equal(users,1);
   menu.open=true;
   menu.querySelector('a').focus();
