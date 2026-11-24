@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {JSDOM} from 'jsdom';
 import {attachEditorWorkspace} from '../dist/editor-workspace/index.js';
 import {mountJobsStaffSidebar} from '../dist/jobs-staff-sidebar.js';
 import {staffPortal,settle} from './helpers/jobs-staff-portal.mjs';
@@ -25,6 +26,37 @@ test('sidebar visibility remains capability-dependent and candidate navigation i
   const h=await staffPortal({caps});try{assert.equal(h.doc.querySelectorAll('#workspace-nav [data-collection]').length,expected);assert.equal(!!h.doc.querySelector('[data-view=applications]'),!!caps.recruit);if(!caps.read)assert.equal(h.cms,null);if(caps.read)assert.equal(h.doc.querySelector('[data-action=new]'),null);}finally{await h.close();}
  }
  const h=await staffPortal({access:'candidate',view:'mine'});try{assert.equal(h.doc.body.dataset.jobsStaff,'false');assert.equal(h.doc.querySelectorAll('[data-jobs-nav-group]').length,0);assert.equal(h.doc.querySelector('[data-view=mine]').textContent,'My applications');assert.equal(h.doc.querySelectorAll('#workspace-nav button').length,1);}finally{await h.close();}
+});
+
+test('Jobs renders unique Lucide symbols for headings and destinations across sidebar modes',async()=>{
+ const sprite=new JSDOM(await readFile(new URL('../dist/assets/staff-nav-icons.svg',import.meta.url),'utf8'),{contentType:'image/svg+xml'});
+ const h=await staffPortal({caps:{read:true,edit:true,recruit:true,manage_staff:true,role:'admin'}});
+ try{
+  const nav=h.doc.querySelector('#workspace-nav');
+  const controls=[...nav.querySelectorAll('.branched-menu__head, [data-collection], [data-view]')];
+  assert.equal(controls.length,15);
+  const icons=controls.map(button=>{
+   const matches=button.querySelectorAll(':scope > svg.branched-menu__icon');
+   assert.equal(matches.length,1);
+   const icon=matches[0];
+   assert.equal(icon,button.firstElementChild);
+   assert.equal(icon.getAttribute('aria-hidden'),'true');
+   assert.equal(icon.getAttribute('focusable'),'false');
+   const id=icon.getAttribute('data-lucide');
+   assert.equal(icon.querySelector('use').getAttribute('href'),'./assets/staff-nav-icons.svg#'+id);
+   assert.ok(sprite.window.document.getElementById(id)?.children.length);
+   return id;
+  });
+  assert.equal(new Set(icons).size,controls.length);
+  const grid=navigation(h,'category').firstElementChild;
+  assert.equal(grid.getAttribute('data-lucide'),'layout-grid');
+  assert.ok(nav.querySelector('[data-view=talent] [data-lucide=user-search]'));
+  assert.ok(nav.querySelector('[data-view=staff] [data-lucide=key-round]'));
+  await h.click('#portal-language');
+  await h.click('[data-jobs-sidebar-toggle]');
+  assert.equal(nav.hasAttribute('data-branched-rail'),true);
+  assert.equal(navigation(h,'category').firstElementChild,grid);
+ }finally{await h.close();sprite.window.close();}
 });
 
 test('Jobs Back and Forward restore collection routes without rebuilding the branch controls', {timeout:5000}, async()=>{

@@ -88,52 +88,30 @@ function updateCmsNavigation(next){
  for(const button of document.querySelectorAll('#workspace-nav [data-action="view"]'))button.setAttribute('aria-current',button.dataset.view===view?'page':'false');
  document.dispatchEvent(new CustomEvent('jobs:staff-navigation'));
 }
-const jobsNavLucide={
- 'layout-grid':[['rect',{width:'7',height:'7',x:'3',y:'3',rx:'1'}],['rect',{width:'7',height:'7',x:'14',y:'3',rx:'1'}],['rect',{width:'7',height:'7',x:'14',y:'14',rx:'1'}],['rect',{width:'7',height:'7',x:'3',y:'14',rx:'1'}]],
- 'user-search':[['circle',{cx:'10',cy:'7',r:'4'}],['path',{d:'M10.3 15H7a4 4 0 0 0-4 4v2'}],['circle',{cx:'17',cy:'17',r:'3'}],['path',{d:'m21 21-1.9-1.9'}]],
- 'key-round':[['path',{d:'M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z'}],['circle',{cx:'16.5',cy:'7.5',r:'.5',fill:'currentColor'}]]
-};
-function paintJobsNavSymbol(symbol,glyph){
- const lucide=jobsNavLucide[glyph];
- if(symbol.dataset.jobsNavGlyph===glyph&&(lucide?symbol.querySelector('svg'):symbol.textContent===glyph))return;
- symbol.dataset.jobsNavGlyph=glyph;
- symbol.replaceChildren();
- if(!lucide){symbol.textContent=glyph;return;}
- const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
- svg.setAttribute('class',`lucide lucide-${glyph}`);
- svg.dataset.lucide=glyph;
- svg.setAttribute('viewBox','0 0 24 24');
- svg.setAttribute('width','18');
- svg.setAttribute('height','18');
- svg.setAttribute('fill','none');
- svg.setAttribute('stroke','currentColor');
- svg.setAttribute('stroke-width','1.75');
- svg.setAttribute('stroke-linecap','round');
- svg.setAttribute('stroke-linejoin','round');
- svg.setAttribute('aria-hidden','true');
- for(const [tag,attrs] of lucide){
-  const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
-  for(const [key,value] of Object.entries(attrs))node.setAttribute(key,value);
-  svg.append(node);
- }
- symbol.append(svg);
-}
 function staffNavGroups(){
- const labels={vacancy:['Vacancies','Tin tuyển dụng'],employer:['Employers','Nhà tuyển dụng'],category:['Job Categories','Danh mục việc làm'],location:['Locations','Địa điểm'],guide:['Guides','Cẩm nang'],faq:['FAQs','Câu hỏi thường gặp'],media:['Media Library','Thư viện tư liệu']};
- const glyphs={vacancy:'◈',employer:'▤',category:'layout-grid',location:'⌖',guide:'▧',faq:'?',media:'▣'};
- const content=(...kinds)=>caps.read?kinds.filter(kind=>kind==='media'||collections.some(item=>item.kind===kind)).map(kind=>({
-  id:kind,collection:true,label:t(...labels[kind]),glyph:glyphs[kind]
- })):[];
+ const collectionsNav={
+  vacancy:['Vacancies','Tin tuyển dụng','file-text'],
+  employer:['Employers','Nhà tuyển dụng','building-2'],
+  category:['Job Categories','Danh mục việc làm','layout-grid'],
+  location:['Locations','Địa điểm','map-pin'],
+  guide:['Guides','Cẩm nang','book-open-text'],
+  faq:['FAQs','Câu hỏi thường gặp','circle-help'],
+  media:['Media Library','Thư viện tư liệu','folder-open']
+ };
+ const content=(...kinds)=>caps.read?kinds.filter(kind=>kind==='media'||collections.some(item=>item.kind===kind)).map(id=>{
+  const [en,vi,icon]=collectionsNav[id];
+  return {id,collection:true,label:t(en,vi),icon};
+ }):[];
  const recruitment=content('vacancy');
- if(caps.recruit)recruitment.push({id:'applications',label:t('Recruitment','Tuyển dụng'),glyph:'↗'});
- if(caps.recruit===true)recruitment.push({id:'talent',label:t('Talent Pool','Nguồn ứng viên'),glyph:'user-search'});
+ if(caps.recruit)recruitment.push({id:'applications',label:t('Recruitment','Tuyển dụng'),icon:'clipboard-list'});
+ if(caps.recruit===true)recruitment.push({id:'talent',label:t('Talent Pool','Nguồn ứng viên'),icon:'user-search'});
  return [
-  ['recruitment',t('Recruitment','Tuyển dụng'),recruitment],
-  ['directory',t('Directories','Danh mục'),content('employer','category','location')],
-  ['knowledge',t('Guides & answers','Cẩm nang & giải đáp'),content('guide','faq')],
-  ['media',t('Content & media','Nội dung & tư liệu'),content('media')],
-  ['administration',t('Administration','Quản trị'),caps.manage_staff?[{id:'staff',label:t('Staff management','Quản lý nhân viên'),glyph:'key-round'}]:[]]
- ].filter(([, ,items])=>items.length);
+  ['recruitment',t('Recruitment','Tuyển dụng'),'briefcase-business',recruitment],
+  ['directory',t('Directories','Danh mục'),'list-tree',content('employer','category','location')],
+  ['knowledge',t('Guides & answers','Cẩm nang & giải đáp'),'library-big',content('guide','faq')],
+  ['media',t('Content & media','Nội dung & tư liệu'),'images',content('media')],
+  ['administration',t('Administration','Quản trị'),'shield-check',caps.manage_staff?[{id:'staff',label:t('Staff management','Quản lý nhân viên'),icon:'key-round'}]:[]]
+ ].filter(([, , ,items])=>items.length);
 }
 function renderStaffNavigation(nav){
  const groups=staffNavGroups();
@@ -141,7 +119,7 @@ function renderStaffNavigation(nav){
  nav.querySelector(':scope > [data-action="view"]')?.remove();
  for(const [name,section] of existing)if(!groups.some(([id])=>id===name))section.remove();
  let previousGroup;
- for(const [name,label,items] of groups){
+ for(const [name,label,icon,items] of groups){
   let section=existing.get(name);
   if(!section){
    section=document.createElement('section');section.dataset.jobsNavGroup=name;section.className='branched-menu__section';section.dataset.open='true';
@@ -152,8 +130,10 @@ function renderStaffNavigation(nav){
   const nextGroup=previousGroup?previousGroup.nextElementSibling:nav.querySelector(':scope > [data-jobs-nav-group]');
   if(nextGroup!==section)nav.insertBefore(section,nextGroup);
   previousGroup=section;
-  const heading=section.querySelector('.branched-menu__head .branched-menu__label');
-  if(heading.textContent!==label)heading.textContent=label;
+  const heading=section.querySelector('.branched-menu__head');
+  heading.dataset.branchedIcon=icon;
+  const groupLabel=heading.querySelector('.branched-menu__label');
+  if(groupLabel.textContent!==label)groupLabel.textContent=label;
   const tree=section.querySelector('.jobs-nav-items');
   const buttons=new Map([...tree.querySelectorAll('button')].map(button=>[button.dataset.collection||button.dataset.view,button]));
   for(const [id,button] of buttons)if(!items.some(item=>item.id===id))button.remove();
@@ -164,10 +144,9 @@ function renderStaffNavigation(nav){
     button=document.createElement('button');button.type='button';
     button.dataset.action=item.collection?'staff-collection':'view';
     button.dataset[item.collection?'collection':'view']=item.id;
-    const symbol=document.createElement('span');symbol.className='jobs-nav-symbol';symbol.setAttribute('aria-hidden','true');
-    const text=document.createElement('span');text.className='jobs-nav-label branched-menu__label';button.append(symbol,text);
+    button.dataset.branchedIcon=item.icon;
+    const text=document.createElement('span');text.className='jobs-nav-label branched-menu__label';button.append(text);
    }
-   paintJobsNavSymbol(button.querySelector('.jobs-nav-symbol'),item.glyph);
    const nextButton=previousButton?previousButton.nextElementSibling:tree.querySelector('button');
    if(nextButton!==button)tree.insertBefore(button,nextButton);
    previousButton=button;
