@@ -15,11 +15,21 @@ function startLattice(target,{pattern,grid,label,cellSize=5,gap=2,fontSize=12,st
  const cancel=api.showDelayedLattice(slot,{pattern,grid,label,cellSize,gap,fontSize,status});
  return ()=>{cancel();if(slot.isConnected)slot.remove()};
 }
-function startWorkspaceLattice(target){
- const slot=document.createElement('div');slot.className='lattice-slot';slot.dataset.reserve='';target.replaceChildren(slot);
- const api=globalThis.garyLattice;if(!api)return ()=>{if(slot.isConnected)slot.remove()};
- const cancel=api.showDelayedLattice(slot,{pattern:'ripple',grid:4,label:t('Loading workspace…','Đang tải không gian làm việc…'),cellSize:5,gap:2,fontSize:12,status:true});
- return ()=>{cancel();if(slot.isConnected)slot.remove()};
+function holdLattice(target,label){
+ if(!target)return ()=>{};
+ const slot=document.createElement('div');slot.className='lattice-slot';slot.dataset.reserve='';slot.dataset.latticeHold='';target.prepend(slot);
+ const api=globalThis.garyLattice;if(!api)return ()=>{slot.remove()};
+ const cancel=api.showDelayedLattice(slot,{pattern:'ripple',grid:4,label,cellSize:5,gap:2,fontSize:12,status:true});
+ return ()=>{cancel();slot.remove()};
+}
+function workspaceBody(){return document.querySelector('#workspace-view [data-workspace-body]')||$('#workspace-view');}
+let stopContentLattice=()=>{};
+function holdContent(label){
+ stopContentLattice();
+ const stop=holdLattice($('#workspace-view'),label);
+ let current=true;
+ const cancel=()=>{if(!current)return;current=false;stop();if(stopContentLattice===cancel)stopContentLattice=()=>{};};
+ stopContentLattice=cancel;return cancel;
 }
 const locale=()=>{try{return JSON.parse(localStorage.getItem('gary-language'))==='vi'?'vi':'en';}catch{return 'en';}};
 const accessFromUrl=url=>url.searchParams.get('access')==='staff'||(!url.searchParams.has('access')&&['cms','applications','talent','staff'].includes(url.searchParams.get('view')))?'staff':'candidate';
@@ -93,7 +103,9 @@ async function openStaffCollection(destination){
   cmsDestination=destination==='media'?cmsDestination:destination;cmsNavigation=destination==='media'?'media':'content';setView('cms');return;
  }
  await cms?.ready;
- if(await cms?.navigate?.(destination))updateCmsNavigation(cms.navigationState?.());
+ const stop=holdContent(destination==='vacancy'?t('Loading vacancies…','Đang tải tin tuyển dụng…'):t('Loading content…','Đang tải nội dung…'));
+ try{if(await cms?.navigate?.(destination))updateCmsNavigation(cms.navigationState?.());}
+ finally{stop();}
 }
 function setView(next, applicationId){
  if(!mayLeave())return;
@@ -110,37 +122,43 @@ function setAccess(next){
  void authenticate();
 }
 async function renderView(){
- if(!user)return;nav();const target=$('#workspace-view');const stopWorkspace=startWorkspaceLattice(target);try{
+ if(!user)return;nav();
+ const target=$('#workspace-view'),body=document.createElement('div');body.dataset.workspaceBody='';target.replaceChildren(body);
+ let stopHold=()=>{};const hold=label=>{stopHold=holdContent(label);};
+ try{
  if(access==='staff'&&(!caps.read&&!caps.recruit||capabilityError)){
-  target.innerHTML=`<div class="jobs-auth-card"><h1>${capabilityError?t('Staff access could not be checked','Chưa thể kiểm tra quyền nhân viên'):t('Staff access not assigned','Chưa được cấp quyền nhân viên')}</h1><p>${capabilityError?t('We could not load your Jobs permissions. Check your connection and try again.','Chưa thể tải quyền Jobs của bạn. Kiểm tra kết nối rồi thử lại.'):t('You are signed in, but this account has no active Jobs staff assignment. Ask your Jobs administrator to assign content or recruitment access to this email.','Bạn đã đăng nhập nhưng tài khoản chưa có quyền nhân viên Jobs đang hoạt động. Hãy nhờ quản trị viên Jobs cấp quyền nội dung hoặc tuyển dụng cho email này.')}</p><div class="jobs-row-actions"><button type="button" data-action="retry">${t('Check access again','Kiểm tra lại quyền')}</button><button type="button" data-action="access" data-access="candidate">${t('Open candidate portal','Mở cổng ứng viên')}</button></div><p class="jobs-meta">${t('To use another assigned account, sign out above and sign in again.','Để dùng tài khoản khác đã được cấp quyền, đăng xuất ở trên rồi đăng nhập lại.')}</p></div>`;return;
+  body.innerHTML=`<div class="jobs-auth-card"><h1>${capabilityError?t('Staff access could not be checked','Chưa thể kiểm tra quyền nhân viên'):t('Staff access not assigned','Chưa được cấp quyền nhân viên')}</h1><p>${capabilityError?t('We could not load your Jobs permissions. Check your connection and try again.','Chưa thể tải quyền Jobs của bạn. Kiểm tra kết nối rồi thử lại.'):t('You are signed in, but this account has no active Jobs staff assignment. Ask your Jobs administrator to assign content or recruitment access to this email.','Bạn đã đăng nhập nhưng tài khoản chưa có quyền nhân viên Jobs đang hoạt động. Hãy nhờ quản trị viên Jobs cấp quyền nội dung hoặc tuyển dụng cho email này.')}</p><div class="jobs-row-actions"><button type="button" data-action="retry">${t('Check access again','Kiểm tra lại quyền')}</button><button type="button" data-action="access" data-access="candidate">${t('Open candidate portal','Mở cổng ứng viên')}</button></div><p class="jobs-meta">${t('To use another assigned account, sign out above and sign in again.','Để dùng tài khoản khác đã được cấp quyền, đăng xuất ở trên rồi đăng nhập lại.')}</p></div>`;return;
  }
  if(view==='cms'){
-  if(!caps.read){target.textContent=t('Jobs content access is not assigned to this account.','Tài khoản này chưa được cấp quyền nội dung Jobs.');return;}
+  if(!caps.read){body.textContent=t('Jobs content access is not assigned to this account.','Tài khoản này chưa được cấp quyền nội dung Jobs.');return;}
   const destination=cmsNavigation==='media'?'media':cmsDestination;
-  cms=mountCms(target,{appId:'jobs',appName:{en:'Vietnam English Teaching Jobs',vi:'Tuyển Dụng Dạy Tiếng Anh'},language,collections,adapter:createCmsAdapter(),navigation:false,onNavigationChange:updateCmsNavigation,onNotice:(message,error)=>status(message,error)});
+  hold(destination==='vacancy'?t('Loading vacancies…','Đang tải tin tuyển dụng…'):t('Loading content…','Đang tải nội dung…'));
+  cms=mountCms(body,{appId:'jobs',appName:{en:'Vietnam English Teaching Jobs',vi:'Tuyển Dụng Dạy Tiếng Anh'},language,collections,adapter:createCmsAdapter(),navigation:false,onNavigationChange:updateCmsNavigation,onNotice:(message,error)=>status(message,error)});
   const mounted=cms;await mounted.ready;if(cms===mounted&&destination!==(mounted.navigationState?.().kind||collections[0]?.kind))await mounted.navigate?.(destination);return;
  }
  if(view==='staff'){
-  staffPage=mountStaffManagement(target,{adapter:createStaffAdapter(),language,errorText,onNotice:(message,error,confirmed)=>confirmed?success(message):error?status(message,true):showActionToast(document,message,{language,tone:'info'})});
+  hold(t('Loading staff access…','Đang tải quyền nhân viên…'));
+  staffPage=mountStaffManagement(body,{adapter:createStaffAdapter(),language,errorText,onNotice:(message,error,confirmed)=>confirmed?success(message):error?status(message,true):showActionToast(document,message,{language,tone:'info'})});
   await staffPage.ready;return;
  }
  if(view==='talent' && access==='staff' && caps.recruit===true){
   const mountedAt=generation;
-  talentPage=mountTalentPool(target,{
+  hold(t('Loading candidates…','Đang tải ứng viên…'));
+  talentPage=mountTalentPool(body,{
    adapter:createTalentAdapter({db,unwrap,deadline,backend:jobsConfig.supabaseUrl}),language,canPublish:caps.publish===true,
    allowed:()=>mountedAt===generation&&view==='talent'&&access==='staff'&&!!user&&caps.recruit===true,
    notify:success,openApplication:id=>setView('applications',id)
   });
-  return;
+  await talentPage.ready;return;
  }
- if(view==='apply'){await renderApplicationForm();return;}
+ if(view==='apply'){hold(new URL(location.href).searchParams.has('vacancy')?t('Loading vacancy…','Đang tải tin tuyển dụng…'):t('Loading application form…','Đang tải mẫu ứng tuyển…'));await renderApplicationForm();return;}
  if(view==='applications'&&!caps.recruit){setView('mine');return;}
  await renderApplications();
- }finally{stopWorkspace();}
+ }finally{stopHold();}
 }
 async function renderApplicationForm(){
  const currentGeneration=generation;
- const target=$('#workspace-view'),vacancy=new URL(location.href).searchParams.get('vacancy');
+ const target=workspaceBody(),vacancy=new URL(location.href).searchParams.get('vacancy');
  let job=null;if(vacancy){const r=await db.from('jobs_public_content').select('id,title_en,title_vi').eq('id',vacancy).eq('kind','vacancy').maybeSingle();job=unwrap(r);if(currentGeneration!==generation||!user)return;if(!job){target.innerHTML=`<p class="jobs-alert">${t('This vacancy is closed or unavailable.','Vị trí này đã đóng hoặc không còn khả dụng.')}</p>`;return;}}
  const profile=unwrap(await db.from('jobs_candidates').select('*').eq('id',user.id).maybeSingle())||{};if(currentGeneration!==generation||!user)return;
  target.innerHTML=`<h1>${t('Apply with confidence','Ứng tuyển thuận tiện')}</h1><p>${esc(job?(language==='vi'?job.title_vi:job.title_en):t('General introduction to the recruitment team','Giới thiệu chung với đội ngũ tuyển dụng'))}</p><form id="persistent-application" data-vacancy="${job?.id||''}"><div class="jobs-form-grid"><label>${t('Full name','Họ và tên')}<input name="full_name" required minlength="2" maxlength="100" autocomplete="name" value="${esc(profile.full_name)}"></label><label>${t('Verified account email','Email tài khoản đã xác minh')}<input type="email" value="${esc(user.email)}" disabled></label><label>${t('Phone / WhatsApp','Điện thoại / WhatsApp')}<input name="phone" maxlength="60" value="${esc(profile.phone)}" autocomplete="tel"></label><label>${t('Current location','Nơi đang sống')}<input name="current_location" maxlength="200" value="${esc(profile.current_location)}"></label></div><label>${t('Experience, qualifications and questions','Kinh nghiệm, bằng cấp và câu hỏi')}<textarea name="message" maxlength="5000" rows="6"></textarea></label><label>${t('CV (optional): PDF or DOCX, up to 10 MB','CV (không bắt buộc): PDF hoặc DOCX, tối đa 10 MB')}<input type="file" name="cv" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><label class="consent"><input type="checkbox" name="consent" required><span>${t('I agree to this site storing my application and documents for recruitment by the Jobs team. I understand these are not shared automatically with other Gary applications.','Tôi đồng ý để trang lưu hồ sơ và tài liệu phục vụ tuyển dụng bởi đội ngũ Jobs. Hồ sơ không tự động được chia sẻ với các ứng dụng Gary khác.')}</span></label><button class="primary" type="submit" data-button-variant="confirm">${t('Submit application','Nộp hồ sơ')}</button></form>`;
@@ -179,7 +197,7 @@ async function loadRecruitmentStats(force=false){
  setCounterValues(document,recruitmentCounts,language);
 }
 async function renderApplications(){
- const target=$('#workspace-view'),staff=view==='applications';
+ const target=workspaceBody(),staff=view==='applications';
  target.innerHTML=`<h1>${staff?t('Recruitment workspace','Không gian tuyển dụng'):t('My applications','Hồ sơ của tôi')}</h1>${staff?`<form id="application-filters" class="jobs-filters"><label>${t('Role keyword','Từ khóa vị trí')}<input name="query" type="search" maxlength="80"></label><label>${t('Stage','Giai đoạn')}<select name="stage"><option value="">${t('All stages','Tất cả giai đoạn')}</option>${STAGES.map(s=>`<option value="${s}">${stageLabel(s)}</option>`).join('')}</select></label><label>${t('Assignment','Phân công')}<select name="assignee"><option value="">${t('All recruiters','Tất cả chuyên viên')}</option><option value="unassigned">${t('Unassigned','Chưa phân công')}</option>${roster.map(s=>`<option value="${s.user_id}">${esc(s.full_name)}</option>`).join('')}</select></label><button type="submit">${t('Search','Tìm kiếm')}</button></form>`:''}<div class="jobs-list" id="applications-list" aria-live="polite"></div><div class="jobs-pagination"><button data-action="previous" type="button">${t('Previous','Trước')}</button><span id="page-count"></span><button data-action="next" type="button">${t('Next','Tiếp')}</button></div><section id="application-detail"></section>`;
  if(staff){renderRecruitmentStats(target);void loadRecruitmentStats();}
  await loadApplications();
@@ -188,7 +206,9 @@ let filterValues={},total=0;
 async function loadApplications(){
  const currentGeneration=generation;
  const list=$('#applications-list');
- const stop=list&&list.childElementCount===0?startLattice(list,{pattern:'ripple',grid:4,label:t('Loading applications…','Đang tải hồ sơ…'),status:false,reserve:true}):()=>{};
+ const hasRows=!!list?.querySelector('.jobs-record');
+ if(list&&!hasRows)list.querySelector('.jobs-empty')?.remove();
+ const stop=startLattice(list,{pattern:'ripple',grid:4,label:t('Loading applications…','Đang tải hồ sơ…'),status:false,reserve:!hasRows});
  try{
  const r=await deadline(applicationList({page,...(view==='applications'?filterValues:{candidateId:user.id})}));if(currentGeneration!==generation||!user)return;total=r.total;
  $('#applications-list').innerHTML=r.records.length?r.records.map(a=>`<article class="jobs-record"><header><div><h2>${esc(a.vacancy_title)}</h2><p class="jobs-meta">${esc(a.receipt_code)} · ${new Date(a.created_at).toLocaleDateString(language==='vi'?'vi-VN':'en-GB')}${view==='applications'?` · ${esc(a.jobs_candidates?.full_name)}`:''}</p></div><span class="jobs-stage">${stageLabel(a.stage)}</span></header><button data-action="open-application" data-id="${a.id}" type="button">${t('View application','Xem hồ sơ')}</button></article>`).join(''):view==='applications'?`<p class="jobs-empty">${t('No applications match this view.','Chưa có hồ sơ phù hợp.')}</p>`:`<div class="jobs-empty"><h2>${t('No applications yet','Bạn chưa có hồ sơ ứng tuyển')}</h2><p>${t('Your submitted applications and recruitment updates will appear here. Find an open vacancy or introduce yourself to the Jobs team.','Hồ sơ đã nộp và cập nhật tuyển dụng sẽ xuất hiện tại đây. Hãy tìm vị trí đang tuyển hoặc giới thiệu bản thân với đội ngũ Jobs.')}</p><div class="jobs-row-actions"><a class="jobs-link-button" href="./#opportunities">${t('Find vacancies','Tìm việc làm')}</a><a class="jobs-link-button" href="portal.html?access=candidate&view=apply">${t('Introduce yourself','Giới thiệu bản thân')}</a></div></div>`;

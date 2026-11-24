@@ -238,6 +238,7 @@ function renderPage() {
   mountHeaderApps();
   photoGalleryMount = mountPhotoGallery($('#photo-gallery'), { locale: state.lang, onExploreRegion: openDestination });
   syncVacancyRoute();
+  syncPublishedLattice();
   if($('#vacancy-gallery')?.open) renderVacancyGallery();
   if(preferencesOpen&&preferenceFocus)$(`[data-preference-focus="${preferenceFocus}"]`)?.focus({preventScroll:true});
 }
@@ -830,6 +831,15 @@ document.addEventListener('toggle',event=>{
   }
   if(event.target.matches('.faq-item')&&event.target.open)$$('.faq-item[open]').filter(item=>item!==event.target).forEach(item=>item.open=false);},true);
 window.addEventListener('resize',()=>{if(window.innerWidth>1360)toggleMenu(false);},{passive:true});
+let stopPublishedLattice=()=>{};
+function syncPublishedLattice(){
+ stopPublishedLattice();
+ if(publicLoadState!=='loading'||document.getElementById('vacancy-lattice')||!globalThis.garyLattice)return;
+ const heading=document.querySelector('#opportunities .section-heading');if(!heading)return;
+ const slot=document.createElement('div');slot.id='published-lattice';slot.className='lattice-slot';heading.append(slot);
+ const cancel=globalThis.garyLattice.showDelayedLattice(slot,{pattern:'orbit',grid:3,label:t('Updating vacancies…','Đang cập nhật tin tuyển dụng…'),cellSize:5,gap:2,fontSize:12,status:true});
+ stopPublishedLattice=()=>{cancel();slot.remove();stopPublishedLattice=()=>{};};
+}
 renderPage();
 
 
@@ -851,8 +861,8 @@ function renderManagedContent(){
   $('#opportunities').prepend(note);
 }
 async function loadPublishedContent(){
-  publicLoadState='loading';syncVacancyRoute();
-  try{managedRecords=await publicContent();backendReady=true;publicLoadState='ready';renderPage();}
-  catch{backendReady=false;publicLoadState='failed';renderManagedContent();syncVacancyRoute();}
+  publicLoadState='loading';syncVacancyRoute();syncPublishedLattice();
+  try{managedRecords=await publicContent();backendReady=true;publicLoadState='ready';stopPublishedLattice();renderPage();}
+  catch{backendReady=false;publicLoadState='failed';stopPublishedLattice();renderManagedContent();syncVacancyRoute();}
 }
 void loadPublishedContent();

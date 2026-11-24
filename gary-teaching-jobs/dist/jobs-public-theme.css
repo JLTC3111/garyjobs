@@ -165,6 +165,8 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public :is(.body-copy,.section-intro,.hero-description,.dialog-intro,.benefit-row p,.process-step p,.faq-item p,.support-card p) { color:var(--jobs-text); }
 .jobs-public :is(.job-count,.job-type,.job-card-bottom>div>span,.listing-note,.life-bottom p,.community-bottom,.footer-brand>p,.footer-column>a,.footer-link,.office-note,.footer-office p,.footer-bottom,.dialog-location,.dialog-location>span,.role-facts>div>span,.check-list>li,.dialog-small,.application-note,.contact-options small,.partner-caption,.role-note) { color:var(--jobs-text-secondary); }
 .jobs-public .opportunities,.jobs-public .life-section,.jobs-public .faq-section,.jobs-public .managed-public-content { background:var(--jobs-bg); }
+.jobs-public #opportunities .section-heading { position:relative; }
+.jobs-public #published-lattice { position:absolute;z-index:1;inset-inline-start:0;inset-block-end:0;transform:translateY(calc(100% + 8px));max-width:min(100%,18rem);pointer-events:none; }
 .jobs-public :is(.job-card,.role-facts,.contact-options>a,.contact-options>button,.role-note,.email-fallback,.form-notice) { background:var(--jobs-surface);border-color:var(--jobs-line);color:var(--jobs-ink); }
 .jobs-public .role-note,.jobs-public .email-fallback { color:var(--jobs-text-secondary); }
 .jobs-public .job-card:hover { border-color:var(--jobs-accent); }
