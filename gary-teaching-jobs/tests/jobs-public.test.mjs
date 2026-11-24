@@ -8,11 +8,12 @@ import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/j
 import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({})}={}){
+async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),reducedMotion=false,storedStyle}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;
+ if(storedStyle!==undefined)w.localStorage.setItem('gary-jobs-vacancy-style',JSON.stringify(storedStyle));
   bindFeedbackDom(dom.window);
-w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
+w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=media=>({matches:reducedMotion&&media.includes("prefers-reduced-motion"),addEventListener(){},removeEventListener(){}});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
  w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());
@@ -393,6 +394,46 @@ test('vacancy workspace restores reading position across language changes and su
   theme.dispatchEvent(new w.Event('change',{bubbles:true}));
   assert.equal(preference,'dark');
  }finally{dom.window.close();}
+});
+
+test('vacancy reveal keeps intact text and reading styles persist independently of theme and language',async()=>{
+ const listing=structuredClone(records);
+ const body='Work with a supportive team & a <small class>. '+'Teach English in Hanoi. '.repeat(30).trim();
+ listing[3].body_en=body;
+ const url='https://jobs.garyhome.vn/jobs/teacher';
+ const dom=await publicPage(listing,{url,storedStyle:'unknown'});
+ let storedStyle;
+ try{
+  const w=dom.window,d=w.document;
+  const workspace=d.querySelector('.vacancy-workspace');
+  const copy=d.querySelector('.vacancy-article .vacancy-copy');
+  const word=copy.querySelector('.vacancy-word');
+  assert.ok(word);
+  assert.equal(copy.textContent,body);
+  assert.equal(copy.querySelector('small'),null);
+  assert.ok(workspace.querySelectorAll('.vacancy-word').length<=64);
+  const style=d.querySelector('#vacancy-style');
+  assert.equal(style.value,'original');
+  assert.deepEqual([...style.options].map(option=>option.value),['original','warm-editorial','modern-slate']);
+  w.document.documentElement.dataset.jobsTheme='dark';
+  style.value='modern-slate';
+  style.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.equal(workspace.dataset.vacancyStyle,'modern-slate');
+  assert.equal(w.document.documentElement.dataset.jobsTheme,'dark');
+  assert.equal(copy.querySelector('.vacancy-word'),word);
+  d.querySelector('.dialog-job-language').click();
+  assert.equal(d.querySelector('.vacancy-word'),null);
+  assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
+  assert.equal(d.querySelector('#vacancy-style').getAttribute('aria-label'),'Kiểu trình bày');
+  storedStyle=JSON.parse(w.localStorage.getItem('gary-jobs-vacancy-style'));
+ }finally{dom.window.close();}
+ const restored=await publicPage(listing,{url,storedStyle,reducedMotion:true});
+ try{
+  const d=restored.window.document;
+  assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
+  assert.equal(d.querySelector('.vacancy-word'),null);
+  assert.equal(d.querySelector('.vacancy-article .vacancy-copy').textContent,body);
+ }finally{restored.window.close();}
 });
 
 test('closing a directly opened vacancy returns to current listings without leaving the website',async()=>{

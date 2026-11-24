@@ -158,6 +158,92 @@
 .vacancy-route-status p { margin: 0 0 20px; color: var(--jobs-text-secondary); }
 .vacancy-browse-toggle, .vacancy-mobile-apply { display: none; }
 
+.vacancy-workspace[data-vacancy-style="warm-editorial"] {
+  --jobs-surface: #F7F5F0;
+  --jobs-bg: #f0eee7;
+  --jobs-raised: #e7ece2;
+  --jobs-ink: #182b42;
+  --jobs-text: #283b49;
+  --jobs-text-secondary: #4c6357;
+  --jobs-muted: var(--jobs-text-secondary);
+  --jobs-line: #cbd5c8;
+  --jobs-accent: #3b6751;
+  --jobs-action: #315a46;
+  --jobs-check: #4d7a62;
+}
+.vacancy-workspace[data-vacancy-style="modern-slate"] {
+  --jobs-surface: #EFF3F8;
+  --jobs-bg: #e7eef6;
+  --jobs-raised: #fff;
+  --jobs-ink: #142d53;
+  --jobs-text: #283a52;
+  --jobs-text-secondary: #445b75;
+  --jobs-muted: var(--jobs-text-secondary);
+  --jobs-line: #c5d3e3;
+  --jobs-accent: #305d8e;
+  --jobs-action: #244d81;
+  --jobs-check: #426e8a;
+}
+html[data-jobs-theme="dark"] .vacancy-workspace[data-vacancy-style="warm-editorial"] {
+  --jobs-surface: #111E2E;
+  --jobs-bg: #0e1926;
+  --jobs-raised: #203347;
+  --jobs-ink: #f8f2e8;
+  --jobs-text: #e1e7ee;
+  --jobs-text-secondary: #b8cbbf;
+  --jobs-line: #425669;
+  --jobs-accent: #aac7b4;
+  --jobs-action: #c2dbc9;
+  --jobs-check: #a1c6ae;
+}
+html[data-jobs-theme="dark"] .vacancy-workspace[data-vacancy-style="modern-slate"] {
+  --jobs-surface: #171F32;
+  --jobs-bg: #131a2a;
+  --jobs-raised: #22344e;
+  --jobs-ink: #eff4ff;
+  --jobs-text: #dfe8f5;
+  --jobs-text-secondary: #bacbe0;
+  --jobs-line: #435772;
+  --jobs-accent: #a5c7ed;
+  --jobs-action: #bcdaff;
+  --jobs-check: #98bbd8;
+}
+.vacancy-workspace[data-vacancy-style="warm-editorial"] .vacancy-article :is(#dialog-title,h2) {
+  font-family: var(--serif);
+  font-weight: 400;
+  text-decoration: none;
+}
+.vacancy-workspace[data-vacancy-style="warm-editorial"]:lang(vi) .vacancy-article :is(#dialog-title,h2) {
+  font-family: Lora, Georgia, serif;
+}
+.vacancy-workspace[data-vacancy-style="modern-slate"] .vacancy-article :is(#dialog-title,h2) {
+  font-family: var(--sans);
+  font-weight: 600;
+  text-decoration: none;
+}
+.vacancy-workspace[data-vacancy-style="modern-slate"]:lang(vi) .vacancy-article :is(#dialog-title,h2) {
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+}
+.vacancy-workspace[data-vacancy-style="warm-editorial"] .vacancy-article :is(.vacancy-summary,.vacancy-copy) {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.vacancy-workspace:is([data-vacancy-style="warm-editorial"],[data-vacancy-style="modern-slate"]) .vacancy-article .vacancy-facts > div {
+  padding: 12px 16px;
+  border: 1px solid var(--jobs-line);
+  border-radius: 8px;
+  background: var(--jobs-raised);
+}
+@keyframes vacancy-word-reveal { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .vacancy-word { animation: vacancy-word-reveal 240ms ease-out calc(var(--vacancy-word-index) * 8ms) both; }
+}
+
+@media (max-width: 620px) {
+  .vacancy-workspace-header { display: grid; gap: 4px; }
+  .vacancy-preferences { flex-wrap: wrap; gap: 6px; }
+  .vacancy-preferences select { min-width: 0; max-width: 100%; padding-inline: 6px; font-size: .875rem; }
+}
 @media (max-height: 540px) {
   .vacancy-sidebar-actions { position: static; }
 }

@@ -68,7 +68,7 @@ test('one photo keeps replace, crop and remove in a row under the preview withou
     assert.deepEqual([...workspace.children].map(child => child.className), ['jobs-vacancy-image-stage', 'jobs-vacancy-image-toolbar']);
     assert.equal(item.querySelector('.jobs-vacancy-image-alts').previousElementSibling, workspace);
     const buttons = [...item.querySelectorAll('.jobs-vacancy-image-toolbar button')];
-    assert.deepEqual(buttons.slice(0, 3).map(button => button.textContent), ['Replace', 'Crop', 'Remove']);
+    assert.deepEqual(buttons.slice(0, 3).map(button => button.textContent), ['Replace', 'Fit to Frame', 'Remove']);
     assert.deepEqual(buttons.slice(3).map(button => button.textContent), ['Move Up', 'Move Down']);
     assert.deepEqual(buttons.map(button => button.querySelector('svg')?.dataset.lucide), ['replace', 'crop', 'trash-2', 'arrow-up', 'arrow-down']);
     assert.equal(buttons[2].querySelector('svg').getAttribute('viewBox'), '0 0 24 24');
@@ -82,7 +82,7 @@ test('one photo keeps replace, crop and remove in a row under the preview withou
   } finally { view.release(); view.dom.window.close(); }
   const vietnamese = mount([photo('11000000-0000-4000-8000-000000000001', {cover:true})], {language:'vi'});
   try {
-    assert.equal(vietnamese.root.querySelector('[data-image-crop-open]').textContent, 'Cắt');
+    assert.equal(vietnamese.root.querySelector('[data-image-crop-open]').textContent, 'Lấp đầy khung');
     assert.equal(vietnamese.root.querySelector('[data-image-replace]').textContent, 'Thay ảnh');
     assert.equal(vietnamese.root.querySelector('[data-cover-badge]').textContent, 'Ảnh bìa');
     assert.equal(vietnamese.root.querySelector('[data-image-cover]'), null);
@@ -100,7 +100,7 @@ test('multiple photos show which cover is selected', async () => {
     assert.equal(covers[0].textContent, 'Cover');
     assert.equal(covers[1].textContent, 'Set as cover');
     assert.equal(view.root.querySelectorAll('[data-cover-badge]').length, 1);
-    assert.deepEqual([...view.root.querySelector('.jobs-vacancy-image-toolbar').querySelectorAll('button')].slice(0, 4).map(button => button.textContent), ['Cover', 'Replace', 'Crop', 'Remove']);
+    assert.deepEqual([...view.root.querySelector('.jobs-vacancy-image-toolbar').querySelectorAll('button')].slice(0, 4).map(button => button.textContent), ['Cover', 'Replace', 'Fit to Frame', 'Remove']);
     covers[1].click();
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(view.saved[0].find(image => image.cover).id, second.id);

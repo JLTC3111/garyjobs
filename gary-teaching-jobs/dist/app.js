@@ -12,6 +12,14 @@ const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector
 const esc = (value = '') => String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const readStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Private browser sessions can still use the site. */ } };
+const vacancyStyles = [
+  ['original', 'Original style', 'Giao diện gốc'],
+  ['warm-editorial', 'Warm Editorial', 'Ấm áp'],
+  ['modern-slate', 'Modern Slate', 'Xanh xám hiện đại'],
+];
+const vacancyStyleKey = 'gary-jobs-vacancy-style';
+function validVacancyStyle(value) { return vacancyStyles.some(([style])=>style===value) ? value : 'original'; }
+let vacancyStyle=validVacancyStyle(readStored(vacancyStyleKey,'original'));
 const state = { lang: readStored('gary-language', 'en') === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
 let photoGalleryMount;
 let glassHeroMount;
@@ -425,6 +433,7 @@ function openDialog(content, {workspace=false, focus=true}={}) {
   if(!dialog.open) dialogOpener=document.activeElement;
   dialog.classList.toggle('is-vacancy-workspace',workspace);
   $('#dialog-content').innerHTML=content;
+  if(workspace) $('.vacancy-workspace',dialog).dataset.vacancyStyle=vacancyStyle;
   $('.dialog-close').setAttribute('aria-label',t('Close dialog','Đóng hộp thoại'));
   if(!dialog.open)dialog.showModal();
   document.body.classList.add('dialog-open');dialog.scrollTop=0;
@@ -480,6 +489,9 @@ function vacancyHeader(){
       <button type="button" class="text-button dialog-job-language" data-action="language" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button>
       <select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
         <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
+      </select>
+      <select id="vacancy-style" aria-label="${t('Reading style','Kiểu trình bày')}">
+        ${vacancyStyles.map(([value,en,vi])=>`<option value="${value}" ${value===vacancyStyle?'selected':''}>${t(en,vi)}</option>`).join('')}
       </select>
     </div>
   </header>`;
@@ -567,6 +579,26 @@ function vacancySidebar(job, apply){
   </aside>`;
 }
 
+function revealVacancyCopy(article){
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return;
+  // Keep the text available immediately and animate just the opening passage.
+  let index=0;
+  for(const paragraph of $$('.vacancy-summary, .vacancy-copy',article)){
+    if(index>=64)break;
+    if(paragraph.childElementCount)continue;
+    const words=document.createDocumentFragment();
+    for(const part of paragraph.textContent.split(/(\s+)/u)){
+      if(!part.trim()||index>=64){words.append(part);continue;}
+      const word=document.createElement('span');
+      word.className='vacancy-word';
+      word.style.setProperty('--vacancy-word-index',String(index++));
+      word.textContent=part;
+      words.append(word);
+    }
+    paragraph.replaceChildren(words);
+  }
+}
+
 function openJob(id,{navigate=true}={}) {
   const job=jobs.find(item=>item.id===id);
   if(!job)return;
@@ -605,6 +637,7 @@ function openJob(id,{navigate=true}={}) {
     <footer class="vacancy-mobile-apply">${apply}</footer>
   </div>`,{workspace:true,focus:!keepPosition});
   const workspace=$('.vacancy-workspace');
+  if(previous?.dataset.vacancy!==id)revealVacancyCopy($('.vacancy-article',workspace));
   renderVacancyResults(workspace);
   renderThemeControls();
   $('.vacancy-results',workspace).scrollTop=resultScroll;
@@ -740,6 +773,11 @@ document.addEventListener('input',event=>{
 });
 document.addEventListener('change',event=>{
   if(event.target.id==='vacancy-theme')window.setGaryJobsTheme?.(event.target.value);
+  if(event.target.id==='vacancy-style'){
+    vacancyStyle=validVacancyStyle(event.target.value);
+    persist(vacancyStyleKey,vacancyStyle);
+    event.target.closest('.vacancy-workspace').dataset.vacancyStyle=vacancyStyle;
+  }
 });
 
 document.addEventListener('submit',event=>{

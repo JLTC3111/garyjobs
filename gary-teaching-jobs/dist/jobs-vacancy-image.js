@@ -551,9 +551,9 @@ export function mountVacancyImageEditor(root, {record, language, editable, previ
       const replace = textButton('imageReplace', '', t('Replace', 'Thay ảnh'), '', 'replace');
       replace.dataset.replacePending = String(index);
       replace.setAttribute('aria-label', t('Replace photo', 'Thay ảnh'));
-      const crop = textButton('imageCropOpen', '', t('Crop', 'Cắt'), '', 'crop');
+      const crop = textButton('imageCropOpen', '', t('Fit to Frame', 'Lấp đầy khung'), '', 'crop');
       crop.dataset.cropPending = String(index);
-      crop.setAttribute('aria-label', t('Crop to 16:9', 'Cắt theo tỷ lệ 16:9'));
+      crop.setAttribute('aria-label', t('Fit to Frame', 'Lấp đầy khung'));
       const remove = textButton('pendingRemove', String(index), t('Remove', 'Xóa'), 'danger', 'trash-2');
       remove.setAttribute('aria-label', t('Remove photo', 'Xóa ảnh'));
       host.append(buildCard({
@@ -589,12 +589,12 @@ export function mountVacancyImageEditor(root, {record, language, editable, previ
         actions.push(cover);
       }
       const replace = textButton('imageReplace', '', t('Replace', 'Thay ảnh'), '', 'replace');
-      const crop = textButton('imageCropOpen', '', t('Crop', 'Cắt'), '', 'crop');
+      const crop = textButton('imageCropOpen', '', t('Fit to Frame', 'Lấp đầy khung'), '', 'crop');
       const remove = textButton('imageRemove', '', t('Remove', 'Xóa'), 'danger', 'trash-2');
       const earlier = textButton('imageMove', '-1', t('Move Up', 'Trước'), '', 'arrow-up');
       const later = textButton('imageMove', '1', t('Move Down', 'Sau'), '', 'arrow-down');
       replace.setAttribute('aria-label', `${t('Replace photo', 'Thay ảnh')}: ${localizedAlt(image)}`);
-      crop.setAttribute('aria-label', `${t('Crop to 16:9', 'Cắt theo tỷ lệ 16:9')}: ${localizedAlt(image)}`);
+      crop.setAttribute('aria-label', `${t('Fit to Frame', 'Lấp đầy khung')}: ${localizedAlt(image)}`);
       crop.setAttribute('aria-pressed', 'false');
       remove.setAttribute('aria-label', `${t('Remove photo', 'Xóa ảnh')}: ${localizedAlt(image)}`);
       earlier.disabled = index === 0;
