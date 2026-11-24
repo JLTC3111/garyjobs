@@ -146,7 +146,7 @@ test('real database: a stale version cannot publish or overwrite a newer draft',
     const saved=await h.adapter.save(vacancyInput(),{expectedVersion:0});
     const updated=await h.adapter.save({...saved,body_en:'A changed and newer set of teaching details.'},{expectedVersion:saved.version});
     const transitionsBefore=h.calls.filter(call=>call.name==='jobs_cms_transition').length;
-    await assert.rejects(()=>h.adapter.transition(saved.id,'published',{expectedVersion:saved.version}),error=>error.code==='40001');
+    await assert.rejects(()=>h.adapter.transition(saved.id,'published',{expectedVersion:saved.version}),error=>error.code==='PT409'&&error.status===409);
     assert.equal(h.calls.filter(call=>call.name==='jobs_cms_transition').length,transitionsBefore);
     assert.equal((await h.one('select version from public.jobs_cms_entries where id=$1',[saved.id])).version,updated.version);
   }finally{await h.close();}

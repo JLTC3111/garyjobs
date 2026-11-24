@@ -1,4 +1,5 @@
 import {escapeText} from './jobs-public-content.js';
+import {isConflictResponse} from './conflict-response.js';
 import {
   applicationStage, candidateKey, normalizeEmail, showcaseReady, talentAvailability, talentPageSize, talentSpecialties, talentStages
 } from './jobs-talent-data.js';
@@ -147,7 +148,7 @@ export function mountTalentPool(root, {adapter, language='en', canPublish=false,
   function problem(error) {
     if (error?.code==='23505' || error?.message==='jobs.talent_duplicate')
       return t('A candidate with this email already exists. Search for the existing profile.','Đã có ứng viên dùng email này. Hãy tìm và mở hồ sơ hiện có.');
-    if (error?.code==='40001' || error?.code==='409' || error?.message==='jobs.talent_conflict')
+    if (isConflictResponse(error))
       return t('This profile changed while you were editing. Reopen it for the latest version.','Hồ sơ đã thay đổi khi bạn chỉnh sửa. Hãy mở lại để tải phiên bản mới nhất.');
     if (error?.message==='jobs.showcase_not_approved')
       return t('Publication requires confirmed placement, approval and consent for this version.','Cần xác nhận việc làm, nội dung và sự đồng ý cho phiên bản này trước khi đăng.');

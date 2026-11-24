@@ -1,5 +1,6 @@
 import { attachEditorWorkspace } from '../editor-workspace/index.js';
 import { showActionToast } from '../action-toast.js';
+import { isConflictResponse } from '../conflict-response.js';
 import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
 import { cmsText, validationText } from './copy.js';
 import { localizeFinding } from './seo-findings.js';
@@ -38,7 +39,7 @@ export function mountCms(root, options) {
   };
   function errorText(error) {
     if (['CMS_REVIEW_REQUIRED', 'jobs.review_required'].includes(error?.message)) return t('reviewFirst');
-    if (['40001', '409', 'CMS_VERSION_CONFLICT'].includes(String(error?.code))) return t('conflict');
+    if (isConflictResponse(error)) return t('conflict');
     if (['42501', '401', '403'].includes(String(error?.code))) return t('denied');
     if (['42P01', '42883', 'PGRST202', 'PGRST205', 'CMS_NOT_CONFIGURED'].includes(String(error?.code))) return t('setup');
     if (typeof adapter.errorText === 'function') { const message = adapter.errorText(error, language); if (typeof message === 'string' && message) return message; }
@@ -452,10 +453,10 @@ export function mountCms(root, options) {
   async function onSubmit(event) {
     if (event.target.matches('[data-cms-editor]')) {
       event.preventDefault(); event.stopPropagation();
-      if (!draft || !capabilities.edit) return;
+      if (busy || !draft || !capabilities.edit) return;
       syncAutomaticSlug();
       if (showIssues(validateEntry(draft, collection()))) return;
-      const payload = structuredClone(draft); return mutate(() => adapter.save(payload, { expectedVersion: draft.version }), t('saved'));
+      const payload = structuredClone(draft); return mutate(() => adapter.save(payload, { expectedVersion: payload.version }), t('saved'));
     }
     if (event.target.matches('[data-cms-upload]')) {
       event.preventDefault(); event.stopPropagation(); if (!capabilities.media || busy) return;

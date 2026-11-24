@@ -5,6 +5,7 @@ import {PGlite} from '@electric-sql/pglite';
 
 const migrations=['20261116043122_teaching_jobs_cms_and_recruitment.sql','20261117102706_simplify_vacancy_publication.sql','20261117195500_jobs_staff_role_management.sql'];
 const eligibility='20261117202945_staff_eligibility_assignment.sql';
+const conflicts='20261124202611_jobs_postgrest_conflict_sqlstates.sql';
 const sql=name=>readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
 const bootstrap=()=>readFile(new URL('../supabase/setup-jobs-staff.sql',import.meta.url),'utf8');
 const ids={owner:'30000000-0000-4000-8000-000000000001',admin:'30000000-0000-4000-8000-000000000002',editor:'30000000-0000-4000-8000-000000000003',publisher:'30000000-0000-4000-8000-000000000004',recruiter:'30000000-0000-4000-8000-000000000005',candidate:'30000000-0000-4000-8000-000000000006',unverified:'30000000-0000-4000-8000-000000000007',outsider:'30000000-0000-4000-8000-000000000008'};
@@ -25,7 +26,7 @@ async function setup({upgrade=true}={}){
  const operator=()=>as(undefined);
  const one=async(statement,params=[])=>(await db.query(statement,params)).rows[0];
  const h={db,as,operator,one,
-  upgrade:async()=>{await operator();await db.exec(await sql(migrations[2]));await db.exec(await sql(eligibility));await h.bootstrap(ids.owner,'admin',true);},
+  upgrade:async()=>{await operator();await db.exec(await sql(migrations[2]));await db.exec(await sql(eligibility));await db.exec(await sql(conflicts));await h.bootstrap(ids.owner,'admin',true);},
   async bootstrap(userId,role,protect){
    const script=await bootstrap();
    const placeholders={'v_user_id uuid := null':`v_user_id uuid := '${userId}'`,'v_role text := null':`v_role text := '${role}'`,'v_protected boolean := null':`v_protected boolean := ${protect}`};
@@ -106,7 +107,8 @@ test('admins assign, change, suspend and restore verified accounts with an audit
   assert.equal(listed.name,'Casey Recruiter');assert.equal(listed.email,'candidate@example.test');assert.equal(listed.role,'recruiter');assert.equal(listed.active,true);assert.equal(listed.can_manage,true);
   const suspended=await h.update(ids.candidate,'recruiter',false,listed.version);
   assert.equal(suspended.active,false);assert.equal(suspended.version,listed.version+1);
-  await assert.rejects(()=>h.update(ids.candidate,'editor',true,listed.version),/jobs\.version_conflict/);
+  await assert.rejects(()=>h.update(ids.candidate,'editor',true,listed.version),
+   error=>error.code==='PT409'&&error.message==='jobs.version_conflict');
 
   await h.as(ids.candidate);
   assert.deepEqual(await h.caps(),{role:null,read:false,edit:false,publish:false,media:false,recruit:false,manage_staff:false,manage_admins:false});

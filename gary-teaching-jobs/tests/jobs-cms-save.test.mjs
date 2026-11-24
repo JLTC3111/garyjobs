@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {saveJobsContent} from '../dist/jobs-cms-save.js';
+import {isConflictResponse} from '../dist/conflict-response.js';
+import {createClient} from '@supabase/supabase-js';
 
 function database({entries = [], published = [], onSave, readError} = {}) {
   const calls = {reads: [], saves: []};
@@ -61,7 +63,7 @@ test('collision lookups page past 500 records instead of reusing an occupied add
 test('a concurrent same-title insert retries the database URL constraint', async () => {
   const entries = [];
   const h = database({entries, onSave(args, attempt) {
-    if (attempt === 1) { entries.push(reserved(args.p_record.slug)); return {error: collision}; }
+    if (attempt === 1) { entries.push(reserved(args.p_record.slug)); return {error: collision, status: 409}; }
     return {data: {...args.p_record, id: 'saved', version: 1}};
   }});
   const saved = await saveJobsContent(h.db, vacancy('Teacher'));
@@ -78,10 +80,26 @@ test('existing vacancy titles and stale client address fields cannot rename a sa
 });
 
 test('permission failures, stale versions and other unique errors are never retried', async () => {
-  for (const error of [{code: '42501'}, {code: '40001'}, {code: '23505', message: 'jobs_cms_revisions_entry_id_version_key'}, {message: 'Network error'}]) {
+  for (const error of [{code: '42501'}, {code: 'PT409', message: 'jobs.version_conflict'}, {status: 409}, {code: '40001'}, {code: '23505', message: 'jobs_cms_revisions_entry_id_version_key'}, {message: 'Network error'}]) {
     const h = database({onSave: () => ({error})});
     await assert.rejects(() => saveJobsContent(h.db, vacancy('Teacher')), actual => actual === error);
     assert.equal(h.calls.saves.length, 1);
+  }
+});
+
+test('the SDK sends one write and preserves both forms of HTTP 409 conflict', async () => {
+  for (const body of [{code:'PT409',message:'jobs.version_conflict'}, {message:'Version conflict'}]) {
+    const paths=[];
+    const db=createClient('https://jobs.example.test','fixture-key',{
+      auth:{persistSession:false,autoRefreshToken:false},
+      global:{fetch:async input=>{
+        paths.push(new URL(input).pathname);
+        return Response.json(body,{status:409});
+      }},
+    });
+    await assert.rejects(saveJobsContent(db,{kind:'guide',title_en:'Keep this draft'}, {expectedVersion:2}),
+      error=>isConflictResponse(error)&&error.message===body.message);
+    assert.deepEqual(paths,['/rest/v1/rpc/jobs_cms_save']);
   }
 });
 

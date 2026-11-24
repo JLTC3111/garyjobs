@@ -1,6 +1,7 @@
 import {titleSlug} from './cms-foundation/content.js';
+import {responseError} from './conflict-response.js';
 
-const unwrap = result => { if (result.error) throw result.error; return result.data; };
+const unwrap = result => { if (result.error) throw responseError(result); return result.data; };
 const slugConflict = error => error?.code === '23505' && /jobs_cms_entries_kind_slug_key/.test(`${error.message || ''} ${error.details || ''}`);
 
 async function reservedSlugs(db, base, kind) {
@@ -45,7 +46,7 @@ export async function saveJobsContent(db, record, {expectedVersion, automaticSlu
     if (!result.error) return result.data;
     // Another editor may save the same title between the lookup and insert.
     // Retry only this exact URL conflict, not permission/version/network errors.
-    if (!slugConflict(result.error) || attempt === 7) throw result.error;
+    if (!slugConflict(result.error) || attempt === 7) throw responseError(result);
     const fresh = await reservedSlugs(db, base, payload.kind);
     reserved = new Set([...reserved, ...fresh, payload.slug]);
   }

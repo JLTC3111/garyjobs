@@ -6,6 +6,8 @@ import {categoryOptions,locationOptions} from '../dist/jobs-vacancy-options.js';
 const ids={a:'10000000-0000-4000-8000-000000000001',b:'10000000-0000-4000-8000-000000000002',admin:'10000000-0000-4000-8000-000000000003',editor:'10000000-0000-4000-8000-000000000004',recruiter:'10000000-0000-4000-8000-000000000005',agency:'10000000-0000-4000-8000-000000000006',unverified:'10000000-0000-4000-8000-000000000007'};
 const migration = new URL('../supabase/migrations/20261117102706_simplify_vacancy_publication.sql',import.meta.url);
 const cvMigration = new URL('../supabase/migrations/20261124162809_jobs_cv_upload_recovery.sql',import.meta.url);
+const conflictMigration = new URL('../supabase/migrations/20261124202611_jobs_postgrest_conflict_sqlstates.sql',import.meta.url);
+const versionConflict = error => error.code==='PT409'&&error.message==='jobs.version_conflict';
 test('database publication choices match all curated editor category and location values',async()=>{
  const sql=await readFile(migration,'utf8');
  for(const [kind,options,count]of [['category',categoryOptions,8],['location',locationOptions,34]]){
@@ -29,6 +31,7 @@ async function setup({latest=true}={}){
  for(const [name,id]of Object.entries(ids))await db.query('insert into auth.users values($1,$2,$3)',[id,name+'@example.test',name==='unverified'?null:new Date().toISOString()]);
  await db.exec(await readFile(new URL('../supabase/migrations/20261116043122_teaching_jobs_cms_and_recruitment.sql',import.meta.url),'utf8'));
  if(latest)await db.exec(await readFile(migration,'utf8'));
+ if(latest)await db.exec(await readFile(conflictMigration,'utf8'));
  for(const role of ['admin','editor','recruiter'])await db.query('insert into jobs_private.staff_members(user_id,role) values($1,$2)',[ids[role],role]);
  const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec('set role '+(id?'authenticated':'anon'));};
  const q=(s,p=[])=>db.query(s,p),one=async(s,p=[])=>(await q(s,p)).rows[0];
@@ -45,7 +48,9 @@ test('Jobs CMS isolates roles, enforces review/versioning and retains published 
   await h.as(ids.editor);let r=await h.save(h.record('guide','teaching-guide'));
   await assert.rejects(()=>h.transition(r,'published'),/publisher_required/);
   const reviewed=await h.transition(r,'review');await h.as(ids.admin);r=await h.transition(reviewed,'published');
-  await assert.rejects(()=>h.save({...r,title_en:'Stale title',version:1}),/version_conflict/);
+  await assert.rejects(()=>h.save({...r,title_en:'Stale title',version:1}),versionConflict);
+  await assert.rejects(()=>h.transition({...r,version:1},'archived'),versionConflict);
+  await assert.rejects(()=>h.save({...h.record('guide','not-created'),version:5}),versionConflict);
   const saved=await h.save({...r,title_en:'Private working draft'});
   assert.equal(saved.status,'draft');await h.as(null);
   assert.equal((await h.one('select title_en from public.jobs_public_content where id=$1',[r.id])).title_en,'Published teaching-guide');
@@ -72,13 +77,27 @@ test('Jobs applications are durable/idempotent/owned; stages and assignees are i
   await h.as(ids.agency);await assert.rejects(()=>h.one('select public.jobs_transition_application($1,$2,$3,$4)',[a.id,'screening',ids.agency,1]),/forbidden/);
   await h.as(ids.recruiter);await assert.rejects(()=>h.one('select public.jobs_transition_application($1,$2,$3,$4)',[a.id,'hired',ids.recruiter,1]),/stage_invalid/);
   const next=await h.one('select * from public.jobs_transition_application($1,$2,$3,$4)',[a.id,'screening',ids.recruiter,1]);assert.equal(next.version,2);assert.equal(next.assigned_staff_id,ids.recruiter);
-  await assert.rejects(()=>h.one('select public.jobs_transition_application($1,$2,$3,$4)',[a.id,'shortlisted',ids.recruiter,1]),/version_conflict/);
+  await assert.rejects(()=>h.one('select public.jobs_transition_application($1,$2,$3,$4)',[a.id,'shortlisted',ids.recruiter,1]),versionConflict);
   await h.q('insert into public.jobs_recruitment_notes(application_id,body) values($1,$2)',[a.id,'Private recruiter context']);
   await h.as(ids.a);assert.equal((await h.one('select count(*)::int n from public.jobs_recruitment_notes')).n,0);assert.equal((await h.one('select count(*)::int n from public.jobs_application_events')).n,2);
   await h.q("insert into storage.objects(bucket_id,name) values('jobs-cv',$1)",[`${ids.a}/${a.id}/cv.pdf`]);
   await h.as(ids.b);assert.equal((await h.one("select count(*)::int n from storage.objects where bucket_id='jobs-cv'")).n,0);
   await assert.rejects(()=>h.q("insert into storage.objects(bucket_id,name) values('jobs-cv',$1)",[`${ids.a}/${a.id}/stolen.pdf`]),/policy/);
   await h.as(null);assert.equal((await h.one("select count(*)::int n from storage.objects where bucket_id='jobs-cv'")).n,0);
+ }finally{await h.db.close();}
+});
+test('two Jobs editors with the same version cannot overwrite the first committed edit', {timeout:15000}, async()=>{
+ const h=await setup();
+ try{
+  await h.as(ids.editor);
+  const initial=await h.save(h.record('guide','concurrent-edit'));
+  await h.as(ids.admin);
+  const first=await h.save({...initial,title_en:'First committed change'});
+  await h.as(ids.editor);
+  await assert.rejects(()=>h.save({...initial,title_en:'Stale editor change'}),versionConflict);
+  const stored=await h.one('select title_en,version from public.jobs_cms_entries where id=$1',[initial.id]);
+  assert.deepEqual(stored,{title_en:first.title_en,version:first.version});
+  assert.equal((await h.q('select version from public.jobs_cms_revisions where entry_id=$1',[initial.id])).rowCount,2);
  }finally{await h.db.close();}
 });
 test('CV reservations recover one verified attachment without disturbing existing CVs',async()=>{

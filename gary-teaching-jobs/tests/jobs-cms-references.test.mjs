@@ -168,6 +168,27 @@ test('changing language during a failed save restores the current editable form'
   assert.match(h.root.querySelector('[name="body_en"]').value,/must survive/);
  }finally{h.close();}
 });
+test('duplicate submissions share one pending save and failures retain the draft without replay',async()=>{
+ let rejectSave;
+ const h=harness({onSave:()=>new Promise((_,reject)=>{rejectSave=reject;})});
+ try{
+  await h.open();
+  h.input('[name="body_en"]','Keep this local edit');
+  const form=h.root.querySelector('[data-cms-editor]');
+  const submit=()=>form.dispatchEvent(new h.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  for(const error of [{code:'PT409',message:'jobs.version_conflict'},{status:409},new Error('offline')]){
+   submit();submit();
+   rejectSave(error);
+   await settle();
+   h.dom.window.dispatchEvent(new h.dom.window.Event('focus'));
+   await settle();
+   assert.equal(h.root.querySelector('[name="body_en"]').value,'Keep this local edit');
+   assert.equal(h.controller.isDirty(),true);
+   if(!(error instanceof Error))assert.match(h.root.querySelector('[data-editor-notice]').textContent,/draft is kept/i);
+  }
+  assert.deepEqual(h.calls.saves.map(call=>call.input.expectedVersion),[record.version,record.version,record.version]);
+ }finally{h.close();}
+});
 test('changing language during failed publication preflight retains editable fields and field errors',async()=>{
  let rejectCheck;const pending=new Promise((_,reject)=>{rejectCheck=reject;});
  const h=harness({onValidate:()=>pending});try{

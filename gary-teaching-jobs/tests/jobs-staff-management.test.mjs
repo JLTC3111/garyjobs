@@ -211,7 +211,7 @@ test('a concurrent membership change refreshes the version and keeps the unfinis
   stale=false;
   const entry=data.members.find(item=>item.user_id==='u-editor');
   Object.assign(entry,{role:'recruiter',version:5});
-  throw Object.assign(new Error('jobs.version_conflict'),{code:'40001'});
+  throw Object.assign(new Error('jobs.version_conflict'),{code:'PT409'});
  }});try{
   await h.page.ready;h.action('u-editor','edit').click();
   await h.submit({display_name:'My Jobs name'});

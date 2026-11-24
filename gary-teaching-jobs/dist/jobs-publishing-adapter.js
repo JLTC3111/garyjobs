@@ -1,4 +1,5 @@
 import {saveJobsContent} from './jobs-cms-save.js';
+import {responseError} from './conflict-response.js';
 import {validateEntry, emptyEntry} from './cms-foundation/content.js';
 import {loadReferenceOptions} from './jobs-reference-data.js';
 import {categoryOptions, locationOptions, resolveVacancyOption} from './jobs-vacancy-options.js';
@@ -57,12 +58,12 @@ export function createJobsPublishingAdapter(db, {collections}) {
   async function transition(id, status, {expectedVersion} = {}) {
     if (status === 'review' || status === 'published') {
       const record = unwrap(await db.from('jobs_cms_entries').select('*').eq('id', id).single());
-      if (record.version !== expectedVersion) throw Object.assign(new Error('jobs.version_conflict'), {code: '40001'});
+      if (record.version !== expectedVersion) throw Object.assign(new Error('jobs.version_conflict'), {code: 'PT409', status: 409});
       const issues = await validatePublication(record);
       if (issues.length) throw issueError(issues);
     }
     const result = await db.rpc('jobs_cms_transition', {p_id: id, p_status: status, p_expected_version: expectedVersion});
-    if (result.error) throw publicationError(result.error);
+    if (result.error) throw publicationError(responseError(result));
     return result.data;
   }
   async function createReference(kind, input) {

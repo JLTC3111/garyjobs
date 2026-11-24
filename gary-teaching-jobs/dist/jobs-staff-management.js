@@ -1,4 +1,6 @@
 // Presentation only: the Jobs staff RPCs re-check every permission against current database state.
+import {isConflictResponse} from './conflict-response.js';
+
 const ROLES=['editor','publisher','recruiter','admin'];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const COPY={
@@ -371,7 +373,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   }catch(error){
    if(disposed)return;
    busy=false;
-   const conflict=error?.code==='40001'||error?.message==='jobs.version_conflict';
+   const conflict=isConflictResponse(error);
    const missing=error?.message==='jobs.staff_not_found';
    const feedback=conflict?{key:'conflict'}:{error:errorText(error,lang)};
    if(draft)draft.feedback=feedback;

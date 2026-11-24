@@ -441,7 +441,8 @@ let authSyncTimer;
 db.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){clearTimeout(authSyncTimer);generation++;clearWorkspace();recovery=true;loading=false;user=session?.user||user;renderChrome();renderAuth();return;}
  if(event==='SIGNED_OUT'){showSignedOut();return;}
- if(!['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)||recovery)return;
+ // The explicit bootstrap read also handles INITIAL_SESSION.
+ if(!['SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)||recovery)return;
  // Supabase may emit SIGNED_IN again on tab focus. Keep an active editor intact.
  if(session?.user?.id===user?.id&&!loading){schedulePermissionRefresh();return;}
  clearTimeout(authSyncTimer);authSyncTimer=setTimeout(()=>void authenticate(),0);
