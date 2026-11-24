@@ -57,6 +57,8 @@ test('upgrade preserves memberships and assignments; only current verified Jobs 
 
   await h.as(ids.editor);
   assert.deepEqual(await h.caps(),{role:'editor',read:true,edit:true,publish:false,media:true,recruit:false,manage_staff:false,manage_admins:false});
+  await h.as(ids.publisher);
+  assert.deepEqual(await h.caps(),{role:'publisher',read:true,edit:true,publish:true,media:true,recruit:false,manage_staff:false,manage_admins:false});
   for(const [name,staff,admins]of [['owner',true,true],['admin',true,false],['publisher',false,false],['recruiter',false,false],['outsider',false,false],['unverified',false,false]]){
    await h.as(ids[name]);const caps=await h.caps();assert.equal(caps.manage_staff,staff,name);assert.equal(caps.manage_admins,admins,name);
   }

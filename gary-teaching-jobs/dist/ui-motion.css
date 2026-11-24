@@ -37,18 +37,18 @@
   transition: content-visibility var(--gary-motion-close) allow-discrete;
 }
 
-:is(.faq-item, #workspace-nav details, .gary-cms details)::details-content {
+:is(.faq-item, #workspace-nav details, .gary-cms details, .jobs-staff-guide)::details-content {
   opacity: 0;
   transition: opacity var(--gary-motion-close) var(--gary-motion-in),
     content-visibility var(--gary-motion-close) allow-discrete;
 }
-:is(.faq-item, #workspace-nav details, .gary-cms details)[open]::details-content {
+:is(.faq-item, #workspace-nav details, .gary-cms details, .jobs-staff-guide)[open]::details-content {
   opacity: 1;
   transition-duration: var(--gary-motion-open);
   transition-timing-function: var(--gary-motion-out);
 }
 @supports (interpolate-size: allow-keywords) {
-  :is(.faq-item, #workspace-nav details, .gary-cms details)::details-content {
+  :is(.faq-item, #workspace-nav details, .gary-cms details, .jobs-staff-guide)::details-content {
     interpolate-size: allow-keywords;
     block-size: 0;
     overflow: clip;
@@ -57,7 +57,7 @@
       opacity var(--gary-motion-close) var(--gary-motion-in),
       content-visibility var(--gary-motion-close) allow-discrete;
   }
-  :is(.faq-item, #workspace-nav details, .gary-cms details)[open]::details-content {
+  :is(.faq-item, #workspace-nav details, .gary-cms details, .jobs-staff-guide)[open]::details-content {
     block-size: auto;
     transition-duration: var(--gary-motion-open);
     transition-timing-function: var(--gary-motion-out);
