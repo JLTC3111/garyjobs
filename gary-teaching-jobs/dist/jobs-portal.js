@@ -202,18 +202,21 @@ async function renderApplications(){
  if(staff){renderRecruitmentStats(target);void loadRecruitmentStats();}
  await loadApplications();
 }
-let filterValues={},total=0;
+let filterValues={},total=0,applicationsRequest=0;
 async function loadApplications(){
- const currentGeneration=generation;
+ const currentGeneration=generation,request=++applicationsRequest,requestedPage=page;
  const list=$('#applications-list');
  const hasRows=!!list?.querySelector('.jobs-record');
  if(list&&!hasRows)list.querySelector('.jobs-empty')?.remove();
  const stop=startLattice(list,{pattern:'ripple',grid:4,label:t('Loading applications…','Đang tải hồ sơ…'),status:false,reserve:!hasRows});
  try{
- const r=await deadline(applicationList({page,...(view==='applications'?filterValues:{candidateId:user.id})}));if(currentGeneration!==generation||!user)return;total=r.total;
+ const r=await deadline(applicationList({page:requestedPage,...(view==='applications'?filterValues:{candidateId:user.id})}));
+ if(currentGeneration!==generation||request!==applicationsRequest||!user)return;
+ total=r.total;
  $('#applications-list').innerHTML=r.records.length?r.records.map(a=>`<article class="jobs-record"><header><div><h2>${esc(a.vacancy_title)}</h2><p class="jobs-meta">${esc(a.receipt_code)} · ${new Date(a.created_at).toLocaleDateString(language==='vi'?'vi-VN':'en-GB')}${view==='applications'?` · ${esc(a.jobs_candidates?.full_name)}`:''}</p></div><span class="jobs-stage">${stageLabel(a.stage)}</span></header><button data-action="open-application" data-id="${a.id}" type="button">${t('View application','Xem hồ sơ')}</button></article>`).join(''):view==='applications'?`<p class="jobs-empty">${t('No applications match this view.','Chưa có hồ sơ phù hợp.')}</p>`:`<div class="jobs-empty"><h2>${t('No applications yet','Bạn chưa có hồ sơ ứng tuyển')}</h2><p>${t('Your submitted applications and recruitment updates will appear here. Find an open vacancy or introduce yourself to the Jobs team.','Hồ sơ đã nộp và cập nhật tuyển dụng sẽ xuất hiện tại đây. Hãy tìm vị trí đang tuyển hoặc giới thiệu bản thân với đội ngũ Jobs.')}</p><div class="jobs-row-actions"><a class="jobs-link-button" href="./#opportunities">${t('Find vacancies','Tìm việc làm')}</a><a class="jobs-link-button" href="portal.html?access=candidate&view=apply">${t('Introduce yourself','Giới thiệu bản thân')}</a></div></div>`;
- $('#page-count').textContent=t(`Page ${page} · ${total} applications`,`Trang ${page} · ${total} hồ sơ`);$('[data-action="previous"]').disabled=page<=1;$('[data-action="next"]').disabled=page*20>=total;
- }finally{stop();}
+ $('#page-count').textContent=t(`Page ${requestedPage} · ${total} applications`,`Trang ${requestedPage} · ${total} hồ sơ`);$('[data-action="previous"]').disabled=requestedPage<=1;$('[data-action="next"]').disabled=requestedPage*20>=total;
+ }catch(error){if(currentGeneration===generation&&request===applicationsRequest&&user)throw error;}
+ finally{stop();}
 }
 const allowedStages=s=>({submitted:['submitted','screening','rejected','withdrawn'],screening:['screening','shortlisted','rejected','withdrawn'],shortlisted:['shortlisted','interview','rejected','withdrawn'],interview:['interview','offer','rejected','withdrawn'],offer:['offer','hired','rejected','withdrawn']}[s]||[s]);
 async function openApplication(id,{scroll=true,preserveStage=false}={}){

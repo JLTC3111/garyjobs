@@ -22,17 +22,25 @@ export function vacancyImageHandler({url, publishableKey, serviceKey, cleanupKey
     const vacancy = parameters.get('vacancy') || '', type = imageType(request.headers.get('content-type'));
     if (!idPattern.test(vacancy)) return error('draft_required', 400);
     if (!type) return error('invalid_file', 415);
+
+    const caller = {apikey: publishableKey, authorization};
+    const capability = await fetcher(`${url}/rest/v1/rpc/jobs_capabilities`, {
+      method: 'POST', headers: {...caller, 'content-type': 'application/json'}, body: '{}',
+    });
+    if ([401, 403].includes(capability.status)) return error('forbidden', capability.status);
+    if (!capability.ok) return error('unavailable', 503);
+    if ((await capability.json())?.edit !== true) return error('forbidden', 403);
+
     const bytes = await boundedImageBody(request);
     if (!bytes) return error('file_size', 413);
     const prepared = await prepareImage(bytes, type);
     if (prepared?.error === 'file_size') return error('file_size', 413);
     if (!prepared || prepared.error) return error('invalid_file', 422);
-    // The caller's JWT goes to PostgREST for verification and the existing
-    // CMS role check. Only the server key can write to the managed bucket.
+    // Reserve under the caller's current role in case access changed during conversion.
     const reservation = await rpc('reserve', {
       p_vacancy_id: vacancy, p_mime: prepared.type, p_bytes: prepared.bytes.length,
       p_width: prepared.width, p_height: prepared.height,
-    }, {apikey: publishableKey, authorization});
+    }, caller);
     if (!reservation.ok) {
       if ([401, 403].includes(reservation.status)) return error('forbidden', reservation.status);
       const result = await reservation.json().catch(() => ({}));

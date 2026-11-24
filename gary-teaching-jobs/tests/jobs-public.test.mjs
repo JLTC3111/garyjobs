@@ -6,15 +6,16 @@ import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
 import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
+import {createVacancyHandler} from '../api/vacancy.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),reducedMotion=false,storedStyle}={}){
- const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
+async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),reducedMotion=false,storedStyle,loadCatalogue,shell}={}){
+ const dom=new JSDOM(shell??await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;
  if(storedStyle!==undefined)w.localStorage.setItem('gary-jobs-vacancy-style',JSON.stringify(storedStyle));
   bindFeedbackDom(dom.window);
 w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=media=>({matches:reducedMotion&&media.includes("prefers-reduced-motion"),addEventListener(){},removeEventListener(){}});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
- w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=()=>result instanceof Error?Promise.reject(result):Promise.resolve(result);
+ w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=loadCatalogue||(()=>result instanceof Error?Promise.reject(result):Promise.resolve(result));
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());
  mountJobsPublicAccount(w.document,auth,loadCapabilities);
@@ -182,6 +183,7 @@ test('vacancy images render on cards and detail routes with localized alt and no
   d.querySelector('[data-language="vi"]').click();
   assert.equal(d.querySelector('.job-card img').alt,'Lớp học A');
   d.querySelector('.job-card h3 a').click();
+  await settle();
   const detail=d.querySelector('#detail-dialog .vacancy-photo img');
   assert.equal(detail.alt,'Lớp học A');
   assert.equal(detail.src,photo.src);
@@ -242,6 +244,7 @@ test('a job-card photo opens that vacancy gallery and does not step into another
   assert.equal(d.querySelector('#vacancy-gallery').open,false);
   assert.equal(d.activeElement,d.querySelector('[data-action="vacancy-gallery"][data-id="10000000-0000-4000-8000-000000000001"]'));
   d.querySelector('.job-card h3 a').click();
+  await settle();
   d.querySelector('#detail-dialog [data-action="vacancy-gallery"]').click();
   assert.equal(d.querySelector('#vacancy-gallery').open,true);
   assert.equal(d.querySelector('#vacancy-gallery .vacancy-gallery-photo').alt,'Cổng trường');
@@ -266,7 +269,7 @@ test('published salary and employer profile fields are visible and translate on 
  try{
   const d=dom.window.document;
   assert.match(d.querySelector('#job-grid').textContent,/USD 2,000 per month/);
-  d.querySelector('[data-action="job"]').click();assert.match(d.querySelector('#detail-dialog').textContent,/USD 2,000 per month/);
+  d.querySelector('[data-action="job"]').click();await settle();assert.match(d.querySelector('#detail-dialog').textContent,/USD 2,000 per month/);
   assert.match(d.querySelector('#published-guides').textContent,/Our teaching team supports new colleagues/);
   assert.equal(d.querySelector('#published-guides a').href,'https://employer.example.test/');
   assert.equal(d.querySelector('#published-guides img').alt,'School');
@@ -294,6 +297,7 @@ test('published vacancies have stable real links derived from the stored title s
   assert.equal(link.href,'https://jobs.garyhome.vn/jobs/english-teacher-hanoi-2');
   assert.equal(d.querySelector('#job-grid .round-arrow').getAttribute('href'),'/jobs/english-teacher-hanoi-2');
   link.click();assert.equal(dom.window.location.pathname,'/jobs/english-teacher-hanoi-2');assert.equal(d.querySelector('#detail-dialog').open,true);
+  await settle();
   assert.match(d.querySelector('#dialog-title').textContent,/English teacher: Hanoi \/ Full-time!/);
  }finally{dom.window.close();}
 });
@@ -341,6 +345,7 @@ test('vacancy workspace searches published roles and keeps Back, Forward and ret
  try{
   const w=dom.window,d=w.document;
   d.querySelector('#job-grid a[href="/jobs/teacher"]').click();
+  await settle();
   assert.ok(d.querySelector('#detail-dialog.is-vacancy-workspace[open]'));
   assert.equal(d.querySelector('h1#dialog-title').textContent,'New teacher vacancy');
   const toggle=d.querySelector('.vacancy-browse-toggle');
@@ -354,6 +359,7 @@ test('vacancy workspace searches published roles and keeps Back, Forward and ret
   const [result]=d.querySelectorAll('.vacancy-results a');
   assert.equal(result.getAttribute('href'),'/jobs/science-teacher');
   result.click();
+  await settle();
   assert.equal(w.location.pathname,'/jobs/science-teacher');
   assert.equal(d.querySelector('.vacancy-results a').getAttribute('aria-current'),'page');
   assert.equal(d.querySelector('.vacancy-article .vacancy-copy').textContent,'Teach laboratory safety.\n\nPlan practical classes.');
@@ -485,6 +491,72 @@ test('backend failure on a vacancy URL offers a retry without opening a referenc
  }finally{dom.window.close();}
 });
 
+test('opening or restoring a vacancy rechecks publication and removes stale application links',async()=>{
+ let current=records,reads=0;
+ const dom=await publicPage(null,{loadCatalogue:async()=>{reads++;return current;}});
+ try{
+  const w=dom.window,d=w.document,listing=d.querySelector('#job-grid a[href="/jobs/teacher"]');
+  current=records.filter(row=>row.kind!=='vacancy');
+  listing.click();
+  assert.match(d.getElementById('dialog-title').textContent,/Loading vacancy/);
+  assert.equal(d.querySelector('#detail-dialog .vacancy-mobile-apply'),null);
+  await settle();
+  assert.equal(reads,2);
+  assert.match(d.getElementById('dialog-title').textContent,/Vacancy unavailable/);
+  assert.equal(d.querySelector('#job-grid a[href="/jobs/teacher"]'),null);
+
+  current=records;
+  w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));
+  d.dispatchEvent(new w.Event('visibilitychange'));
+  await settle();
+  assert.equal(reads,3,'restoration events share one catalogue read');
+  assert.match(d.getElementById('dialog-title').textContent,/New teacher vacancy/);
+ }finally{dom.window.close();}
+});
+
+test('the server serves public vacancy text and metadata, with distinct missing and unavailable statuses',async()=>{
+ const row={...records[3],seo_title_vi:'Việc dạy tiếng Anh',seo_description_vi:'Cơ hội tại Hà Nội',body_vi:'Nội dung <em>thuần văn bản</em>'};
+ let fail=false;
+ const calls=[];
+ const handler=createVacancyHandler(async slug=>{calls.push(slug);if(fail)throw new Error('offline');return slug===row.slug?row:null;});
+ async function request(url,method='GET',query){
+  const response={writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;}};
+  await handler({url,method,query},response);
+  return response;
+ }
+ const published=await request('/api/vacancy?slug=teacher&lang=vi');
+ assert.equal(published.status,200);
+ const doc=new JSDOM(published.body).window.document;
+ try{
+  assert.equal(doc.documentElement.lang,'vi');assert.equal(doc.title,row.seo_title_vi);
+  assert.equal(doc.querySelector('meta[name=description]').content,row.seo_description_vi);
+  assert.equal(doc.querySelector('#app h1').textContent,row.title_vi);
+  assert.equal(doc.querySelector('#app em'),null);
+  assert.match(doc.querySelector('#app').textContent,/<em>thuần văn bản<\/em>/);
+  assert.equal(doc.querySelector('link[rel=canonical]').href,'https://jobs.garyhome.vn/jobs/teacher');
+ }finally{doc.defaultView.close();}
+ let resolveCatalogue;
+ const catalogue=new Promise(resolve=>{resolveCatalogue=resolve;});
+ const hydrated=await publicPage(catalogue,{shell:published.body,url:'https://jobs.garyhome.vn/jobs/teacher?lang=vi'});
+ try{
+  const page=hydrated.window.document;
+  assert.equal(page.title,row.seo_title_vi,'the server title stays available during loading');
+  resolveCatalogue([...records.slice(0,3),row]);await settle();
+  assert.equal(page.title,row.seo_title_vi);
+  assert.equal(page.querySelector('meta[name=description]').content,row.seo_description_vi);
+ }finally{resolveCatalogue([]);hydrated.window.close();}
+ const missing=await request('/jobs/unknown');
+ assert.equal(missing.status,404);assert.match(missing.body,/noindex,follow/);
+ const invalid=await request('/api/vacancy','GET',{slug:['teacher','unknown']});
+ assert.equal(invalid.status,404);assert.deepEqual(calls,['teacher','unknown']);
+ assert.equal((await request('/jobs/teacher','HEAD')).body,undefined);
+ assert.equal((await request('/jobs/teacher','POST')).status,405);
+ fail=true;
+ const unavailable=await request('/jobs/teacher');
+ assert.equal(unavailable.status,503);assert.equal(unavailable.headers['Retry-After'],'60');
+ assert.match(unavailable.body,/Vacancy could not be loaded/);
+});
+
 test('modified vacancy link clicks retain native open-in-new-tab behavior',async()=>{
  const dom=await publicPage(records);
  try{
@@ -496,7 +568,8 @@ test('modified vacancy link clicks retain native open-in-new-tab behavior',async
 
 test('Vercel rewrites only the public job route and the HTML supplies a root asset base',async()=>{
  const config=JSON.parse(await readFile(new URL('../vercel.json',import.meta.url),'utf8'));
- assert.deepEqual(config.rewrites,[{source:'/jobs/:slug',destination:'/index.html'}]);
+ assert.deepEqual(config.rewrites,[{source:'/jobs/:slug',destination:'/api/vacancy?slug=:slug'}]);
+ assert.equal(config.functions['api/vacancy.js'].includeFiles,'dist/index.html');
  const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
  assert.match(html,/<base href="\/">/);
 });
@@ -523,9 +596,11 @@ test('local static request handler serves a direct vacancy URL and preserves sta
  const {readFile:read,stat}=await import('node:fs/promises'),{resolve,extname,sep}=await import('node:path'),{fileURLToPath}=await import('node:url');
  const source=(await readFile(new URL('../server.mjs',import.meta.url),'utf8')).split('\n').filter(line=>!line.startsWith('import ')).join('\n').replaceAll('import.meta.url',JSON.stringify(new URL('../server.mjs',import.meta.url).href));
  let handler;
- vm.runInNewContext(source,{createServer:fn=>{handler=fn;return {listen(){},close(){}};},readFile:read,stat,resolve,extname,sep,fileURLToPath,URL,process:{argv:[],env:{},on(){}}});
- async function request(url){const res={status:null,body:null,writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;return this;}};await handler({url},res);return res;}
+ vm.runInNewContext(source,{vacancy:createVacancyHandler(async slug=>records.find(row=>row.kind==='vacancy'&&row.slug===slug)??null),createServer:fn=>{handler=fn;return {listen(){},close(){}};},readFile:read,stat,resolve,extname,sep,fileURLToPath,URL,process:{argv:[],env:{},on(){}}});
+ async function request(url){const res={status:null,body:null,writeHead(status,headers){this.status=status;this.headers=headers;return this;},end(body){this.body=body;return this;}};await handler({url,method:'GET'},res);return res;}
  const vacancy=await request('/jobs/teacher?utm_source=test');assert.equal(vacancy.status,200);assert.match(vacancy.headers['Content-Type'],/text\/html/);assert.match(vacancy.body.toString(),/<base href="\/">/);
+ assert.match(vacancy.body,/<h1>New teacher vacancy<\/h1>/);
+ assert.equal((await request('/jobs/unknown')).status,404);
  assert.equal((await request('/portal.html')).status,200);assert.equal((await request('/app.js')).status,200);assert.equal((await request('/assets/favicon-32.png')).status,200);
  assert.equal((await request('/jobs/teacher/private')).status,404);assert.equal((await request('/api/nonexistent')).status,404);
 });
@@ -584,7 +659,7 @@ test('standalone vacancies render employer, predefined bilingual filters and opt
    d.querySelector('#job-search').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
    assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/,'Direct vacancy details remain searchable: '+query);
   }
-  d.querySelector('#job-grid h3 a').click();
+  d.querySelector('#job-grid h3 a').click();await settle();
   assert.match(d.querySelector('#detail-dialog').textContent,/Independent Teaching Team/);
   assert.match(d.querySelector('#detail-dialog').textContent,/West Lake branch · 12 Example Street/);
   d.querySelector('.dialog-job-language').click();

@@ -1,5 +1,6 @@
 import {createClient} from './vendor/supabase.js';
 import {jobsConfig} from './jobs-config.js';
+import {attachCv, validateCv as validateCvFile} from './jobs-cv.js';
 import {createJobsPublishingAdapter} from './jobs-publishing-adapter.js';
 import {categoryOptions, locationOptions} from './jobs-vacancy-options.js';
 import {forgetVacancyImage, mountVacancyImageEditor, uploadVacancyImage, vacancyImageErrorText} from './jobs-vacancy-image.js';
@@ -24,7 +25,15 @@ export function errorText(error,language='en'){
  return vi?'Chưa thể hoàn tất thao tác. Kiểm tra kết nối và thử lại.':'The action could not be completed. Check your connection and try again.';
 }
 export async function capabilities(){return unwrap(await db.rpc('jobs_capabilities'));}
-export async function publicContent(){const rows=[];for(let from=0;from<10000;from+=500){const page=unwrap(await db.from('jobs_public_content').select('*').order('published_at',{ascending:false}).order('id').range(from,from+499));rows.push(...page);if(page.length<500)return rows;}throw new Error('Published catalogue exceeds this view limit.');}
+export async function publicContent(){
+ const rows=[],signal=AbortSignal.timeout(8000);
+ for(let from=0;from<10000;from+=500){
+  const page=unwrap(await db.from('jobs_public_content').select('*').order('published_at',{ascending:false}).order('id').range(from,from+499).abortSignal(signal));
+  if(!Array.isArray(page))throw new Error('Invalid published catalogue response.');
+  rows.push(...page);if(page.length<500)return rows;
+ }
+ throw new Error('Published catalogue exceeds this view limit.');
+}
 const fields=['hours','ages','salary_en','salary_vi','benefits_en','benefits_vi','requirements_en','requirements_vi','contact_email','source_url','employer_slug','category_slug','location_slug','closes_on'];
 const field=(key,en,vi,type='text',extra={})=>({key,label:{en,vi},type,...extra});
 export const collections=[
@@ -66,8 +75,11 @@ export function createCmsAdapter(){return {
   return {...r,url:db.storage.from(jobsConfig.mediaBucket).getPublicUrl(path).data.publicUrl};
  }
 };}
-export function validateCv(file){if(!file||!['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)||file.size<1||file.size>jobsConfig.maxCvBytes)throw new Error('jobs.cv_invalid');}
-export async function uploadCv(application,file){validateCv(file);const ext=file.type==='application/pdf'?'pdf':'docx',path=`${application.candidate_id}/${application.id}/${crypto.randomUUID()}.${ext}`;unwrap(await db.storage.from(jobsConfig.cvBucket).upload(path,file,{contentType:file.type,upsert:false}));return unwrap(await db.from('jobs_application_documents').insert({application_id:application.id,candidate_id:application.candidate_id,object_path:path,file_name:file.name.slice(0,200),mime_type:file.type,size_bytes:file.size}).select().single());}
+export function validateCv(file){return validateCvFile(file);}
+export async function uploadCv(application,file){
+ try{return await attachCv(db,application.id,file);}
+ catch(error){return unwrap({error});}
+}
 export async function submitApplication({vacancyId=null,profile,message,requestId}){return unwrap(await db.rpc('jobs_submit_application',{p_vacancy_id:vacancyId,p_profile:profile,p_message:message,p_client_request_id:requestId}));}
 export async function applicationList({page=1,stage='',assignee='',query='',candidateId=null}={}){
  let q=db.from('jobs_applications').select('*,jobs_candidates(full_name,email,phone,current_location)',{count:'exact'}).order('created_at',{ascending:false}).order('id').range((page-1)*20,page*20-1);

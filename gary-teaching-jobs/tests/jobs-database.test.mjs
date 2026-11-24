@@ -5,6 +5,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {categoryOptions,locationOptions} from '../dist/jobs-vacancy-options.js';
 const ids={a:'10000000-0000-4000-8000-000000000001',b:'10000000-0000-4000-8000-000000000002',admin:'10000000-0000-4000-8000-000000000003',editor:'10000000-0000-4000-8000-000000000004',recruiter:'10000000-0000-4000-8000-000000000005',agency:'10000000-0000-4000-8000-000000000006',unverified:'10000000-0000-4000-8000-000000000007'};
 const migration = new URL('../supabase/migrations/20261117102706_simplify_vacancy_publication.sql',import.meta.url);
+const cvMigration = new URL('../supabase/migrations/20261124162809_jobs_cv_upload_recovery.sql',import.meta.url);
 test('database publication choices match all curated editor category and location values',async()=>{
  const sql=await readFile(migration,'utf8');
  for(const [kind,options,count]of [['category',categoryOptions,8],['location',locationOptions,34]]){
@@ -22,7 +23,7 @@ async function setup({latest=true}={}){
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
- create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
+ create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,metadata jsonb not null default '{}');
  alter table storage.objects enable row level security;grant select,insert,update,delete on storage.objects to anon,authenticated;
  create policy unrelated_permissive_policy on storage.objects for all to anon,authenticated using(true) with check(true);`);
  for(const [name,id]of Object.entries(ids))await db.query('insert into auth.users values($1,$2,$3)',[id,name+'@example.test',name==='unverified'?null:new Date().toISOString()]);
@@ -78,6 +79,36 @@ test('Jobs applications are durable/idempotent/owned; stages and assignees are i
   await h.as(ids.b);assert.equal((await h.one("select count(*)::int n from storage.objects where bucket_id='jobs-cv'")).n,0);
   await assert.rejects(()=>h.q("insert into storage.objects(bucket_id,name) values('jobs-cv',$1)",[`${ids.a}/${a.id}/stolen.pdf`]),/policy/);
   await h.as(null);assert.equal((await h.one("select count(*)::int n from storage.objects where bucket_id='jobs-cv'")).n,0);
+ }finally{await h.db.close();}
+});
+test('CV reservations recover one verified attachment without disturbing existing CVs',async()=>{
+ const h=await setup();try{
+  await h.as(ids.a);
+  const app=await h.one("select * from public.jobs_submit_application(null,$1,'Application',gen_random_uuid())",[{full_name:'Candidate A',consent:true}]);
+  const original=await h.one("insert into public.jobs_application_documents(application_id,candidate_id,object_path,file_name,mime_type,size_bytes) values($1,$2,$3,'original.pdf','application/pdf',3) returning id",[app.id,ids.a,`${ids.a}/${app.id}/original.pdf`]);
+  await h.db.exec('reset role');
+  await h.db.exec(await readFile(cvMigration,'utf8'));
+  const reserve=async(hash='a'.repeat(64))=>(await h.one("select public.jobs_reserve_cv_upload($1,$2,'cv.pdf','application/pdf',24) r",[app.id,hash])).r;
+  const complete=id=>h.one('select * from public.jobs_complete_cv_upload($1)',[id]);
+  const store=(path,size)=>h.q("insert into storage.objects(bucket_id,name,metadata) values('jobs-cv',$1,$2::jsonb)",[path,{mimetype:'application/pdf',size}]);
+  const documents=() => h.q('select id from public.jobs_application_documents where application_id=$1',[app.id]);
+  await h.as(ids.a);
+  const first=await reserve();assert.deepEqual(await reserve(),first);
+  assert.equal(first.stored,false);assert.equal(first.document,null);
+  await assert.rejects(()=>complete(first.id),/jobs.cv_upload_missing/);
+  assert.deepEqual((await documents()).rows,[original]);
+  await h.as(ids.b);
+  await assert.rejects(reserve,/jobs.forbidden/);await assert.rejects(()=>complete(first.id),/jobs.forbidden/);
+  await h.as(ids.a);await store(first.object_path,24);
+  assert.deepEqual(await reserve(),{...first,stored:true});
+  const attached=await complete(first.id);
+  assert.equal(attached.object_path,first.object_path);
+  assert.equal((await reserve()).document.id,attached.id);
+  assert.equal((await complete(first.id)).id,attached.id);
+  assert.equal((await documents()).rows.length,2);
+  const mismatch=await reserve('b'.repeat(64));await store(mismatch.object_path,23);
+  await assert.rejects(()=>complete(mismatch.id),/jobs.cv_invalid/);
+  assert.equal((await documents()).rows.length,2);
  }finally{await h.db.close();}
 });
 test('vacancy required fields, expiry and bilingual media metadata are enforced below the UI',async()=>{

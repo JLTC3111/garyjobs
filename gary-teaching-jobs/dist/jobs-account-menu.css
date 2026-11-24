@@ -4,7 +4,7 @@
   --account-line: var(--jobs-portal-line);
   --account-surface: var(--jobs-portal-surface);
   --account-hover: var(--jobs-portal-raised);
-  --account-danger: color-mix(in srgb, var(--color-red-500, #fb2c36) 75%, var(--account-ink));
+  --account-danger: #D51212;
   position: relative;
   flex: none;
   color: var(--account-ink);
@@ -16,7 +16,7 @@
   --account-surface: var(--jobs-surface);
   --account-hover: var(--jobs-raised);
 }
-html[data-jobs-theme="dark"] .jobs-login-menu { --account-danger: #E99491; }
+html[data-jobs-theme="dark"] .jobs-login-menu { --account-danger: #EC8686; }
 .jobs-login-menu[hidden] { display: none; }
 .jobs-portal-header:has(#portal-account[open]) { z-index: 31; }
 .jobs-login-menu > summary {

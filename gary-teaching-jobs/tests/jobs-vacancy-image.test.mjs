@@ -23,21 +23,29 @@ test('unverified or invalid uploads cannot reach managed Storage',async()=>{
  const requests=[];
  const handler=vacancyImageHandler({
   url:api,publishableKey:'publishable',serviceKey:'server',cleanupKey:'disabled-test',
-  fetcher:async(url,options)=>{requests.push({url,options});return Response.json({}, {status:403});},
+  fetcher:async(url,options)=>{
+   requests.push({url,options});
+   if(url.endsWith('/jobs_capabilities'))return Response.json({edit:options.headers.authorization==='Bearer fixture-editor'});
+   return Response.json({}, {status:403});
+  },
  });
  const send=(body,headers={})=>handler(new Request(api+'/?vacancy='+id,{method:'POST',body,headers}));
  const png=await readFile(new URL('../dist/assets/favicon-32.png',import.meta.url));
- const headers={authorization:'Bearer no-cms-access','content-type':'image/png'};
+ const headers={authorization:'Bearer fixture-editor','content-type':'image/png'};
  assert.equal((await send(png,{'content-type':'image/png'})).status,401);
  assert.equal((await send('<svg/>',{...headers,'content-type':'image/svg+xml'})).status,415);
+ const denied=new Request(api+'/?vacancy='+id,{method:'POST',body:png,headers:{...headers,authorization:'Bearer fixture-recruiter'}});
+ assert.equal((await handler(denied)).status,403);
+ assert.equal(denied.bodyUsed,false,'an unauthorized request is rejected before reading the image');
  assert.equal((await send('<svg/>',headers)).status,422);
  assert.equal((await send(new Uint8Array(maxImageBytes+1),headers)).status,413);
- assert.equal(requests.length,0);
+ assert.ok(requests.every(call=>call.url.endsWith('/jobs_capabilities')));
  assert.equal((await send(png,headers)).status,403);
- assert.equal(requests.length,1);
- assert.match(requests[0].url,/\/rpc\/jobs_vacancy_image_reserve$/);
- assert.equal(requests[0].options.headers.authorization,headers.authorization);
- const reserved=JSON.parse(requests[0].options.body);
+ assert.equal(requests.length,5);
+ const reservation=requests.at(-1);
+ assert.match(reservation.url,/\/rpc\/jobs_vacancy_image_reserve$/);
+ assert.equal(reservation.options.headers.authorization,headers.authorization);
+ const reserved=JSON.parse(reservation.options.body);
  assert.equal(reserved.p_mime,'image/webp');
  assert.equal(reserved.p_width,32);
  assert.equal(reserved.p_height,32);
@@ -57,13 +65,13 @@ test('png uploads become same-size webp, webp stays unchanged, and an oversized 
  const handler=vacancyImageHandler({
   url:'https://supabase.example.test',publishableKey:'publishable',serviceKey:'server',cleanupKey:'disabled-test',
   prepareImage:async()=>({error:'file_size'}),
-  fetcher:async()=>{requests.push(1);return Response.json({});},
+  fetcher:async url=>{requests.push(url);return Response.json({edit:true});},
  });
  const response=await handler(new Request('https://supabase.example.test/?vacancy=11000000-0000-4000-8000-000000000001',{
   method:'POST',body:png,headers:{authorization:'Bearer staff','content-type':'image/png'},
  }));
  assert.equal(response.status,413);
- assert.equal(requests.length,0);
+ assert.deepEqual(requests,['https://supabase.example.test/rest/v1/rpc/jobs_capabilities']);
 });
 
 test('unauthorized or in-use forget does not delete storage',async()=>{

@@ -15,13 +15,13 @@ Open `http://localhost:4179`. To use another port, run `npm run dev -- --port 41
 npm run build
 ```
 
-The photo carousel uses React, React DOM, and OGL, bundled locally with esbuild. `npm run dev` rebuilds the gallery when its source changes. `dist/` is the complete static site and can be served by any static host without installing dependencies on that host. `server.mjs` is a small development server; it is not needed by a static hosting service.
+The photo carousel uses React, React DOM, and OGL, bundled locally with esbuild. `npm run dev` rebuilds the gallery when its source changes. The homepage, portal, and their assets are served from `dist/`. Vacancy URLs use `api/vacancy.js` through Vercel or the included Node preview server.
 
 ### Vercel
 
 Deploy this directory with the included `vercel.json`. It selects the **Other** framework preset, runs `npm run build`, and serves `dist/` as static files. If this repository contains multiple projects, set Vercel's **Root Directory** to `gary-teaching-jobs`.
 
-The website does not need a Vercel Function or a production start command. `npm start` runs the local preview server only. If an older deployment shows `500 FUNCTION_INVOCATION_FAILED`, deploy the updated configuration so Vercel serves the static build. Existing deployments keep their original configuration until a new deployment is created.
+Vercel sends `/jobs/:slug` to the vacancy function for public HTML, metadata, and HTTP status. `npm start` runs the same handler locally alongside the static assets.
 
 The Sites project is registered in `.openai/hosting.json`. Publication was not completed because the execution environment could not resolve `git.chatgpt-team.site`. The expected Sites origin in the social image metadata is not a verified live URL. Before deploying elsewhere, update `og:image` to that host's origin.
 
@@ -78,29 +78,9 @@ Verified in desktop Edge and responsive Chrome: English and Vietnamese page rend
 
 The photo carousel was also checked in Chrome on desktop and at a 390 px phone width: real local photographs, location filtering, next-photo controls, Vietnamese captions, language switching, keyboard navigation to the last photo, Enter/Escape focus, and the Hội An destination dialog. The build confirms all 58 supplied photographs are included.
 
-## Shared Gary Apps updates
+## Gary Apps menu
 
-The header and phone navigation connect to Gary Home's shared runtime at
-`https://garyhome.vn/shared/gary-apps/v1/manifest.json`. The manifest points to
-matching, hashed JavaScript and CSS from one release. Publishing that shared
-release updates Homes, Jobs and Visa without rebuilding Jobs. Visible pages
-check once a minute and on returning to the tab; an open or focused menu finishes
-its interaction before the new release replaces it.
-
-`src/components/GaryAppsMount.jsx` keeps the locally bundled menu available until
-the remote component and its stylesheet load successfully. Network errors leave
-the current menu usable. The adapter forwards the current English/Vietnamese
-language and mobile-menu callbacks. The shared component reads no account data.
-
-The canonical component, catalogue, release builder and browser protocol adapter
-live in Gary Home's `shared/gary-apps/`. Jobs keeps a copy of `client.js` only for
-the stable loading protocol, plus its last known local component as a fallback;
-regular design, copy and link changes belong in the canonical Home component.
-Change the local protocol copy only when the loading API itself changes.
-
-Run `npm run test:shared` for manifest validation, deduplicated loading, language
-updates, deferred release replacement, retry and unmount cleanup checks. Run
-`npm run build` for the complete static-site validation.
+Jobs bundles the menu and its catalogue from `src/gary-apps/`. Updates to the links, labels, or menu runtime ship through a Jobs release. The header still supplies the active language and mobile navigation callbacks.
 
 ## CMS and backend development
 

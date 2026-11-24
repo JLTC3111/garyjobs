@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 import {enhanceGaryApps} from '../src/gary-apps/brand-adapter.js';
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 const markup=()=>['home','jobs','visa'].map(app=>`<a class="gary-app-menu-item gary-app-${app}" href="https://${app==='home'?'garyhome.vn':app+'.garyhome.vn'}/" target="_blank" rel="noopener noreferrer"><span class="gary-app-mark" aria-hidden="true"><svg data-runtime-icon></svg></span><span><strong>Gary ${app}</strong><span>Existing localized description</span><small class="gary-app-menu-host">${app}</small></span></a>`).join('')+'<a data-all-services href="https://garyhome.vn/services#gary-services">All services</a><a data-travel href="https://jobs.garyhome.vn/#life">Travel</a>';
+test('Jobs mounts an app-local menu and the shipped entry has no remote release loader',async()=>{
+ const [mount,bundle]=await Promise.all(['src/components/GaryAppsMount.jsx','dist/photo-gallery.js'].map(path=>readFile(new URL('../'+path,import.meta.url),'utf8')));
+ assert.match(mount,/root.render\(<GaryAppsMenu/);
+ assert.doesNotMatch(mount,/connectGaryApps/);
+ assert.doesNotMatch(bundle,/shared\/gary-apps\/v1\/manifest\.json|Invalid Gary Apps manifest/);
+});
 test('host branding preserves navigation and runtime nodes while adding distinctive monochrome marks',()=>{
  const dom=new JSDOM('<main>'+markup()+'</main>'),root=dom.window.document.querySelector('main');
  const links=[...root.querySelectorAll('a')].map(link=>({node:link,href:link.href,target:link.target,rel:link.rel})),originals=[...root.querySelectorAll('[data-runtime-icon]')];

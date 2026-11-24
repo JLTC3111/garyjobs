@@ -4,29 +4,31 @@ import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 
 const migrations=['20261116043122_teaching_jobs_cms_and_recruitment.sql','20261117102706_simplify_vacancy_publication.sql','20261117195500_jobs_staff_role_management.sql'];
+const eligibility='20261117202945_staff_eligibility_assignment.sql';
 const sql=name=>readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
+const bootstrap=()=>readFile(new URL('../supabase/setup-jobs-staff.sql',import.meta.url),'utf8');
 const ids={owner:'30000000-0000-4000-8000-000000000001',admin:'30000000-0000-4000-8000-000000000002',editor:'30000000-0000-4000-8000-000000000003',publisher:'30000000-0000-4000-8000-000000000004',recruiter:'30000000-0000-4000-8000-000000000005',candidate:'30000000-0000-4000-8000-000000000006',unverified:'30000000-0000-4000-8000-000000000007',outsider:'30000000-0000-4000-8000-000000000008'};
 
 async function setup({upgrade=true}={}){
  const db=new PGlite();
  await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;
- create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+ create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,deleted_at timestamptz,banned_until timestamptz,is_anonymous boolean default false);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
  alter table storage.objects enable row level security;`);
- for(const [name,id]of Object.entries(ids))await db.query('insert into auth.users values($1,$2,$3)',[id,name+'@example.test',name==='unverified'?null:new Date().toISOString()]);
+ for(const [name,id]of Object.entries(ids))await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)',[id,name+'@example.test',name==='unverified'?null:new Date().toISOString()]);
  for(const name of migrations.slice(0,2))await db.exec(await sql(name));
  for(const [name,role]of [['owner','admin'],['admin','admin'],['editor','editor'],['publisher','publisher'],['recruiter','recruiter']])await db.query('insert into jobs_private.staff_members(user_id,role) values($1,$2)',[ids[name],role]);
  const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);if(id!==undefined)await db.exec('set role '+(id?'authenticated':'anon'));};
  const operator=()=>as(undefined);
  const one=async(statement,params=[])=>(await db.query(statement,params)).rows[0];
  const h={db,as,operator,one,
-  upgrade:async()=>{await operator();await db.exec(await sql(migrations[2]));await h.bootstrap('owner@example.test','admin',true);},
-  async bootstrap(email,role,protect){
-   const script=await readFile(new URL('../supabase/setup-jobs-staff.sql',import.meta.url),'utf8');
-   const placeholders={"lower(email)='staff@example.com'":`lower(email)='${email}'`,"chosen_role text:='admin'":`chosen_role text:='${role}'`,'make_protected boolean:=null':`make_protected boolean:=${protect}`};
+  upgrade:async()=>{await operator();await db.exec(await sql(migrations[2]));await db.exec(await sql(eligibility));await h.bootstrap(ids.owner,'admin',true);},
+  async bootstrap(userId,role,protect){
+   const script=await bootstrap();
+   const placeholders={'v_user_id uuid := null':`v_user_id uuid := '${userId}'`,'v_role text := null':`v_role text := '${role}'`,'v_protected boolean := null':`v_protected boolean := ${protect}`};
    for(const placeholder of Object.keys(placeholders))assert.ok(script.includes(placeholder),placeholder);
    await operator();await db.exec(Object.entries(placeholders).reduce((text,[from,to])=>text.replace(from,to),script));
   },
@@ -162,7 +164,7 @@ test('self-changes, protected accounts, administrator grants and the last active
   await h.as(ids.owner);
   assert.equal((await h.update(ids.admin,'editor',true,await h.version(ids.admin))).role,'editor','a protected owner can demote an administrator');
   await assert.rejects(async()=>h.update(ids.owner,'editor',true,await h.version(ids.owner)),/jobs\.self_change_forbidden/);
-  await h.bootstrap('candidate@example.test','admin',true);
+  await h.bootstrap(ids.candidate,'admin',true);
   await h.as(ids.owner);
   await assert.rejects(async()=>h.update(ids.candidate,'editor',true,await h.version(ids.candidate)),/jobs\.protected_account/,'protected owners cannot change each other in the app');
 
@@ -178,10 +180,11 @@ test('self-changes, protected accounts, administrator grants and the last active
   await assert.rejects(()=>h.db.query('update jobs_private.staff_members set active=false where user_id=$1',[ids.candidate]),/jobs\.last_admin_required/);
 
   // Re-running the operator script restores an owner without dropping protection unless asked to.
-  await h.bootstrap('owner@example.test','admin',null);
+  await h.bootstrap(ids.owner,'admin',null);
   assert.deepEqual(await h.one('select role,active,protected from jobs_private.staff_members where user_id=$1',[ids.owner]),{role:'admin',active:true,protected:true});
-  for(const [email,role,protect,error]of [['editor@example.test','editor',true,/Only a Jobs admin can be a protected owner/],['unverified@example.test','editor',null,/query returned no rows/]]){
-   await assert.rejects(()=>h.bootstrap(email,role,protect),error);await h.db.exec('rollback');
+  await assert.rejects(async()=>h.db.exec(await bootstrap()),e=>e.code==='22023');await h.db.exec('rollback');
+  for(const [id,role,protect]of [[ids.editor,'editor',true],[ids.unverified,'editor',null]]){
+   await assert.rejects(()=>h.bootstrap(id,role,protect),e=>e.code==='23514');await h.db.exec('rollback');
   }
   assert.deepEqual(await h.one('select role,protected from jobs_private.staff_members where user_id=$1',[ids.editor]),{role:'publisher',protected:false});
  }finally{await h.db.close();}

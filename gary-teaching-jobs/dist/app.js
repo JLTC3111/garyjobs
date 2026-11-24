@@ -3,6 +3,7 @@ import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
 import {showActionToast,setCounterValues} from './action-toast.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
+let catalogueStamp=null,catalogueFlight=null;
 let vacancyQuery='';
 const defaultSocialImage=document.querySelector('meta[property="og:image"]')?.content;
 
@@ -20,7 +21,7 @@ const vacancyStyles = [
 const vacancyStyleKey = 'gary-jobs-vacancy-style';
 function validVacancyStyle(value) { return vacancyStyles.some(([style])=>style===value) ? value : 'original'; }
 let vacancyStyle=validVacancyStyle(readStored(vacancyStyleKey,'original'));
-const state = { lang: readStored('gary-language', 'en') === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
+const state = { lang: readStored('gary-language', document.documentElement.lang) === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
 let photoGalleryMount;
 let glassHeroMount;
 let headerApps = [];
@@ -161,7 +162,7 @@ function renderPage() {
   photoGalleryMount = null;
   clearHeaderApps();
   document.documentElement.lang = state.lang;
-  document.title = t('English Teaching Jobs in Vietnam | Gary Agency', 'Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
+  if(!document.documentElement.hasAttribute('data-server-vacancy'))document.title = t('English Teaching Jobs in Vietnam | Gary Agency', 'Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
   $('.skip-link').textContent = t('Skip to content', 'Chuyển đến nội dung');
   $('#app').innerHTML = `
     <div class="announcement"><div class="container announcement-inner"><span>${icon('globe')} ${t('Your local connection to a world of opportunity.', 'Kết nối địa phương, mở ra cơ hội mới.')}</span><div class="announcement-links"><a href="#why-gary">${t('No placement fees. Ever.', 'Không phí giới thiệu việc làm.')} ${icon('arrow')}</a></div></div></div>
@@ -446,15 +447,16 @@ function closeDialog() { leaveVacancyRoute(); $('#detail-dialog').close(); }
 // Public URLs use the saved slug, so changing a title never changes a live link.
 function updateVacancyMetadata(job=null){
   const decode=value=>{const textarea=document.createElement('textarea');textarea.innerHTML=value||'';return textarea.value;};
-  document.title=job?`${decode(pick(job.title))} | Vietnam English Teaching Jobs`:t('English Teaching Jobs in Vietnam | Gary Agency','Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
-  const description=job?decode(pick(job.intro)):t('Find your next English teaching opportunity in Vietnam with Gary Agency. Fee-free placement, a local team, and support for your next chapter.','Tìm công việc giảng dạy tiếng Anh tại Việt Nam cùng Gary Agency. Giới thiệu việc làm miễn phí và đội ngũ địa phương đồng hành.');
+  document.title=job?(decode(pick(job.seoTitle))||`${decode(pick(job.title))} | Vietnam English Teaching Jobs`):t('English Teaching Jobs in Vietnam | Gary Agency','Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
+  const description=job?decode(pick(job.seoDescription)||pick(job.intro)):t('Find your next English teaching opportunity in Vietnam with Gary Agency. Fee-free placement, a local team, and support for your next chapter.','Tìm công việc giảng dạy tiếng Anh tại Việt Nam cùng Gary Agency. Giới thiệu việc làm miễn phí và đội ngũ địa phương đồng hành.');
   for(const [selector,value] of [['meta[name="description"]',description],['meta[property="og:title"]',document.title],['meta[property="og:description"]',description]])document.querySelector(selector)?.setAttribute('content',value);
   if(defaultSocialImage)$('meta[property="og:image"]')?.setAttribute('content',job?.image?.url||defaultSocialImage);
   let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}canonical.href=new URL(job?.url||'/',location.origin).href;
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content',canonical.href);
   document.querySelector('meta[data-vacancy-robots]')?.remove();
 }
 function leaveVacancyRoute(){
-  if(!routeDialog)return;routeDialog=false;updateVacancyMetadata();
+  if(!routeDialog)return;routeDialog=false;vacancyQuery='';updateVacancyMetadata();
   if(!location.pathname.startsWith('/jobs/'))return;
   const previous=history.state?.garyJobsReturnUrl,returnUrl=typeof previous==='string'&&previous.startsWith('/')&&!previous.startsWith('//')?previous:'/'+location.search+'#opportunities';
   if(history.state?.garyJobsFromListing)history.go(-(history.state.garyJobsListingDepth||1));
@@ -465,20 +467,23 @@ function leaveVacancyRoute(){
 }
 function syncVacancyRoute(){
   const slug=vacancySlug(location.pathname);
-  if(!slug&&!location.pathname.startsWith('/jobs/')){if(routeDialog){routeDialog=false;$('#detail-dialog').close();updateVacancyMetadata();}return;}
+  if(!slug&&!location.pathname.startsWith('/jobs/')){if(routeDialog){routeDialog=false;vacancyQuery='';$('#detail-dialog').close();updateVacancyMetadata();}return;}
   if(publicLoadState==='ready'){
     const job=jobs.find(item=>item.persistent&&item.slug===slug);
     if(job){openJob(job.id,{navigate:false});return;}
   }
   routeDialog=true;
-  updateVacancyMetadata();
   const pending=publicLoadState==='loading',failed=publicLoadState==='failed';
+  if(!pending||!document.documentElement.hasAttribute('data-server-vacancy'))updateVacancyMetadata();
   openDialog(`<div class="vacancy-workspace">${vacancyHeader()}<section class="vacancy-route-status${pending?' lattice-surface':''}" aria-busy="${pending}"><h1 id="dialog-title" tabindex="-1">${pending?t('Loading vacancy…','Đang tải tin tuyển dụng…'):failed?t('Vacancy could not be loaded','Chưa thể tải tin tuyển dụng'):t('Vacancy unavailable','Tin tuyển dụng không còn khả dụng')}</h1><p>${pending?t('Checking the current published vacancy.','Đang kiểm tra tin tuyển dụng đã xuất bản.'):failed?t('Check your connection and try again.','Kiểm tra kết nối rồi thử lại.'):t('This vacancy may have closed or is no longer published. Browse current opportunities to find another role.','Vị trí này có thể đã hết hạn hoặc không còn được đăng. Xem các cơ hội hiện tại để tìm công việc khác.')}</p>${pending?'<div class="lattice-slot" data-reserve id="vacancy-lattice"></div>':''}${failed?`<button type="button" class="button" data-action="retry-vacancy">${t('Try again','Thử lại')}</button>`:''}</section></div>`,{workspace:true});
   if(pending)globalThis.garyLattice?.showDelayedLattice(document.getElementById('vacancy-lattice'),{pattern:'orbit',grid:3,label:'',cellSize:8,gap:3,fontSize:14});
   renderThemeControls();
   if(!pending){document.title=t('Vacancy unavailable | Vietnam English Teaching Jobs','Tin tuyển dụng không còn khả dụng | Vietnam English Teaching Jobs');let robots=document.querySelector('meta[data-vacancy-robots]');if(!robots){robots=document.createElement('meta');robots.name='robots';robots.dataset.vacancyRobots='';document.head.append(robots);}robots.content='noindex,follow';}
 }
-window.addEventListener('popstate',syncVacancyRoute);
+window.addEventListener('popstate',()=>{
+  if(vacancySlug(location.pathname))void loadPublishedContent({interactive:true});
+  else syncVacancyRoute();
+});
 
 function openDestination(id) {
   const d=destinations[id];if(!d)return;openDialog(`<div class="destination-dialog-photo"><img src="${d.image}" alt="${pick(d.alt)}" width="${d.width}" height="${d.height}" style="object-position:${d.position}"></div><p class="eyebrow">${pick(d.eyebrow)}</p><h2 id="dialog-title">${pick(d.name)}<em>, Vietnam.</em></h2><p class="dialog-intro">${pick(d.detail)}</p><button class="button" data-action="destination-jobs" data-id="${id}">${t('Explore teaching opportunities','Khám phá cơ hội giảng dạy')} ${arrow()}</button>`);
@@ -604,21 +609,26 @@ function revealVacancyCopy(article){
 function openJob(id,{navigate=true}={}) {
   const job=jobs.find(item=>item.id===id);
   if(!job)return;
-  const previous=$('#detail-dialog[open] .vacancy-workspace[data-vacancy]');
-  const keepPosition=!navigate&&previous?.dataset.vacancy===id;
-  const bodyScroll=keepPosition?$('.vacancy-workspace-body',previous).scrollTop:0;
-  const readingScroll=keepPosition?$('.vacancy-reading',previous).scrollTop:0;
-  const resultScroll=previous?$('.vacancy-results',previous).scrollTop:0;
-  const browseExpanded=keepPosition&&$('.vacancy-browse-toggle',previous).getAttribute('aria-expanded')==='true';
-  if(!previous)vacancyQuery='';
-  if(job.url){
-    if(navigate&&location.pathname!==job.url){
+  if(job.url&&navigate){
+    const differentPath=location.pathname!==job.url;
+    if(differentPath){
       const fromListing=!location.pathname.startsWith('/jobs/'),previousState=history.state;
       const returnUrl=fromListing?location.pathname+location.search+location.hash:previousState?.garyJobsReturnUrl||'/'+location.search+'#opportunities';
       const depth=fromListing?1:previousState?.garyJobsFromListing?(previousState.garyJobsListingDepth||1)+1:0;
       const target=new URL(job.url,location.origin);target.search=location.search;
       history.pushState({garyJobsFromListing:depth>0,garyJobsListingDepth:depth,garyJobsReturnUrl:returnUrl},'',target);
     }
+    void loadPublishedContent({interactive:differentPath});
+    return;
+  }
+  const previous=$('#detail-dialog[open] .vacancy-workspace[data-vacancy]');
+  const keepPosition=!navigate&&previous?.dataset.vacancy===id;
+  const bodyScroll=keepPosition?$('.vacancy-workspace-body',previous).scrollTop:0;
+  const readingScroll=keepPosition?$('.vacancy-reading',previous).scrollTop:0;
+  const resultScroll=previous?$('.vacancy-results',previous).scrollTop:0;
+  const browseExpanded=keepPosition&&$('.vacancy-browse-toggle',previous).getAttribute('aria-expanded')==='true';
+  if(!previous&&!routeDialog)vacancyQuery='';
+  if(job.url){
     routeDialog=true;updateVacancyMetadata(job);
   }
   const apply=vacancyApply(job);
@@ -754,7 +764,7 @@ document.addEventListener('click',event=>{
   }
   if(action==='vacancy-browse')control.setAttribute('aria-expanded',String(control.getAttribute('aria-expanded')!=='true'));
   if(action==='share-vacancy')void shareVacancy(id,control);
-  if(action==='retry-vacancy')void loadPublishedContent();
+  if(action==='retry-vacancy')void loadPublishedContent({interactive:true});
   if(action==='apply'){toggleMenu(false);openApplication(id);}
   if(action==='close-dialog')closeDialog();
   if(action==='destination')openDestination(id);
@@ -858,11 +868,28 @@ function renderManagedContent(){
   }
   const note=document.createElement('p');note.className='jobs-live-note';note.setAttribute('role','status');
   note.textContent=backendReady?t('Published vacancies are current until their closing date. Submit securely and track your application in the candidate portal.','Tin đã xuất bản hiển thị đến hạn tuyển. Nộp hồ sơ an toàn và theo dõi tại cổng ứng viên.'):t('Online applications are not available yet. These reference listings require recruiter confirmation; the fallback form only prepares an email.','Ứng tuyển trực tuyến chưa khả dụng. Tin tham khảo cần được chuyên viên xác nhận; biểu mẫu dự phòng chỉ chuẩn bị email.');
+  if(!backendReady&&managedRecords)note.textContent=t('The vacancy list could not be refreshed. Open a listing to check its availability.','Chưa thể cập nhật danh sách tuyển dụng. Hãy mở tin để kiểm tra xem vị trí còn tuyển không.');
   $('#opportunities').prepend(note);
 }
-async function loadPublishedContent(){
-  publicLoadState='loading';syncVacancyRoute();syncPublishedLattice();
-  try{managedRecords=await publicContent();backendReady=true;publicLoadState='ready';stopPublishedLattice();renderPage();}
-  catch{backendReady=false;publicLoadState='failed';stopPublishedLattice();renderManagedContent();syncVacancyRoute();}
+function loadPublishedContent({interactive=false}={}){
+  if(interactive){publicLoadState='loading';syncVacancyRoute();syncPublishedLattice();}
+  if(catalogueFlight)return catalogueFlight;
+  catalogueFlight=Promise.resolve().then(publicContent).then(records=>{
+    const isRecovering=!backendReady,needsRoute=publicLoadState!=='ready';
+    const stamp=JSON.stringify(records),changed=stamp!==catalogueStamp;
+    document.documentElement.removeAttribute('data-server-vacancy');
+    backendReady=true;publicLoadState='ready';stopPublishedLattice();
+    if(changed){managedRecords=records;catalogueStamp=stamp;renderPage();}
+    else{
+      if(isRecovering)renderManagedContent();
+      if(needsRoute)syncVacancyRoute();
+    }
+  }).catch(()=>{
+    document.documentElement.removeAttribute('data-server-vacancy');
+    backendReady=false;publicLoadState='failed';stopPublishedLattice();renderManagedContent();syncVacancyRoute();
+  }).finally(()=>{catalogueFlight=null;});
+  return catalogueFlight;
 }
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void loadPublishedContent();});
+window.addEventListener('pageshow',event=>{if(event.persisted)void loadPublishedContent();});
 void loadPublishedContent();

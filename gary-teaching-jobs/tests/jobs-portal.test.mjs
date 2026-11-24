@@ -81,3 +81,27 @@ test('recruitment KPIs use confirmed totals independent of the application list'
     assert.match(doc.querySelector('#page-count').textContent,/0 applications/);
   } finally { h.dom.window.close(); }
 });
+
+test('slower recruitment responses cannot replace rows for the latest filter',async()=>{
+ const pending=[];
+ const h=await portal({view:'applications',caps:{recruit:true},listApplications:options=>{
+  if(!options.stage)return Promise.resolve({records:[],total:0});
+  return new Promise(resolve=>pending.push({stage:options.stage,resolve}));
+ }});
+ const doc=h.w.document;
+ const answer=(stage,title)=>({records:[{id:stage,vacancy_title:title,stage,created_at:'2026-11-24T00:00:00Z'}],total:1});
+ try{
+  const filter=doc.getElementById('application-filters');
+  const submit=stage=>{filter.elements.stage.value=stage;filter.dispatchEvent(new h.w.Event('submit',{bubbles:true,cancelable:true}));};
+  submit('screening');await settle();
+  // Pagination and filtering can overlap because they use different controls.
+  const go=()=>vm.runInContext('loadApplications()',h.dom.getInternalVMContext());
+  vm.runInContext("filterValues={stage:'submitted'}",h.dom.getInternalVMContext());
+  const latest=go();
+  assert.deepEqual(pending.map(entry=>entry.stage),['screening','submitted']);
+  pending[1].resolve(answer('submitted','New result'));await latest;
+  pending[0].resolve(answer('screening','Old result'));await settle();
+  assert.match(doc.getElementById('applications-list').textContent,/New result/);
+  assert.doesNotMatch(doc.getElementById('applications-list').textContent,/Old result/);
+ }finally{h.dom.window.close();}
+});

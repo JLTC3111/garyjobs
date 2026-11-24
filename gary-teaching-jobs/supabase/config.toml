@@ -1,6 +1,6 @@
 project_id = "gary-teaching-jobs"
 
 # Image GET is public with a published-row check. POST verifies the caller's
-# JWT and CMS role through the reservation RPC before any Storage write.
+# JWT and CMS role before image processing. The reservation checks again before writing.
 [functions.jobs-vacancy-image]
 verify_jwt = false

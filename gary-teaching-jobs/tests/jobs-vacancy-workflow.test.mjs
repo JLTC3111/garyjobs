@@ -247,6 +247,11 @@ test('featured vacancy image survives drafts, replacement, archive, republicatio
     url:origin,publishableKey:'test-publishable',serviceKey:'test-server',cleanupKey:'test-cleanup',
     async fetcher(url,options){
       const name=url.split('/').pop(), args=options.body&&typeof options.body==='string'?JSON.parse(options.body):{};
+      if(name==='jobs_capabilities'){
+        assert.equal(options.headers.authorization,'Bearer test-staff');
+        const {result}=await h.one('select public.jobs_capabilities() as result');
+        return Response.json(result);
+      }
       if(name==='jobs_vacancy_image_reserve'){
         assert.equal(options.headers.authorization,'Bearer test-staff');
         const result=await h.one('select public.jobs_vacancy_image_reserve($1,$2,$3,$4,$5) as result',Object.values(args));

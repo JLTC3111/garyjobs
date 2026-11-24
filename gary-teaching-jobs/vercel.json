@@ -3,7 +3,8 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": { "api/vacancy.js": { "includeFiles": "dist/index.html" } },
   "rewrites": [
-    { "source": "/jobs/:slug", "destination": "/index.html" }
+    { "source": "/jobs/:slug", "destination": "/api/vacancy?slug=:slug" }
   ]
 }
