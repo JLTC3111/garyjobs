@@ -17,7 +17,8 @@ export function mountCms(root, options) {
   const mediaPolicy = options.mediaPolicy || adapter.mediaPolicy || { mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], maxBytes: 10 * 1024 * 1024 };
   let language = options.language === 'vi' ? 'vi' : 'en', disposed = false, epoch = 0, busy = false;
   let capabilities = { read: false, edit: false, publish: false, media: false };
-  let kind = options.collections[0].kind, query = '', status = '', page = 1, total = 0, records = [], media = [], view = 'content';
+  let kind = options.collections.find(item => item.kind === options.initialDestination)?.kind ?? options.collections[0].kind;
+  let query = '', status = '', page = 1, total = 0, records = [], media = [], view = options.initialDestination === 'media' ? 'media' : 'content';
   let draft = null, baseline = '', revisions = [], notice = '', noticeKind = 'status';
   let editorIssues = [], editorEpoch = 0, editorWorkspace = null, releaseVacancyImage = null;
   const references = new Map(), referenceQueries = new Map(), referenceDrafts = new Map(), referenceCreates = new Map();

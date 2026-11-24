@@ -12,8 +12,10 @@ const backend=(await readFile(new URL('../../dist/jobs-backend.js',import.meta.u
 const context=vm.createContext({createClient:()=>({}),jobsConfig:{},...vacancyOptions});vm.runInContext(backend+'\nglobalThis.value=collections;',context);
 export const collections=JSON.parse(JSON.stringify(context.value));
 export const settle=async()=>{for(let i=0;i<16;i++)await new Promise(resolve=>setImmediate(resolve));};
-export async function staffPortal({caps={read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},access='staff',view='cms',width=1440,height=960,records=[],confirm=()=>false,theme='light',staff=null,talent=null}={}){
- const dom=new JSDOM(await readFile(new URL('../../dist/portal.html',import.meta.url),'utf8'),{url:`https://jobs.garyhome.vn/portal.html?access=${access}&view=${view}`,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,doc=w.document;
+export async function staffPortal({caps={read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},access='staff',view='cms',collection,width=1440,height=960,records=[],confirm=()=>false,theme='light',staff=null,talent=null}={}){
+ const url=new URL('https://jobs.garyhome.vn/portal.html');
+ url.search=new URLSearchParams({access,view,...(collection?{collection}:{})});
+ const dom=new JSDOM(await readFile(new URL('../../dist/portal.html',import.meta.url),'utf8'),{url:url.href,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,doc=w.document;
   bindFeedbackDom(dom.window);
  w.mountJobsAccountMenu=mountJobsAccountMenu;
 
@@ -29,5 +31,5 @@ export async function staffPortal({caps={read:true,edit:true,publish:true,media:
  w.applicationList=async options=>{calls.applications.push(options);return{records:[],total:0};};w.uploadCv=async()=>{};w.transitionApplication=async()=>{};w.submitApplication=async()=>({});
  const sidebar=mountJobsStaffSidebar(doc);
  const source=(await readFile(new URL('../../dist/jobs-portal.js',import.meta.url),'utf8')).split('\n').filter(line=>!line.startsWith('import ')).join('\n');vm.runInContext(source,dom.getInternalVMContext());await settle();if(cms)await cms.ready;await settle();
- return{dom,w,doc,calls,sidebar,get cms(){return cms;},input(name,value){const element=doc.querySelector(`[name="${name}"]`);element.value=value;element.dispatchEvent(new w.Event('input',{bubbles:true}));return element;},async click(selector){doc.querySelector(selector).click();await settle();},async close(){cms?.destroy({force:true});sidebar.destroy();dom.window.close();}};
+ return{dom,w,doc,calls,sidebar,get cms(){return cms;},input(name,value){const element=doc.querySelector(`[name="${name}"]`);element.value=value;element.dispatchEvent(new w.Event('input',{bubbles:true}));return element;},async click(selector){doc.querySelector(selector).click();await settle();},async changeCapabilities(next){caps=next;w.dispatchEvent(new w.Event('focus'));await new Promise(resolve=>setTimeout(resolve,0));await settle();},async close(){cms?.destroy({force:true});sidebar.destroy();dom.window.close();}};
 }

@@ -27,6 +27,56 @@ test('sidebar visibility remains capability-dependent and candidate navigation i
  const h=await staffPortal({access:'candidate',view:'mine'});try{assert.equal(h.doc.body.dataset.jobsStaff,'false');assert.equal(h.doc.querySelectorAll('[data-jobs-nav-group]').length,0);assert.equal(h.doc.querySelector('[data-view=mine]').textContent,'My applications');assert.equal(h.doc.querySelectorAll('#workspace-nav button').length,1);}finally{await h.close();}
 });
 
+test('Jobs Back and Forward restore collection routes without rebuilding the branch controls', {timeout:5000}, async()=>{
+ const h=await staffPortal({collection:'category'});try{
+  const {w,doc}=h,nav=doc.querySelector('#workspace-nav');
+  const category=navigation(h,'category'),directory=category.closest('[data-jobs-nav-group]');
+  const directoryHead=directory.querySelector('.jobs-nav-group-toggle');
+  const marker=nav.querySelector('.branched-menu__marker'),reach=directory.querySelectorAll('.branched-menu__reach')[1];
+  assert.deepEqual(h.calls.lists.map(call=>call.kind),['category']);
+  assert.equal(category.getAttribute('aria-current'),'page');
+  assert.equal(reach.getAttribute('stroke-dashoffset'),'0');
+  directoryHead.click();
+  await h.click('[data-collection=guide]');
+  assert.equal(new URL(w.location.href).searchParams.get('collection'),'guide');
+  assert.equal(reach.getAttribute('stroke-dashoffset'),'1');
+  await h.click('[data-view=applications]');
+  assert.equal(new URL(w.location.href).searchParams.has('collection'),false);
+  async function history(direction){
+   const changed=new Promise(resolve=>w.addEventListener('popstate',resolve,{once:true}));
+   w.history[direction]();await changed;await settle();
+  }
+  await history('back');assert.equal(navigation(h,'guide').getAttribute('aria-current'),'page');
+  await history('back');
+  assert.equal(h.cms.navigationState().kind,'category');
+  assert.equal(directoryHead.getAttribute('aria-expanded'),'true');
+  assert.equal(navigation(h,'category'),category);
+  assert.equal(directory.querySelectorAll('.branched-menu__reach')[1],reach);
+  assert.equal(reach.getAttribute('stroke-dashoffset'),'0');
+  assert.equal(nav.querySelector('.branched-menu__marker'),marker);
+  await history('forward');
+  assert.equal(navigation(h,'guide').getAttribute('aria-current'),'page');
+  assert.equal(doc.querySelector('.jobs-sidebar-account #account-summary').closest('nav'),null);
+ }finally{await h.close();}
+});
+
+test('Jobs removes revoked links and their traces and keeps the permitted navigation node',async()=>{
+ const h=await staffPortal({caps:{read:true,edit:true,recruit:true,manage_staff:true,role:'admin'}});try{
+  const nav=h.doc.querySelector('#workspace-nav'),applications=nav.querySelector('[data-view=applications]');
+  assert.ok(nav.querySelector('[data-view=staff]'));
+  await h.changeCapabilities({recruit:true,role:'recruiter'});
+  assert.equal(nav.querySelector('[data-view=staff]'),null);
+  assert.equal(nav.querySelector('[data-collection]'),null);
+  assert.equal(nav.querySelector('[data-view=applications]'),applications);
+  assert.equal(applications.getAttribute('aria-current'),'page');
+  assert.equal(new URL(h.w.location.href).searchParams.get('view'),'applications');
+  assert.equal(nav.querySelectorAll('.branched-menu__reach').length,2);
+  assert.equal(nav.querySelectorAll('.branched-menu__reach[stroke-dashoffset="0"]').length,1);
+  await h.changeCapabilities({});
+  assert.equal(nav.querySelector('[data-jobs-nav-group], .branched-menu__marker'),null);
+ }finally{await h.close();}
+});
+
 test('navigation resizing and collapse preserve an unsaved invalid vacancy and editor size independently',async()=>{
  const h=await staffPortal();try{
   await h.click('[data-action=new]');h.input('title_en','Unsaved teaching position');await h.click('[data-action=publish]');const form=h.doc.querySelector('[data-cms-editor]'),title=form.querySelector('[name=title_en]'),error=form.querySelector('[data-error-for=body_en]');assert.ok(error.textContent);const dialog=h.doc.querySelector('.cms-dialog'),editor=attachEditorWorkspace(dialog);dialog.querySelector('[data-gw-toggle]').click();const editorState=editor.getState();
@@ -37,15 +87,42 @@ test('navigation resizing and collapse preserve an unsaved invalid vacancy and e
   resizeKey(h,'Home');assert.equal(h.sidebar.getState().width,216);resizeKey(h,'End');assert.equal(h.sidebar.getState().width,384);
   await h.click('[data-jobs-sidebar-toggle]');assert.equal(h.sidebar.getState().collapsed,true);assert.deepEqual(editor.getState(),editorState);assert.equal(h.doc.querySelector('[data-cms-editor]'),form);assert.equal(title.value,'Unsaved teaching position');assert.ok(error.textContent);assert.equal(h.cms.isDirty(),true);
   await h.click('[data-jobs-sidebar-toggle]');await h.click('[data-collection=guide]');assert.equal(h.cms.navigationState().kind,'vacancy','declining the dirty warning leaves the current collection intact');assert.equal(h.doc.querySelector('[data-cms-editor]'),form);assert.equal(title.value,'Unsaved teaching position');
-  const savedSidebar=h.w.localStorage.getItem('gary-jobs:staff-sidebar:v1'),savedEditor=h.w.localStorage.getItem('gary-editor-workspace:v1:jobs:cms:vacancy');assert.ok(savedSidebar);assert.ok(savedEditor);assert.equal(JSON.parse(savedEditor).maximized,true);assert.equal(JSON.parse(savedSidebar).width,384);
+  const savedSidebar=h.w.localStorage.getItem('gary-jobs:staff-sidebar:v1'),savedEditor=h.w.localStorage.getItem('gary-editor-workspace:v1:jobs:cms:vacancy');assert.ok(savedSidebar);assert.ok(savedEditor);assert.equal(JSON.parse(savedEditor).maximized,true);assert.equal(JSON.parse(savedSidebar).width,384);assert.equal(JSON.parse(savedSidebar).version,2);assert.equal(JSON.parse(savedSidebar).groups.administration,true);
+ }finally{await h.close();}
+});
+
+test('Administration opens by default and survives unrelated group collapse',async()=>{
+ const h=await staffPortal({caps:{read:true,edit:true,publish:true,recruit:true,manage_staff:true,role:'admin'}});try{
+  const admin=h.doc.querySelector('[data-jobs-nav-group=administration]');
+  assert.equal(admin.dataset.open,'true');
+  assert.equal(h.sidebar.getState().groups.administration,true);
+  h.doc.querySelector('[data-jobs-nav-group=directory] .jobs-nav-group-toggle').click();
+  assert.equal(h.doc.querySelector('[data-jobs-nav-group=directory]').dataset.open,'false');
+  assert.equal(admin.dataset.open,'true');
+  h.w.localStorage.setItem('gary-jobs:staff-sidebar:v1',JSON.stringify({version:1,width:272,collapsed:false,groups:{administration:false}}));
+  h.sidebar.destroy();
+  const sidebar=mountJobsStaffSidebar(h.doc);
+  h.doc.dispatchEvent(new h.w.CustomEvent('jobs:staff-navigation'));
+  assert.equal(sidebar.getState().groups.administration,true,'v1 closed preference does not keep Administration closed');
+  assert.equal(h.doc.querySelector('[data-jobs-nav-group=administration]').dataset.open,'true');
+  sidebar.destroy();
  }finally{await h.close();}
 });
 
 test('sidebar preferences and nested groups persist without changing editor preferences; mobile overlay is keyboard accessible',async()=>{
  const h=await staffPortal();try{
-  resizeKey(h,'Home');const group=h.doc.querySelector('[data-jobs-nav-group=directory]');group.open=false;group.dispatchEvent(new h.w.Event('toggle',{bubbles:false}));await h.click('[data-jobs-sidebar-toggle]');h.sidebar.destroy();const sidebar=mountJobsStaffSidebar(h.doc);assert.equal(sidebar.getState().width,216);assert.equal(sidebar.getState().collapsed,true);assert.equal(sidebar.getState().groups.directory,false);assert.equal(h.doc.querySelector('[data-jobs-nav-group=directory]').open,true,'collapsed rail keeps every labelled icon route reachable');await h.click('[data-jobs-sidebar-toggle]');assert.equal(h.doc.querySelector('[data-jobs-nav-group=directory]').open,false,'expanding restores the preferred closed group');
+  const group=h.doc.querySelector('[data-jobs-nav-group=directory]'),head=group.querySelector('.jobs-nav-group-toggle'),employer=navigation(h,'employer');
+  const key=(element,key)=>element.dispatchEvent(new h.w.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+  head.focus();key(head,'ArrowLeft');
+  assert.equal(employer.tabIndex,-1);
+  key(head,'ArrowDown');assert.equal(h.doc.activeElement.closest('[data-jobs-nav-group]').dataset.jobsNavGroup,'knowledge');
+  head.focus();key(head,'ArrowRight');key(head,'ArrowDown');assert.equal(h.doc.activeElement,employer);
+  key(employer,'End');assert.equal(h.doc.activeElement,navigation(h,'media'));
+  head.click();resizeKey(h,'Home');await h.click('[data-jobs-sidebar-toggle]');h.sidebar.destroy();
+  const sidebar=mountJobsStaffSidebar(h.doc);assert.equal(sidebar.getState().width,216);assert.equal(sidebar.getState().collapsed,true);assert.equal(sidebar.getState().groups.directory,false);assert.equal(group.dataset.open,'true','collapsed rail keeps every labelled icon route reachable');await h.click('[data-jobs-sidebar-toggle]');assert.equal(group.dataset.open,'false','expanding restores the preferred closed group');
   h.w.innerWidth=390;h.w.innerHeight=844;h.w.dispatchEvent(new h.w.Event('resize'));assert.ok(h.doc.querySelector('[data-jobs-sidebar-resize]').hidden);assert.equal(h.doc.querySelector('[data-jobs-sidebar-toggle]').getAttribute('aria-expanded'),'false');
   await h.click('[data-jobs-sidebar-toggle]');assert.equal(sidebar.getState().overlay,true);
+  head.click();assert.equal(sidebar.getState().overlay,true);
   const panel=h.doc.querySelector('.jobs-staff-sidebar'),layout=panel.closest('.jobs-staff-layout'),toggle=h.doc.querySelector('[data-jobs-sidebar-toggle]');
   let finished;const fade=new Promise(resolve=>{finished=resolve;});
   panel.getAnimations=()=>[{transitionProperty:'opacity',finished:fade}];
