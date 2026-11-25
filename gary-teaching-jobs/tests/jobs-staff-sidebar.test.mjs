@@ -8,6 +8,33 @@ import {staffPortal,settle} from './helpers/jobs-staff-portal.mjs';
 const navigation=(h,kind)=>h.doc.querySelector(`[data-collection="${kind}"]`);
 const resizeKey=(h,key,shiftKey=false)=>h.doc.querySelector('[data-jobs-sidebar-resize]').dispatchEvent(new h.w.KeyboardEvent('keydown',{key,shiftKey,bubbles:true,cancelable:true}));
 
+test('CMS toolbar icons retain localized labels and existing search, refresh and new actions',async()=>{
+ const h=await staffPortal({width:320});try{
+  const icons=['search','refresh-cw','plus'];
+  const buttons=[...h.doc.querySelectorAll('.cms-toolbar-actions > button')];
+  assert.deepEqual(buttons.map(button=>button.dataset.action),['search','refresh','new']);
+  for(const [index,button]of buttons.entries()){
+   assert.equal(button.querySelector('use').getAttribute('href'),`./assets/staff-nav-icons.svg#${icons[index]}`);
+   assert.equal(button.querySelector('svg').getAttribute('aria-hidden'),'true');
+   assert.equal(button.getAttribute('aria-label'),button.querySelector('.cms-toolbar-label').textContent);
+   assert.equal(button.title,button.getAttribute('aria-label'));
+  }
+  h.doc.querySelector('[data-cms-search]').value='teacher';
+  await h.click('.cms-toolbar-actions [data-action=search]');
+  assert.equal(h.calls.lists.at(-1).query,'teacher');
+  const count=h.calls.lists.length;
+  await h.click('.cms-toolbar-actions [data-action=refresh]');
+  assert.equal(h.calls.lists.length,count+1);
+  await h.click('#portal-language');
+  assert.equal(h.doc.querySelector('.cms-toolbar-actions [data-action=search]').title,'Tìm');
+  await h.click('.cms-toolbar-actions [data-action=new]');
+  assert.ok(h.doc.querySelector('.cms-dialog[open] [data-cms-editor]'));
+ }finally{await h.close();}
+ const css=await readFile(new URL('../dist/cms-foundation/styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.cms-content-toolbar \{[^}]*grid-template-columns: minmax\(0, 1fr\) max-content;/);
+ assert.match(css,/\.cms-toolbar-actions > button \{ flex: none; width: 44px; padding: 0; \}/);
+});
+
 test('Jobs staff sidebar exposes every implemented CMS destination and permitted recruitment without duplicate collection controls',async()=>{
  const h=await staffPortal();try{
   assert.equal(h.doc.querySelectorAll('#workspace-nav [data-collection]').length,7);assert.equal(h.doc.querySelectorAll('[data-jobs-nav-group]').length,4);assert.equal(h.doc.querySelector('.cms-collections'),null);assert.ok(h.doc.querySelector('[data-view=applications]'));

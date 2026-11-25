@@ -201,6 +201,7 @@ function setView(next, applicationId, destination=staffCollection){
 function setAccess(next){
  if(next===access||recovery||!mayLeave())return;
  generation++;clearWorkspace();access=next;view='';status('');const u=new URL(location.href);u.searchParams.set('access',access);u.searchParams.delete('view');u.searchParams.delete('collection');if(access==='candidate'&&u.searchParams.has('vacancy'))view='apply';history.pushState({},'',u);currentViewUrl=u.href;
+ document.dispatchEvent(new Event('jobs:portal-access'));
  void authenticate();
 }
 async function renderView(){

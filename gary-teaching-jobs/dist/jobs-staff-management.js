@@ -8,7 +8,8 @@ const COPY={
   eyebrow:'TEACHING JOBS ADMINISTRATION',title:'Staff management',
   intro:'Assign, change, suspend and restore Teaching Jobs staff roles. Changes apply to Teaching Jobs memberships.',
   add:'Add Staff',edit:'Edit Access',assignIntro:'Enter the sign-in email of a verified Gary account to add it to Teaching Jobs.',
-  email:'Account email',displayName:'Jobs display name',nameHint:'Optional. Leave blank to use the existing name.',
+  email:'Account email',copyEmail:'Copy email',emailCopied:'Email copied.',emailSelected:'Email selected. Use Copy to copy the full address.',
+  displayName:'Jobs display name',nameHint:'Optional. Leave blank to use the existing name.',
   role:'Role',status:'Status',assign:'Assign access',cancel:'Cancel',close:'Close',
   adminOwnerOnly:'Administrator access can only be granted by a protected Jobs owner.',guideTitle:'Role permissions',
   roles:{editor:'Editor',publisher:'Publisher',recruiter:'Recruiter',admin:'Admin',none:'No access'},
@@ -46,7 +47,8 @@ const COPY={
   eyebrow:'QUẢN TRỊ TEACHING JOBS',title:'Quản lý nhân viên',
   intro:'Cấp, thay đổi, tạm ngưng và khôi phục vai trò nhân viên Teaching Jobs. Thay đổi chỉ áp dụng cho thành viên Teaching Jobs.',
   add:'Thêm nhân viên',edit:'Chỉnh Sửa',assignIntro:'Nhập email đăng nhập của tài khoản Gary đã xác minh để thêm tài khoản vào Teaching Jobs.',
-  email:'Email tài khoản',displayName:'Tên hiển thị trên Jobs',nameHint:'Không bắt buộc. Để trống để dùng tên hiện có.',
+  email:'Email tài khoản',copyEmail:'Sao chép email',emailCopied:'Đã sao chép email.',emailSelected:'Đã chọn email. Dùng lệnh Sao chép để sao chép địa chỉ đầy đủ.',
+  displayName:'Tên hiển thị trên Jobs',nameHint:'Không bắt buộc. Để trống để dùng tên hiện có.',
   role:'Vai trò',status:'Trạng thái',assign:'Cấp quyền',cancel:'Hủy',close:'Đóng',
   adminOwnerOnly:'Chỉ chủ sở hữu Jobs được bảo vệ mới có thể cấp quyền Quản trị viên.',guideTitle:'Quyền theo vai trò',
   roles:{editor:'Biên tập viên',publisher:'Người xuất bản',recruiter:'Chuyên viên tuyển dụng',admin:'Quản trị viên',none:'Không có quyền'},
@@ -186,15 +188,15 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   const reason=member.is_self?c.selfReadonly:member.protected?c.protectedReadonly:member.role==='admin'?c.adminReadonly:c.viewOnly;
   const action=member.active?'suspend':'restore';
   const stateLabel=state==='active'?c.active:state==='suspended'?c.suspendedHint:c.unverifiedHint;
-  const address=member.email&&member.email!==name?esc(member.email):'';
+  const displayName=name===member.email?c.member:name,address=esc(member.email);
   return `<article class="jobs-staff-member" data-user-id="${id}">
-   <details class="jobs-staff-identity" name="jobs-staff-identities">
-    <summary class="jobs-staff-person">
-     <span class="jobs-staff-avatar" aria-hidden="true">${esc(initials(member))}</span>
-     <span class="jobs-staff-member-name"><strong title="${esc(name)}">${esc(name)}</strong>${address?`<span class="jobs-meta jobs-staff-email" title="${address}">${address}</span>`:''}</span>
-    </summary>
-    <div class="jobs-staff-identity-full"><strong>${esc(name)}</strong>${address?`<span class="jobs-meta">${address}</span>`:''}</div>
-   </details>
+   <div class="jobs-staff-identity">
+    <span class="jobs-staff-avatar" aria-hidden="true">${esc(initials(member))}</span>
+    <div class="jobs-staff-member-name">
+     <strong title="${esc(displayName)}">${esc(displayName)}</strong>
+     ${address?`<button type="button" class="jobs-staff-email" data-staff-action="copy-email" aria-label="${esc(c.copyEmail)}: ${address}" title="${address}"><span>${address}</span></button>`:''}
+    </div>
+   </div>
    <div class="jobs-staff-member-badges">
     <span class="jobs-staff-role">${esc(c.roles[member.role]||member.role)}</span>
     <div class="jobs-staff-tags">
@@ -225,7 +227,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 
  function rowLauncher(id,action){
   const row=[...list.children].find(node=>node.dataset.userId===id);
-  if(action==='identity')return row?.querySelector('.jobs-staff-person');
+  if(action==='copy-email')return row?.querySelector('.jobs-staff-email');
   const edit=row?.querySelector('.jobs-staff-edit'),more=row?.querySelector('[data-staff-action=more]');
   return action==='more'||(edit&&win.getComputedStyle(edit).display==='none')?more:edit;
  }
@@ -255,9 +257,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 
  function renderList(){
   const c=copy(),active=doc.activeElement,id=active?.closest('[data-user-id]')?.dataset.userId;
-  const person=active?.matches('.jobs-staff-person');
-  const identityOpen=person&&active.parentElement.open;
-  const action=person?'identity':active?.matches('.jobs-staff-edit')?'edit':'more';
+  const action=active?.matches('.jobs-staff-email')?'copy-email':active?.matches('.jobs-staff-edit')?'edit':'more';
   closeMenu();
   const query=searchable(search.value),roleFilter=filters.elements.role.value,statusFilter=filters.elements.status.value;
   const filtered=Boolean(query||roleFilter||statusFilter),members=data?.members||[];
@@ -283,11 +283,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
    list.innerHTML=shown.length?shown.map(memberMarkup).join(''):`<p class="jobs-empty">${esc(filtered?c.noMatches:c.empty)}</p>`;
   }
   syncControls();
-  if(id&&!blocked()){
-   const launcher=rowLauncher(id,action);
-   if(identityOpen&&launcher)launcher.parentElement.open=true;
-   launcher?.focus({preventScroll:true});
-  }
+  if(id&&!blocked())rowLauncher(id,action)?.focus({preventScroll:true});
  }
 
  function syncControls(){
@@ -453,6 +449,19 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   }
  }
 
+ async function copyEmail(button,address){
+  try{await win.navigator.clipboard.writeText(address);}
+  catch{
+   if(!button.isConnected)return;
+   const selection=win.getSelection();
+   if(!selection)return;
+   selection.selectAllChildren(button);
+   onNotice(copy().emailSelected,false,false);
+   return;
+  }
+  if(!disposed)onNotice(copy().emailCopied,false,false);
+ }
+
  function clicked(event){
   const button=event.target.closest?.('[data-staff-action]');
   if(!button)return;
@@ -464,6 +473,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(!data)return;
   if(action==='add'){if(canAssign())openDrawer(addDraft);return;}
   const member=memberFor(button.closest('[data-user-id]')?.dataset.userId);
+  if(action==='copy-email'&&member?.email){void copyEmail(button,member.email);return;}
   if(!canEdit(member))return;
   if(action==='edit'){
    if(!drafts.has(member.user_id))drafts.set(member.user_id,editValues(member));
@@ -490,17 +500,11 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   const rect=drawer.getBoundingClientRect();
   if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dismissDrawer();
  }
- function outsideDisclosures(event){
+ function outsideMenu(event){
   if(menu&&!menu.button.parentElement.contains(event.target))closeMenu();
-  const identity=list.querySelector('.jobs-staff-identity[open]');
-  if(identity&&!identity.contains(event.target))identity.open=false;
  }
  function menuKey(event){
-  if(event.key==='Escape'){
-   const identity=event.target.closest('.jobs-staff-identity[open]');
-   if(identity){event.preventDefault();identity.open=false;}
-   if(menu){event.preventDefault();closeMenu(true);}
-  }
+  if(event.key==='Escape'&&menu){event.preventDefault();closeMenu(true);}
   if(event.key==='ArrowDown'&&event.target.matches('[data-staff-action=more]')&&!blocked()){
    event.preventDefault();
    if(menu?.button===event.target)menu.panel.querySelector('button').focus();
@@ -519,8 +523,8 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  drawer.addEventListener('cancel',cancel);
  drawer.addEventListener('close',onClose);
  drawer.addEventListener('click',backdrop);
- doc.addEventListener('pointerdown',outsideDisclosures);
- doc.addEventListener('focusin',outsideDisclosures);
+ doc.addEventListener('pointerdown',outsideMenu);
+ doc.addEventListener('focusin',outsideMenu);
  render();
  const ready=load();
  return {ready,reload:load,setLanguage(next){captureDraft();lang=next==='vi'?'vi':'en';render();},destroy(){
@@ -528,8 +532,8 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   disposed=true;request++;
   closeMenu();dismissDrawer(false);
   root.removeEventListener('click',clicked);
-  doc.removeEventListener('pointerdown',outsideDisclosures);
-  doc.removeEventListener('focusin',outsideDisclosures);
+  doc.removeEventListener('pointerdown',outsideMenu);
+  doc.removeEventListener('focusin',outsideMenu);
   root.replaceChildren();
  }};
 }

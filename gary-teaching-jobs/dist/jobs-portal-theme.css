@@ -96,6 +96,10 @@ html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-dark{display:block}
 .jobs-portal-preferences [data-squish-mode=theme]{width:100%;min-width:0;overflow:visible}
 .jobs-portal-preferences [data-squish-mode=theme] > .squish-choice{--ss-width:100%;min-width:0}
 .jobs-portal-preferences .jobs-preferences-help{margin:10px 0 0;color:var(--jobs-portal-muted);font-size:.75rem;line-height:1.55}
+.jobs-preferences-portal{margin-top:14px;padding-top:12px;border-top:1px solid var(--jobs-portal-line)}
+.jobs-preferences-portal h3{margin:0 0 8px;font-size:.8125rem;font-weight:600}
+.jobs-preferences-portal .jobs-portal-access{display:flex}
+.jobs-preferences-portal .jobs-portal-access button{flex:1;min-height:44px}
 .jobs-portal-header:has(.jobs-preferences-panel:not([hidden])){z-index:40}
 @media(max-width:900px){
   body[data-jobs-staff=true] .jobs-portal-header{
@@ -110,12 +114,10 @@ html[data-jobs-theme=dark] .jobs-portal-brand .jobs-logo-dark{display:block}
   .jobs-portal-header{padding:.5rem 1rem;gap:.55rem;flex-wrap:wrap}
   .jobs-portal-brand img{width:132px;max-height:46px}
   .jobs-portal-context{font-size:.68rem}
-  .jobs-portal-access{order:3;flex:1 1 100%;justify-content:stretch}
-  .jobs-portal-access button{flex:1;min-height:40px}
+  .jobs-portal-header > .jobs-portal-access{display:none}
   .jobs-portal-header .jobs-portal-tools{gap:.3rem;margin-left:auto}
   .jobs-portal-preferences .jobs-preferences-panel{position:fixed;top:calc(var(--jobs-portal-header-height,64px) + 8px);right:12px}
   body[data-jobs-staff=true] .jobs-portal-header{grid-template-columns:auto minmax(0,1fr) auto}
-  body[data-jobs-staff=true] .jobs-portal-access{grid-column:1 / -1}
   body[data-jobs-staff=true] .jobs-portal-context{display:none}
 }
 @media(max-width:520px){

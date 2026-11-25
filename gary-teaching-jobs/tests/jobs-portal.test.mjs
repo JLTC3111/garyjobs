@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
+import {mountPortalAppearance} from '../dist/jobs-portal-appearance.js';
 const settle=()=>new Promise(r=>setTimeout(r,15));
 async function portal({caps={},view='mine',canLeave=()=>true,listApplications,stats={}}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/portal.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/portal.html?view='+view,runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window;
@@ -54,6 +55,37 @@ test('account links and browser history honor the CMS dirty guard',async()=>{
   assert.ok(h.calls.destroy.some(value=>value?.force===true),'Confirmed departure removes the old private editor and its leave guard');
   assert.match(h.w.document.querySelector('#workspace-view').textContent,/My applications/);
  }finally{h.dom.window.close();}
+});
+
+test('mobile Preferences moves the single portal switcher and uses the existing route guard',async()=>{
+ let allow=false;
+ const h=await portal({view:'cms',caps:{read:true,edit:true},canLeave:()=>allow});
+ h.w.innerWidth=390;
+ const doc=h.w.document,switcher=doc.getElementById('portal-access'),home=switcher.parentElement;
+ const preferences=mountPortalAppearance(doc);
+ try{
+  const panel=doc.getElementById('portal-preferences-panel'),trigger=doc.getElementById('portal-preferences-trigger');
+  assert.ok(panel.contains(switcher));
+  assert.equal(doc.querySelectorAll('#portal-access').length,1);
+  assert.equal(doc.querySelector('.jobs-portal-header > #portal-access'),null);
+  trigger.click();
+  assert.equal(panel.hidden,false);
+  assert.equal(switcher.querySelector('[aria-current=page]').dataset.access,'staff');
+  doc.getElementById('portal-language').click();await settle();
+  assert.equal(doc.getElementById('jobs-preferences-portal-title').textContent,'Cổng thông tin');
+  assert.deepEqual([...switcher.querySelectorAll('button')].map(button=>button.textContent),['Ứng viên','Nhân viên']);
+  switcher.querySelector('[data-access=candidate]').click();
+  assert.equal(panel.hidden,false);
+  assert.equal(switcher.querySelector('[aria-current=page]').dataset.access,'staff');
+  allow=true;switcher.querySelector('[data-access=candidate]').click();await settle();
+  assert.equal(new URL(h.w.location.href).searchParams.get('access'),'candidate');
+  assert.equal(switcher.querySelector('[aria-current=page]').dataset.access,'candidate');
+  assert.equal(panel.hidden,true);
+  assert.equal(doc.activeElement,trigger);
+  h.w.innerWidth=1024;h.w.dispatchEvent(new h.w.Event('resize'));
+  assert.equal(switcher.parentElement,home);
+  assert.equal(panel.querySelector('.jobs-preferences-portal').hidden,true);
+ }finally{preferences.destroy();h.dom.window.close();}
 });
 
 test('application confirmation is visible while the subsequent list read is pending',async()=>{

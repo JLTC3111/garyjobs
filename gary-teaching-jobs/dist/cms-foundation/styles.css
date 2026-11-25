@@ -4,6 +4,25 @@
 @media(max-width:700px){.gary-cms{padding:16px;font-size:16px}.cms-header{display:block}.cms-role{display:inline-block}.cms-language-columns,.cms-editor-meta{grid-template-columns:1fr;gap:12px}.cms-dialog{width:98vw;max-height:98dvh}.cms-dialog form{padding:16px}.cms-dialog>header{padding:14px 16px}.cms-pagination{align-items:start}.cms-toolbar .cms-search{min-width:100%}.cms-toolbar>button{flex:1}.cms-revision{align-items:start;flex-direction:column}.cms-editor-actions{bottom:-16px}.cms-editor-actions button{flex:1}.gary-cms input,.gary-cms textarea,.gary-cms select{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.gary-cms *{scroll-behavior:auto!important;transition:none!important}}
 
+.cms-toolbar-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.gary-cms .cms-toolbar-actions > button {
+  display: inline-flex; align-items: center; justify-content: center; height: 44px; white-space: nowrap;
+}
+.gary-cms .cms-toolbar-actions > button:focus-visible { outline: 2px solid var(--cms-focus); outline-offset: 2px; }
+.cms-toolbar-icon { display: none; }
+@media (max-width: 760px) {
+  .cms-content-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 8px; }
+  .cms-content-toolbar .cms-search { grid-column: 1 / -1; }
+  .cms-content-toolbar > label { min-width: 0; }
+  .cms-toolbar-actions { gap: 6px; }
+  .gary-cms .cms-toolbar-actions > button { flex: none; width: 44px; padding: 0; }
+  .cms-toolbar-icon {
+    display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .cms-toolbar-label { display: none; }
+}
+
 /* Reference forms keep labels, stored identifiers and publication state separate. */
 .gary-cms .cms-dialog form{max-width:none}
 .gary-cms .cms-reference{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;gap:8px 12px;border:1px solid var(--cms-line);border-radius:10px;padding:16px;margin:18px 0;align-items:start}

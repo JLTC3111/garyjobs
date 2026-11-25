@@ -65,25 +65,33 @@ function mount({data=overview(),fail=null,respond=()=>{}}={}){
 }
 const values=select=>[...select.options].map(option=>option.value);
 
-test('compact staff cards group badges, disclose the full identity and return Edit focus to the kebab',async()=>{
+test('compact staff cards show one copyable email and return Edit focus to the kebab',async()=>{
  const data=overview(),member=data.members.find(item=>item.user_id==='u-editor');
  member.display_name='Nguyễn '+ 'Minh '.repeat(12)+'Anh';
  member.email='long.staff.address.'.repeat(7)+'@example.test';
  const h=mount({data});try{
   await h.page.ready;
   h.page.setLanguage('vi');
-  const row=h.row(member.user_id),person=row.querySelector('summary'),identity=person.parentElement;
+  const row=h.row(member.user_id),email=h.action(member.user_id,'copy-email');
   const badges=row.querySelector('.jobs-staff-member-badges');
   assert.ok(badges.querySelector('.jobs-staff-role'));
   assert.ok(badges.querySelector('.jobs-staff-state'));
   assert.equal(badges.contains(h.action(member.user_id,'more')),false);
-  person.focus();person.click();
-  assert.equal(identity.open,true);
-  assert.equal(identity.querySelector('.jobs-staff-identity-full strong').textContent,member.display_name);
-  assert.equal(identity.querySelector('.jobs-staff-identity-full .jobs-meta').textContent,member.email);
-  h.key(person,'Escape');
-  assert.equal(identity.open,false);
-  assert.equal(h.doc.activeElement,person);
+  assert.equal(row.querySelector('details, summary'),null);
+  assert.equal(row.textContent.split(member.email).length,2);
+  assert.equal(email.previousElementSibling.textContent,member.display_name);
+  assert.equal(email.getAttribute('aria-label'),`Sao chép email: ${member.email}`);
+  const copied=[];let permitted=true;
+  Object.defineProperty(h.dom.window.navigator,'clipboard',{value:{async writeText(value){
+   if(!permitted)throw new Error('Clipboard unavailable');
+   copied.push(value);
+  }}});
+  email.focus();email.click();await settle();
+  assert.deepEqual(copied,[member.email]);
+  assert.equal(h.calls.notices.at(-1).message,'Đã sao chép email.');
+  permitted=false;email.click();await settle();
+  assert.equal(h.dom.window.getSelection().toString(),member.email);
+  assert.equal(h.doc.activeElement,email);
   const more=h.action(member.user_id,'more');
   h.action(member.user_id,'edit').style.display='none';
   more.click();row.querySelector('.jobs-staff-menu-edit').click();

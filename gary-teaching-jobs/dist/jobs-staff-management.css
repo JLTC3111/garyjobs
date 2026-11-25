@@ -54,33 +54,18 @@
   padding: 10px 0;
   border-top: 1px solid var(--jobs-portal-line);
 }
-.jobs-staff-identity { position: relative; min-width: 0; }
-.jobs-staff-person {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
-  border-radius: 6px; cursor: pointer; list-style: none;
-}
-.jobs-staff-person::-webkit-details-marker { display: none; }
-.jobs-staff-person::after {
-  content: ""; width: 6px; height: 6px; flex: none; margin-inline-end: 3px;
-  border: solid var(--jobs-portal-muted); border-width: 0 1px 1px 0; transform: rotate(45deg);
-}
-.jobs-staff-identity[open] .jobs-staff-person::after { transform: rotate(225deg); }
-.jobs-staff-identity-full {
-  position: absolute; z-index: 6; inset: calc(100% + 4px) auto auto 0;
-  display: grid; gap: 2px; width: min(22rem, calc(100cqi - 26px)); padding: 10px 12px;
-  border: 1px solid var(--jobs-portal-line); border-radius: 8px;
-  background: var(--jobs-portal-raised); box-shadow: var(--jobs-overlay-shadow); overflow-wrap: anywhere;
-}
-.jobs-staff-identity:not([open]) .jobs-staff-identity-full { display: none; }
+.jobs-staff-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .jobs-staff-member-name { display: grid; flex: 1; gap: 2px; min-width: 0; }
 .jobs-staff-member-name strong {
-  font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .9rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.jobs-staff-email {
-  margin: 0; font-size: .79rem; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  overflow-wrap: normal; word-break: normal;
+.jobs-workspace button.jobs-staff-email {
+  display: block; min-width: 0; min-height: 24px; padding: 0; border: 0; background: transparent;
+  color: var(--jobs-portal-muted); font-size: .79rem; line-height: 1.35; text-align: start;
+  user-select: text; cursor: copy;
 }
+.jobs-staff-email > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jobs-staff-email:is(:hover, :focus-visible) { text-decoration: underline; }
 .jobs-staff-avatar {
   display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 50%;
   border: 1px solid var(--jobs-portal-line); background: var(--jobs-portal-selected);
