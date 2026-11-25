@@ -141,7 +141,7 @@ test('Administration opens by default and survives unrelated group collapse',asy
  }finally{await h.close();}
 });
 
-test('sidebar preferences and nested groups persist without changing editor preferences; mobile overlay is keyboard accessible',async()=>{
+test('sidebar preferences and nested groups persist without changing editor preferences; mobile drawer is keyboard accessible',async()=>{
  const h=await staffPortal();try{
   const group=h.doc.querySelector('[data-jobs-nav-group=directory]'),head=group.querySelector('.jobs-nav-group-toggle'),employer=navigation(h,'employer');
   const key=(element,key)=>element.dispatchEvent(new h.w.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
@@ -152,16 +152,24 @@ test('sidebar preferences and nested groups persist without changing editor pref
   key(employer,'End');assert.equal(h.doc.activeElement,navigation(h,'media'));
   head.click();resizeKey(h,'Home');await h.click('[data-jobs-sidebar-toggle]');h.sidebar.destroy();
   const sidebar=mountJobsStaffSidebar(h.doc);assert.equal(sidebar.getState().width,216);assert.equal(sidebar.getState().collapsed,true);assert.equal(sidebar.getState().groups.directory,false);assert.equal(group.dataset.open,'true','collapsed rail keeps every labelled icon route reachable');await h.click('[data-jobs-sidebar-toggle]');assert.equal(group.dataset.open,'false','expanding restores the preferred closed group');
-  h.w.innerWidth=390;h.w.innerHeight=844;h.w.dispatchEvent(new h.w.Event('resize'));assert.ok(h.doc.querySelector('[data-jobs-sidebar-resize]').hidden);assert.equal(h.doc.querySelector('[data-jobs-sidebar-toggle]').getAttribute('aria-expanded'),'false');
-  await h.click('[data-jobs-sidebar-toggle]');assert.equal(sidebar.getState().overlay,true);
-  head.click();assert.equal(sidebar.getState().overlay,true);
-  const panel=h.doc.querySelector('.jobs-staff-sidebar'),layout=panel.closest('.jobs-staff-layout'),toggle=h.doc.querySelector('[data-jobs-sidebar-toggle]');
-  let finished;const fade=new Promise(resolve=>{finished=resolve;});
-  panel.getAnimations=()=>[{transitionProperty:'opacity',finished:fade}];
-  toggle.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
-  assert.equal(sidebar.getState().overlay,false);assert.equal(h.doc.activeElement,toggle);
-  assert.ok(layout.classList.contains('jobs-sidebar-overlay'));assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
-  finished();await fade;assert.equal(layout.classList.contains('jobs-sidebar-overlay'),false);
+  h.w.innerWidth=390;h.w.innerHeight=844;h.w.dispatchEvent(new h.w.Event('resize'));
+  const trigger=h.doc.getElementById('jobs-mobile-nav-trigger');
+  assert.ok(h.doc.querySelector('[data-jobs-sidebar-resize]').hidden);
+  assert.equal(trigger.hidden,false);
+  assert.equal(sidebar.getState().mobile,true);
+  assert.equal(sidebar.getState().mobileExpanded,false);
+  assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
+  trigger.click();
+  const drawer=h.doc.getElementById('jobs-mobile-nav');
+  assert.equal(drawer.open,true);
+  assert.equal(sidebar.getState().overlay,true);
+  assert.equal(trigger.getAttribute('aria-expanded'),'true');
+  assert.equal(h.doc.querySelector('#workspace-nav').inert,false);
+  head.click();assert.equal(drawer.open,true);
+  drawer.getBoundingClientRect=()=>({left:0,right:276,top:0,bottom:600});
+  drawer.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(drawer.open,false);assert.equal(h.doc.activeElement,trigger);
+  assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
   assert.equal(JSON.parse(h.w.localStorage.getItem('gary-jobs:staff-sidebar:v1')).width,216);sidebar.destroy();
  }finally{await h.close();}
 });
@@ -171,5 +179,5 @@ test('a vacancy still validates, saves and publishes after navigation panel chan
   await h.click('[data-action=new]');h.input('title_en','English teacher');h.input('body_en','Teach and support learners.');h.input('data.employer_name_en','Independent School');h.input('data.category_slug','public');h.input('data.location_slug','hanoi');h.input('data.contact_email','jobs@example.test');h.input('data.closes_on','2099-12-31');resizeKey(h,'Home');await h.click('[data-jobs-sidebar-toggle]');await h.click('[data-action=publish]');assert.equal(h.calls.saves.length,1);assert.equal(h.calls.transitions.length,1);assert.equal(h.calls.transitions[0].status,'published');assert.equal(h.calls.saves[0].record.title_en,'English teacher');
   assert.equal(h.doc.querySelector('.cms-dialog').open,false);assert.ok(h.doc.querySelector('[data-cms-success]')?.isConnected);await h.click('[data-success-close]');await h.click('[data-jobs-sidebar-toggle]');await h.click('[data-collection=media]');const form=h.doc.querySelector('[data-cms-upload]'),file=form.elements.file;const selected=new h.w.File(['image'],'classroom.png',{type:'image/png'});Object.defineProperty(file,'files',{value:[selected]});form.elements.alt_en.value='A classroom';form.elements.alt_vi.value='Lớp học';resizeKey(h,'End');assert.equal(h.doc.querySelector('[data-cms-upload]'),form);assert.equal(file.files[0],selected);form.dispatchEvent(new h.w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(h.calls.uploads.length,1);assert.equal(h.calls.uploads[0].file,selected);
  }finally{await h.close();}
- const css=await readFile(new URL('../dist/jobs-staff-sidebar.css',import.meta.url),'utf8');assert.match(css,/--jobs-staff-surface:var\(--jobs-portal-surface\)/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/@media\(max-width:520px\)/);
+ const css=await readFile(new URL('../dist/jobs-staff-sidebar.css',import.meta.url),'utf8');assert.match(css,/--jobs-staff-surface:var\(--jobs-portal-surface\)/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/@media\(max-width:900px\)/);assert.match(css,/jobs-mobile-nav-drawer/);
 });

@@ -33,16 +33,70 @@ body[data-jobs-staff=true] .jobs-portal-header a{color:var(--jobs-staff-ink)}
 .jobs-sidebar-resize::after{content:"";position:absolute;left:5px;top:20px;bottom:20px;width:4px;border-radius:4px;background:var(--jobs-staff-accent);opacity:.6}
 .jobs-sidebar-resize:hover::after,.jobs-sidebar-resize:focus-visible::after{opacity:1}
 .jobs-staff-active .jobs-sidebar-resize[hidden]{display:none}
-.jobs-staff-active :is(#workspace-nav button,[data-jobs-sidebar-toggle],.jobs-sidebar-resize):focus-visible{outline:3px solid var(--jobs-staff-focus);outline-offset:2px}
+.jobs-staff-active :is(#workspace-nav button,[data-jobs-sidebar-toggle],.jobs-sidebar-resize,#jobs-mobile-nav-trigger):focus-visible{outline:3px solid var(--jobs-staff-focus);outline-offset:2px}
 .jobs-staff-active .jobs-sidebar-collapsed .jobs-sidebar-heading{padding:0 0 12px;justify-content:center}.jobs-staff-active .jobs-sidebar-collapsed .jobs-sidebar-heading>div{display:none}
-.jobs-staff-active .jobs-sidebar-collapsed #workspace-nav{display:block;scrollbar-gutter:auto;padding:12px 0}.jobs-staff-active .jobs-sidebar-collapsed [data-jobs-nav-group]{margin:0 0 8px}.jobs-staff-active .jobs-sidebar-collapsed #workspace-nav button{justify-content:center;padding:8px}.jobs-staff-active .jobs-sidebar-collapsed .jobs-nav-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.jobs-staff-active .jobs-sidebar-collapsed #workspace-nav{display:block;scrollbar-gutter:auto;padding:12px 0}.jobs-staff-active .jobs-sidebar-collapsed [data-jobs-nav-group]{margin:0 0 8px}.jobs-staff-active .jobs-sidebar-collapsed #workspace-nav button{justify-content:center;padding:8px;position:relative}.jobs-staff-active .jobs-sidebar-collapsed .jobs-nav-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .jobs-staff-active .jobs-sidebar-collapsed .jobs-staff-sidebar{padding:14px 8px}
 .jobs-sidebar-account{flex:none;min-width:0;padding:10px 4px 0;border-top:1px solid var(--jobs-staff-line)}
 .jobs-sidebar-account #account-summary{margin:0;color:var(--jobs-staff-muted);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 .jobs-sidebar-collapsed .jobs-sidebar-account{display:none}
-.jobs-staff-active .jobs-sidebar-overlay .jobs-staff-sidebar{position:fixed;left:16px;top:98px;bottom:16px;height:auto;max-height:calc(100dvh - 114px);width:min(320px,calc(100vw - 32px));z-index:30;box-shadow:var(--jobs-overlay-shadow);min-height:0}
-@media(max-width:760px){body[data-jobs-staff=true] .jobs-workspace{padding:12px}.jobs-staff-active .jobs-staff-layout{gap:10px}.jobs-staff-active .jobs-staff-sidebar{top:96px;height:calc(100dvh - 116px);min-height:0}.jobs-staff-active .cms-workspace{padding:12px}.jobs-staff-active .cms-header{display:block}.jobs-staff-active .cms-role{margin-top:12px}.jobs-staff-active .cms-pagination{align-items:start;flex-direction:column}.jobs-staff-active .cms-toolbar .cms-search{min-width:100%}.jobs-staff-active .jobs-sidebar-overlay .jobs-staff-sidebar{top:90px;max-height:calc(100dvh - 106px)}}
-@media(max-width:520px){.jobs-staff-active .jobs-staff-layout{grid-template-columns:minmax(0,1fr)}.jobs-staff-active .jobs-staff-sidebar{position:relative;top:0;height:auto;min-height:0;width:100%;padding:8px 12px}.jobs-staff-active .jobs-sidebar-heading{padding:0;border:0;justify-content:space-between}.jobs-staff-active .jobs-sidebar-collapsed .jobs-sidebar-heading{padding:0;justify-content:space-between}.jobs-staff-active .jobs-sidebar-collapsed .jobs-sidebar-heading>div{display:block}.jobs-staff-active .jobs-sidebar-collapsed #workspace-nav{display:none}.jobs-staff-active .jobs-sidebar-overlay .jobs-staff-sidebar{position:fixed;top:88px;left:12px;width:calc(100vw - 24px);bottom:12px;height:auto}.jobs-staff-active #workspace-view{padding-top:4px}.jobs-staff-active .cms-workspace{padding:10px}}
-@media(prefers-reduced-motion:reduce){.jobs-staff-sidebar,.jobs-staff-sidebar *{scroll-behavior:auto!important;transition:none!important}}
+
+.jobs-mobile-nav-trigger,.jobs-mobile-nav-drawer{display:none}
+.jobs-portal-body.jobs-sidebar-scroll-locked{overflow:hidden}
+
+@media(max-width:900px){
+  body[data-jobs-staff=true] .jobs-workspace{padding:12px}
+  .jobs-staff-active .jobs-staff-layout{grid-template-columns:minmax(0,1fr);gap:10px}
+  .jobs-mobile-nav-trigger:not([hidden]){
+    display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;padding:0;
+    color:var(--jobs-staff-ink);background:var(--jobs-staff-surface);
+    border:1px solid var(--jobs-staff-line);border-radius:8px;cursor:pointer
+  }
+  .jobs-mobile-nav-trigger:hover{background:var(--jobs-staff-hover)}
+  .jobs-mobile-nav-drawer{
+    --drawer-time:var(--gary-motion-close,180ms);--drawer-ease:var(--gary-motion-in,ease-in);
+    position:fixed;inset:0 auto 0 0;box-sizing:border-box;
+    width:min(320px,calc(100% - 44px));max-width:none;height:100dvh;max-height:none;
+    margin:0;padding:0;border:0;border-right:1px solid var(--jobs-staff-line);border-radius:0;
+    background:var(--jobs-staff-surface);color:var(--jobs-staff-ink);overflow:hidden;translate:-100% 0;
+    transition:translate var(--drawer-time) var(--drawer-ease),display var(--drawer-time) allow-discrete,overlay var(--drawer-time) allow-discrete
+  }
+  .jobs-mobile-nav-drawer[open]{
+    --drawer-time:var(--gary-motion-open,240ms);--drawer-ease:var(--gary-motion-out,ease-out);
+    display:block;translate:0 0
+  }
+  .jobs-mobile-nav-drawer:not([open]){pointer-events:none}
+  .jobs-mobile-nav-drawer::backdrop{
+    background:var(--jobs-backdrop);opacity:0;
+    transition:opacity var(--gary-motion-close,180ms) var(--gary-motion-in,ease-in)
+  }
+  .jobs-mobile-nav-drawer[open]::backdrop{
+    opacity:1;transition:opacity var(--gary-motion-open,240ms) var(--gary-motion-out,ease-out)
+  }
+  @starting-style{
+    .jobs-mobile-nav-drawer[open]{translate:-100% 0}
+    .jobs-mobile-nav-drawer[open]::backdrop{opacity:0}
+  }
+  .jobs-mobile-nav-drawer>.jobs-staff-sidebar{
+    position:relative;top:auto;display:flex;flex-direction:column;height:100%;min-width:0;min-height:0;
+    padding:12px 16px max(16px,env(safe-area-inset-bottom));border:0;border-radius:0
+  }
+  .jobs-mobile-nav-drawer .jobs-sidebar-heading{display:flex;margin-bottom:12px;padding:0 0 12px;min-height:44px;border-bottom:1px solid var(--jobs-staff-line)}
+  .jobs-mobile-nav-drawer .jobs-sidebar-heading>div{display:block}
+  .jobs-mobile-nav-drawer #workspace-nav{scrollbar-gutter:auto;display:block}
+  .jobs-mobile-nav-drawer #workspace-nav button{min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere;font-size:13px}
+  .jobs-mobile-nav-drawer [data-jobs-sidebar-toggle]{width:44px;height:44px;min-width:44px}
+  .jobs-mobile-nav-drawer .jobs-nav-group-toggle{min-height:42px;font-size:12px}
+  .jobs-mobile-nav-drawer .jobs-sidebar-account{display:block}
+  .jobs-staff-active .cms-workspace{padding:12px}
+  .jobs-staff-active .cms-header{display:block}
+  .jobs-staff-active .cms-role{margin-top:12px}
+  .jobs-staff-active .cms-pagination{align-items:start;flex-direction:column}
+  .jobs-staff-active .cms-toolbar .cms-search{min-width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .jobs-staff-sidebar,.jobs-staff-sidebar *{scroll-behavior:auto!important;transition:none!important}
+  .jobs-mobile-nav-drawer,.jobs-mobile-nav-drawer::backdrop{transition:none}
+}
 
 .jobs-staff-active #workspace-nav:focus-visible{outline:2px solid var(--jobs-staff-focus);outline-offset:-2px}

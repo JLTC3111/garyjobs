@@ -19,11 +19,17 @@ const COPY={
    admin:'All content and recruitment permissions, including staff management within the owner safeguards.',
    none:'Jobs keeps the suspended membership, history and recruitment assignments.'
   },
-  directoryTitle:'Staff directory',count:n=>`${n} ${n===1?'membership':'memberships'}, including suspended access`,
-  filteredCount:(shown,total)=>`Showing ${shown} of ${total} memberships`,
+  directoryTitle:'Staff directory',
+  count:({active,suspended,unverified})=>{
+   const parts=[`${active} Active`,`${suspended} Suspended`];
+   if(unverified)parts.push(`${unverified} Unverified`);
+   return parts.join(' · ');
+  },
+  filteredCount:(shown,total,counts)=>`Showing ${shown} of ${total} · ${counts.active} Active · ${counts.suspended} Suspended${counts.unverified?` · ${counts.unverified} Unverified`:''}`,
   search:'Search by name or email',allRoles:'All roles',allStatuses:'All statuses',clear:'Clear filters',noMatches:'No staff match your search or filters.',
   refresh:'Refresh',loading:'Loading staff…',empty:'No Jobs staff memberships yet.',tryAgain:'Try again',
-  active:'Active',suspended:'Suspended · no access',unverified:'Email not verified · no access',
+  active:'Active',suspended:'Suspended',unverified:'Unverified',
+  suspendedHint:'Suspended · no access',unverifiedHint:'Email not verified · no access',
   you:'You',member:'Staff member',
   selfReadonly:'Your account',protectedReadonly:'Protected account',adminReadonly:'Administrator · only a protected owner can change this',viewOnly:'View only',
   editFor:name=>`Edit access for ${name}`,more:name=>`More actions for ${name}`,save:'Save changes',suspend:'Suspend access',restore:'Restore access',
@@ -39,7 +45,7 @@ const COPY={
  vi:{
   eyebrow:'QUẢN TRỊ TEACHING JOBS',title:'Quản lý nhân viên',
   intro:'Cấp, thay đổi, tạm ngưng và khôi phục vai trò nhân viên Teaching Jobs. Thay đổi chỉ áp dụng cho thành viên Teaching Jobs.',
-  add:'Thêm nhân viên',edit:'Chỉnh sửa quyền truy cập',assignIntro:'Nhập email đăng nhập của tài khoản Gary đã xác minh để thêm tài khoản vào Teaching Jobs.',
+  add:'Thêm nhân viên',edit:'Chỉnh Sửa',assignIntro:'Nhập email đăng nhập của tài khoản Gary đã xác minh để thêm tài khoản vào Teaching Jobs.',
   email:'Email tài khoản',displayName:'Tên hiển thị trên Jobs',nameHint:'Không bắt buộc. Để trống để dùng tên hiện có.',
   role:'Vai trò',status:'Trạng thái',assign:'Cấp quyền',cancel:'Hủy',close:'Đóng',
   adminOwnerOnly:'Chỉ chủ sở hữu Jobs được bảo vệ mới có thể cấp quyền Quản trị viên.',guideTitle:'Quyền theo vai trò',
@@ -51,14 +57,20 @@ const COPY={
    admin:'Toàn bộ quyền nội dung và tuyển dụng, bao gồm quản lý nhân viên theo quy tắc bảo vệ của chủ sở hữu.',
    none:'Jobs giữ lại tư cách thành viên đã tạm ngưng, lịch sử và phân công tuyển dụng.'
   },
-  directoryTitle:'Danh bạ nhân viên',count:n=>`${n} thành viên, gồm cả thành viên đã tạm ngưng`,
-  filteredCount:(shown,total)=>`Hiển thị ${shown} trên ${total} thành viên`,
+  directoryTitle:'Danh bạ nhân viên',
+  count:({active,suspended,unverified})=>{
+   const parts=[`${active} Đang hoạt động`,`${suspended} Đã tạm ngưng`];
+   if(unverified)parts.push(`${unverified} Chưa xác minh`);
+   return parts.join(' · ');
+  },
+  filteredCount:(shown,total,counts)=>`Hiển thị ${shown} trên ${total} · ${counts.active} Đang hoạt động · ${counts.suspended} Đã tạm ngưng${counts.unverified?` · ${counts.unverified} Chưa xác minh`:''}`,
   search:'Tìm theo tên hoặc email',allRoles:'Tất cả vai trò',allStatuses:'Tất cả trạng thái',clear:'Xóa bộ lọc',noMatches:'Không tìm thấy nhân viên phù hợp với từ khóa hoặc bộ lọc.',
   refresh:'Làm mới',loading:'Đang tải danh sách nhân viên…',empty:'Chưa có thành viên nhân viên Jobs.',tryAgain:'Thử lại',
-  active:'Đang hoạt động',suspended:'Đã tạm ngưng · không có quyền',unverified:'Email chưa xác minh · không có quyền',
+  active:'Đang hoạt động',suspended:'Đã tạm ngưng',unverified:'Chưa xác minh',
+  suspendedHint:'Đã tạm ngưng · không có quyền',unverifiedHint:'Email chưa xác minh · không có quyền',
   you:'Bạn',member:'Nhân viên',
   selfReadonly:'Tài khoản của bạn',protectedReadonly:'Tài khoản được bảo vệ',adminReadonly:'Quản trị viên · chỉ chủ sở hữu được bảo vệ mới có thể thay đổi',viewOnly:'Chỉ xem',
-  editFor:name=>`Chỉnh sửa quyền truy cập của ${name}`,more:name=>`Thao tác khác cho ${name}`,save:'Lưu thay đổi',suspend:'Tạm ngưng quyền truy cập',restore:'Khôi phục quyền truy cập',
+  editFor:name=>`Chỉnh sửa của ${name}`,more:name=>`Thao tác khác cho ${name}`,save:'Lưu thay đổi',suspend:'Tạm ngưng quyền truy cập',restore:'Khôi phục quyền truy cập',
   assigned:email=>`Đã cấp quyền Jobs cho ${email}.`,updated:email=>`Đã cập nhật quyền của ${email}.`,noChange:'Không có thay đổi để lưu.',
   suspendedNotice:email=>`Đã tạm ngưng quyền Jobs của ${email}.`,restored:email=>`Đã khôi phục quyền Jobs của ${email}.`,
   conflict:'Thông tin thành viên đã thay đổi. Hãy xem lại các giá trị mới trước khi lưu lại.',
@@ -172,22 +184,27 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   const c=copy(),state=statusOf(member),id=esc(member.user_id),name=nameOf(member)||c.member;
   const reason=member.is_self?c.selfReadonly:member.protected?c.protectedReadonly:member.role==='admin'?c.adminReadonly:c.viewOnly;
   const action=member.active?'suspend':'restore';
+  const stateLabel=state==='active'?c.active:state==='suspended'?c.suspendedHint:c.unverifiedHint;
+  const email=member.email&&member.email!==name
+   ?`<span class="jobs-meta jobs-staff-email" title="${esc(member.email)}">${esc(member.email)}</span>`
+   :'';
   return `<article class="jobs-staff-member" data-user-id="${id}">
    <div class="jobs-staff-identity">
     <span class="jobs-staff-avatar" aria-hidden="true">${esc(initials(member))}</span>
-    <div class="jobs-staff-member-name"><strong>${esc(name)}</strong>${member.email&&member.email!==name?`<span class="jobs-meta">${esc(member.email)}</span>`:''}</div>
+    <div class="jobs-staff-member-name"><strong title="${esc(name)}">${esc(name)}</strong>${email}</div>
    </div>
    <span class="jobs-staff-role">${esc(c.roles[member.role]||member.role)}</span>
    <div class="jobs-staff-tags">
-    <span class="jobs-staff-state" data-state="${state}">${esc(c[state])}</span>
+    <span class="jobs-staff-state" data-state="${state}" title="${esc(stateLabel)}">${esc(c[state])}</span>
     ${member.is_self?`<span class="jobs-staff-tag">${esc(c.you)}</span>`:''}
    </div>
    ${canEdit(member)?`<div class="jobs-staff-row-actions">
-    <button type="button" data-staff-action="edit" aria-haspopup="dialog" aria-controls="jobs-staff-drawer" aria-label="${esc(c.editFor(name))}">${esc(c.edit)}</button>
+    <button type="button" class="jobs-staff-edit" data-staff-action="edit" data-button-variant="edit" aria-haspopup="dialog" aria-controls="jobs-staff-drawer" aria-label="${esc(c.editFor(name))}">${esc(c.edit)}</button>
     <div class="jobs-staff-menu">
      <button type="button" class="jobs-staff-icon-button" data-staff-action="more" aria-label="${esc(c.more(name))}" aria-expanded="false" aria-controls="jobs-staff-menu-${id}"><span aria-hidden="true">⋮</span></button>
      <div id="jobs-staff-menu-${id}" class="jobs-staff-menu-panel" inert aria-hidden="true">
       <button type="button" data-staff-action="${action}">${esc(c[action])}</button>
+      <button type="button" class="jobs-staff-menu-edit" data-staff-action="edit" aria-haspopup="dialog" aria-controls="jobs-staff-drawer">${esc(c.edit)}</button>
      </div>
     </div>
    </div>`:`<p class="jobs-staff-readonly">${esc(reason)}</p>`}
@@ -239,7 +256,13 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
    (!query||[nameOf(member),member.email].some(value=>searchable(value).includes(query)))&&
    (!roleFilter||roleFilter===member.role)&&(!statusFilter||statusFilter===statusOf(member))
   );
-  const count=$('[data-staff-count]'),countText=data?(filtered?c.filteredCount(shown.length,members.length):c.count(members.length)):'';
+  const tally=list=>{
+   const counts={active:0,suspended:0,unverified:0};
+   for(const member of list)counts[statusOf(member)]+=1;
+   return counts;
+  };
+  const counts=tally(filtered?shown:members);
+  const count=$('[data-staff-count]'),countText=data?(filtered?c.filteredCount(shown.length,members.length,counts):c.count(counts)):'';
   if(count.textContent!==countText)count.textContent=countText;
   $('[data-staff-action=clear]').hidden=!filtered;
   list.setAttribute('aria-busy',String(blocked()));
@@ -274,7 +297,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   submit.dataset.buttonVariant=member?'save':'confirm';
   $('[data-staff-assign-intro]').hidden=Boolean(member);
   $('[data-staff-owner-hint]').hidden=owner();
-  $('[data-staff-form-status]').textContent=member?c[statusOf(member)]:'';
+  $('[data-staff-form-status]').textContent=member?(statusOf(member)==='active'?c.active:statusOf(member)==='suspended'?c.suspendedHint:c.unverifiedHint):'';
   if(email.value!==editor.email)email.value=editor.email;
   if(displayName.value!==editor.display_name)displayName.value=editor.display_name;
   displayName.placeholder=member?.name&&member.name!==member.display_name?member.name:'';

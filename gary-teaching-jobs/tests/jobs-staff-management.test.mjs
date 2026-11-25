@@ -71,7 +71,7 @@ test('the directory leads with compact identities and actions gated by Jobs memb
   assert.equal(h.$('.jobs-staff-admin > section').classList.contains('jobs-staff-directory'),true);
   assert.equal(h.doc.querySelectorAll('.jobs-staff-member').length,6);
   assert.equal(h.doc.querySelectorAll('.jobs-staff-member form, .jobs-staff-member input, .jobs-staff-member select').length,0);
-  assert.match(h.$('[data-staff-count]').textContent,/6 memberships/);
+  assert.match(h.$('[data-staff-count]').textContent,/4 Active · 1 Suspended · 1 Unverified/);
   assert.match(h.row('u-owner').textContent,/Gary Owner.*owner@example\.test.*Admin.*Active.*Protected account/s);
   assert.equal(h.row('u-owner').querySelector('.jobs-staff-tag'),null);
   assert.equal(h.row('u-owner').querySelector('.jobs-staff-readonly')?.className,'jobs-staff-readonly');
@@ -82,8 +82,11 @@ test('the directory leads with compact identities and actions gated by Jobs memb
    assert.equal(h.action(id,'edit'),null);assert.equal(h.action(id,'more'),null);
    assert.match(h.row(id).textContent,reason);
   }
-  assert.match(h.row('u-recruiter').textContent,/Suspended · no access/);
-  assert.match(h.row('u-pending').textContent,/Email not verified · no access/);
+  assert.match(h.row('u-recruiter').textContent,/Suspended/);
+  assert.equal(h.row('u-recruiter').querySelector('.jobs-staff-state').title,'Suspended · no access');
+  assert.match(h.row('u-pending').textContent,/Unverified/);
+  assert.equal(h.row('u-pending').querySelector('.jobs-staff-state').title,'Email not verified · no access');
+  assert.equal(h.row('u-editor').querySelector('.jobs-staff-email').title,'editor@example.test');
   const guide=h.$('details.jobs-staff-guide');
   assert.equal(guide.open,true);
   guide.querySelector('summary').click();assert.equal(guide.open,false);
@@ -120,7 +123,7 @@ test('search combines Jobs names and emails with role and status filters',async(
   h.input(form.elements.query,'example.test');
   h.input(form.elements.role,'publisher');h.input(form.elements.status,'unverified');
   assert.deepEqual(shown(),['u-pending']);
-  assert.match(h.$('[data-staff-count]').textContent,/Showing 1 of 6/);
+  assert.match(h.$('[data-staff-count]').textContent,/Showing 1 of 6 · 0 Active · 0 Suspended · 1 Unverified/);
   h.input(form.elements.status,'suspended');
   assert.deepEqual(shown(),[]);
   assert.match(h.$('.jobs-staff-list').textContent,/No staff match/);
@@ -248,7 +251,8 @@ test('Vietnamese labels and drawer drafts survive language changes and dismissal
   assert.equal(h.form.elements.role.value,'recruiter');
   assert.equal(h.form.elements.role.selectedOptions[0].textContent,'Chuyên viên tuyển dụng');
   assert.match(h.form.elements.role.selectedOptions[0].title,/Chỉ tuyển dụng/);
-  assert.match(h.row('u-recruiter').textContent,/Đã tạm ngưng · không có quyền/);
+  assert.match(h.row('u-recruiter').textContent,/Đã tạm ngưng/);
+  assert.equal(h.row('u-recruiter').querySelector('.jobs-staff-state').title,'Đã tạm ngưng · không có quyền');
   assert.match(h.row('u-self').textContent,/Tài khoản của bạn/);
   assert.doesNotMatch(h.row('u-owner').textContent,/Chủ sở hữu được bảo vệ/);
   assert.match(h.$('.jobs-staff-history').textContent,/Bởi Quản trị cơ sở dữ liệu/);

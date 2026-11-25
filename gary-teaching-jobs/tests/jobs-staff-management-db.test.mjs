@@ -7,6 +7,11 @@ const migrations=['20261116043122_teaching_jobs_cms_and_recruitment.sql','202611
 const eligibility='20261117202945_staff_eligibility_assignment.sql';
 const conflicts='20261124202611_jobs_postgrest_conflict_sqlstates.sql';
 const visibility='20261125182549_jobs_staff_visibility_and_media_ownership.sql';
+const vacancyImages=[
+ '20261119041527_jobs_vacancy_featured_images.sql','20261123081300_jobs_vacancy_image_gallery.sql',
+ '20261123091000_jobs_vacancy_removed_images.sql','20261123161500_jobs_vacancy_image_crop.sql',
+ '20261123164000_jobs_vacancy_image_forgotten.sql',
+];
 const sql=name=>readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
 const bootstrap=()=>readFile(new URL('../supabase/setup-jobs-staff.sql',import.meta.url),'utf8');
 const ids={owner:'30000000-0000-4000-8000-000000000001',admin:'30000000-0000-4000-8000-000000000002',editor:'30000000-0000-4000-8000-000000000003',publisher:'30000000-0000-4000-8000-000000000004',recruiter:'30000000-0000-4000-8000-000000000005',candidate:'30000000-0000-4000-8000-000000000006',unverified:'30000000-0000-4000-8000-000000000007',outsider:'30000000-0000-4000-8000-000000000008'};
@@ -44,6 +49,43 @@ async function setup({upgrade=true}={}){
  return h;
 }
 
+test('Jobs visibility installs when the earlier eligibility migration is pending',async()=>{
+ const h=await setup({upgrade:false});
+ try{
+  await h.db.exec(await sql(migrations[2]));
+  await h.db.exec(await sql(conflicts));
+  await h.db.exec('create role service_role');
+  for(const migration of vacancyImages)await h.db.exec(await sql(migration));
+  assert.deepEqual(await h.one(`select
+   to_regprocedure('jobs_private.is_assignable(uuid)') is null as missing_assignable,
+   to_regprocedure('jobs_private.staff_identity_eligible(uuid)') is null as missing_eligibility`),
+  {missing_assignable:true,missing_eligibility:true});
+
+  await h.db.exec(await sql(visibility));
+  await h.bootstrap(ids.owner,'admin',true);
+  await h.db.query("insert into public.jobs_candidates(id,full_name,email) values($1,'Candidate','candidate@example.test')",[ids.candidate]);
+  const app=await h.one("insert into public.jobs_applications(candidate_id,vacancy_title,client_request_id) values($1,'General introduction',gen_random_uuid()) returning id",[ids.candidate]);
+  await h.as(ids.owner);
+  assert.equal((await h.caps()).media,true);
+  await h.operator();
+  await h.db.query("update auth.users set banned_until=now()+interval '1 hour' where id=$1",[ids.owner]);
+
+  await h.as(ids.owner);
+  assert.equal((await h.caps()).media,false);
+  await assert.rejects(h.overview(),error=>error.code==='42501');
+  await assert.rejects(h.assign('candidate@example.test','editor'),error=>error.code==='42501');
+
+  await h.as(ids.recruiter);
+  const roster=(await h.db.query('select user_id from public.jobs_staff_directory()')).rows.map(row=>row.user_id).sort();
+  assert.deepEqual(roster,[ids.admin,ids.recruiter].sort());
+  const transition=(assignee,version)=>h.one(
+   "select stage,assigned_staff_id from public.jobs_transition_application($1,'screening',$2,$3)",[app.id,assignee,version]);
+  await assert.rejects(transition(ids.owner,1),error=>error.code==='23514'&&error.message==='jobs.assignee_invalid');
+  assert.deepEqual(await transition(ids.recruiter,1),{stage:'screening',assigned_staff_id:ids.recruiter});
+  await assert.rejects(transition(ids.recruiter,1),error=>error.code==='PT409');
+ }finally{await h.db.close();}
+});
+
 test('Jobs staff visibility, direct requests and media management respect the existing roles and protected Owners',async()=>{
  const h=await setup();
  const id=n=>`a1000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
@@ -67,9 +109,7 @@ test('Jobs staff visibility, direct requests and media management respect the ex
   await h.db.exec(`create role service_role;
    grant select,insert on storage.objects to authenticated,anon;
    create policy unrelated_permissive_policy on storage.objects for all to authenticated,anon using(true) with check(true);`);
-  for(const migration of ['20261119041527_jobs_vacancy_featured_images.sql','20261123081300_jobs_vacancy_image_gallery.sql',
-   '20261123091000_jobs_vacancy_removed_images.sql','20261123161500_jobs_vacancy_image_crop.sql',
-   '20261123164000_jobs_vacancy_image_forgotten.sql',visibility])await h.db.exec(await sql(migration));
+  for(const migration of [...vacancyImages,visibility])await h.db.exec(await sql(migration));
   for(const person of roster){
    if(!Object.values(ids).includes(person.id)){
     await q('insert into auth.users(id,email,email_confirmed_at) values($1,$2,case when $3 then now() end)',[person.id,email(person),person.eligible!==false]);
