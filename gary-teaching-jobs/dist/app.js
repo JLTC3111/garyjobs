@@ -5,6 +5,7 @@ import {jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePat
 import {showActionToast,setCounterValues} from './action-toast.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
 let catalogueStamp=null,catalogueFlight=null;
+let publicAuth={loading:true,user:null,failed:false};
 let vacancyQuery='';
 const defaultSocialImage=document.querySelector('meta[property="og:image"]')?.content;
 
@@ -59,6 +60,9 @@ const icons = {
   chat: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l1-5a8.5 8.5 0 1 1 16-3.5Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/>',
   document: '<path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h6"/>',
   home: '<path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-8h6v8"/>',
+  'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8m8 4H8m8 4H8"/>',
+  house: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  'messages-square': '<path d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/><path d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>',
   phone: '<path d="m6 3 4 5-3 3q2 4 6 6l3-3 5 4q-1 4-5 3C8 19 5 16 3 8Q2 4 6 3Z"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
@@ -178,7 +182,7 @@ function renderPage() {
         <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('globe')}</button>
           <div id="jobs-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="jobs-preferences-title" ${preferencesOpen?'':'hidden'}><div class="jobs-preferences-heading"><h2 id="jobs-preferences-title">${t('Website preferences','Tùy chọn website')}</h2><button type="button" class="jobs-preferences-close" data-action="close-preferences" data-preference-focus="close" aria-label="${t('Close preferences','Đóng tùy chọn')}">${icon('close')}</button></div>
             <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
-            <fieldset><legend>${t('Appearance','Giao diện')}</legend><div class="jobs-preferences-options">${[['light','Light','Sáng'],['dark','Dark','Tối'],['system','System','Hệ thống']].map(([value,en,vi])=>`<button type="button" data-action="theme" data-jobs-theme-choice="${value}" data-preference-focus="theme-${value}" aria-pressed="false">${t(en,vi)}</button>`).join('')}</div><p class="jobs-preferences-help">${t('System follows your device settings.','Hệ thống theo cài đặt thiết bị của bạn.')}</p></fieldset>
+            <fieldset><legend>${t('Appearance','Giao diện')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-theme" data-squish-mode="theme">${[['light','Light','Sáng'],['dark','Dark','Tối'],['system','System','Hệ thống']].map(([value,en,vi])=>`<button type="button" data-action="theme" data-jobs-theme-choice="${value}" data-preference-focus="theme-${value}" aria-pressed="false">${t(en,vi)}</button>`).join('')}</div><p class="jobs-preferences-help">${t('System follows your device settings.','Hệ thống theo cài đặt thiết bị của bạn.')}</p></fieldset>
           </div>
         </div><a class="button button-primary button-small nav-cta" href="portal.html?access=staff&amp;view=cms">${t('Post a Job', 'Đăng tuyển')}</a><button class="icon-button button-utility menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
     </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
@@ -213,10 +217,16 @@ function renderPage() {
       <section id="teacher-showcase" class="teacher-showcase section-pad" aria-labelledby="teacher-showcase-title" hidden></section>
       <section id="life" class="life-section section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('THERE’S A WHOLE LIFE BEYOND THE CLASSROOM', 'CÒN CẢ MỘT CUỘC SỐNG BÊN NGOÀI LỚP HỌC')}</p><h2>${t('Make a living.<br>Make a little <em>more of life.</em>', 'Tạo dựng sự nghiệp.<br>Thêm sắc màu <em>cho cuộc sống.</em>')}</h2></div><p class="section-intro">${t('New routines. Unexpected friendships.<br>Weekends that feel like a world away.<br>This is your invitation to explore.', 'Thói quen mới. Tình bạn bất ngờ.<br>Cuối tuần với những hành trình khác biệt.<br>Mời bạn cùng khám phá.')}</p></div><div id="photo-gallery"></div><div class="life-bottom">${icon('sun')}<p>${t('Come for the teaching. Stay for everything else.', 'Đến vì giảng dạy. Gắn bó vì tất cả những điều còn lại.')}</p><span class="handwritten">${t('That’s the Vietnam feeling.', 'Đó là cảm giác Việt Nam.')}</span></div></div></section>
       <section id="services" class="support-section section-pad"><div class="container"><div class="section-heading"><div><p class="eyebrow">${t('YOUR LANDING, A LITTLE SOFTER', 'ĐỂ KHỞI ĐẦU NHẸ NHÀNG HƠN')}</p><h2>${t('More than a <em>job match.</em>', 'Hơn cả một <em>công việc.</em>')}</h2></div><p class="section-intro">${t('A new home comes with a few moving parts.<br>We’re here to help you put them together.', 'Một cuộc sống mới có nhiều điều cần sắp xếp.<br>Chúng tôi ở đây để hỗ trợ bạn.')}</p></div><div class="support-grid">${[
-        ['documents','document',['Paperwork, made clearer', 'Giấy tờ, rõ ràng hơn'],['Work permits, visas, temporary residence cards and document services. Get a clearer picture of your next steps.', 'Giấy phép lao động, visa, thẻ tạm trú và dịch vụ giấy tờ. Hiểu rõ hơn các bước bạn cần thực hiện.'],['Explore document support','Khám phá hỗ trợ giấy tờ']],
-        ['housing','home',['A place to call home', 'Một nơi để gọi là nhà'],['From a studio of your own to room for a bigger adventure. Explore rental support as you settle into Hanoi.', 'Từ studio riêng đến không gian cho hành trình lớn hơn. Khám phá hỗ trợ thuê nhà khi đến Hà Nội.'],['Find your space','Tìm không gian của bạn']],
-        ['settling','chat',['Someone in your corner', 'Luôn có người đồng hành'],['Questions before the move? A little help after you arrive? It starts with a conversation with our local team.', 'Băn khoăn trước khi chuyển đến? Cần giúp đỡ khi đã đến nơi? Bắt đầu bằng cuộc trò chuyện với đội ngũ địa phương.'],['Meet your local support','Kết nối đội ngũ hỗ trợ']],
-      ].map(([id,symbol,title,desc,cta])=>`<article class="support-card"><button class="support-card-main" data-action="service" data-id="${id}"><span class="support-icon">${icon(symbol)}</span><h3>${pick(title)}</h3><p>${pick(desc)}</p><span class="support-cta">${pick(cta)} ${arrow()}</span></button>${serviceSites[id] ? serviceSiteLink(id, 'support-site-link') : ''}</article>`).join('')}</div></div></section>
+        ['documents','file-text',['Document support','Hỗ trợ giấy tờ'],['Paperwork, made clearer', 'Giấy tờ, rõ ràng hơn'],['Work permits, visas, temporary residence cards and document services. Get a clearer picture of your next steps.', 'Giấy phép lao động, visa, thẻ tạm trú và dịch vụ giấy tờ. Hiểu rõ hơn các bước bạn cần thực hiện.'],['Explore document support','Khám phá hỗ trợ giấy tờ']],
+        ['housing','house',['Housing','Nhà ở'],['A place to call home', 'Một nơi để gọi là nhà'],['From a studio of your own to room for a bigger adventure. Explore rental support as you settle into Hanoi.', 'Từ studio riêng đến không gian cho hành trình lớn hơn. Khám phá hỗ trợ thuê nhà khi đến Hà Nội.'],['Find your space','Tìm không gian của bạn']],
+        ['settling','messages-square',['Local assistance','Hỗ trợ địa phương'],['Someone in your corner', 'Luôn có người đồng hành'],['Questions before the move? A little help after you arrive? It starts with a conversation with our local team.', 'Băn khoăn trước khi chuyển đến? Cần giúp đỡ khi đã đến nơi? Bắt đầu bằng cuộc trò chuyện với đội ngũ địa phương.'],['Meet your local support','Kết nối đội ngũ hỗ trợ']],
+      ].map(([id,symbol,category,title,desc,cta])=>`<article class="support-card">
+        <span class="support-icon">${icon(symbol)}</span>
+        <span class="support-category">${pick(category)}</span>
+        <h3>${pick(title)}</h3><p>${pick(desc)}</p>
+        ${serviceSites[id] ? serviceSiteLink(id, 'support-site-link') : ''}
+        <button type="button" class="support-card-main support-cta" data-action="service" data-id="${id}"><span>${pick(cta)}</span>${arrow()}</button>
+      </article>`).join('')}</div></div></section>
       <section class="community-section"><div class="container community-top"><div><p class="eyebrow">${t('TEACHERS. TRAVELERS. YOUR PEOPLE.', 'GIÁO VIÊN. NGƯỜI KHÁM PHÁ. CỘNG ĐỒNG CỦA BẠN.')}</p><h2>${t('A place to <em>belong.</em>', 'Một nơi để <em>gắn kết.</em>')}</h2></div><a class="text-button" href="https://www.facebook.com/vnenglishteachingjobs/" target="_blank" rel="noopener noreferrer">${t('Meet the community', 'Gặp gỡ cộng đồng')} ${arrow()}</a></div><div class="community-gallery container">${[5,1,4,2,3].map((n,i)=>`<figure><img src="assets/community-${n}.webp" alt="${pick([['Gary Agency community members sharing a meal', 'Thành viên cộng đồng Gary Agency dùng bữa cùng nhau'],['Teachers visiting an agency partner', 'Giáo viên gặp gỡ đối tác'],['Friends exploring Vietnam by boat', 'Bạn bè khám phá Việt Nam bằng thuyền'],['A teacher and agency partner', 'Giáo viên và đối tác'],['Gary Agency community gathering', 'Buổi gặp mặt cộng đồng Gary Agency']][i])}" loading="lazy" width="600" height="600"></figure>`).join('')}</div><div class="container community-bottom"><span>${icon('heart')}${t('Real moments. Real connections. A life of your own.', 'Khoảnh khắc thật. Kết nối thật. Cuộc sống của riêng bạn.')}</span><a class="inline-link" href="https://www.facebook.com/vnenglishteachingjobs/" target="_blank" rel="noopener noreferrer">@vnenglishteachingjobs ${arrow()}</a></div></section>
       <section id="questions" class="faq-section section-pad"><div class="container faq-grid"><div><p class="eyebrow">${t('A FEW THINGS YOU MIGHT BE WONDERING', 'MỘT VÀI ĐIỀU BẠN CÓ THỂ MUỐN BIẾT')}</p><h2>${t('Big questions.<br><em>Straight answers.</em>', 'Câu hỏi lớn.<br><em>Giải đáp rõ ràng.</em>')}</h2><p class="body-copy">${t('Still have something on your mind?<br>We’re just a conversation away.', 'Vẫn còn điều bạn muốn hỏi?<br>Chúng tôi luôn sẵn lòng trò chuyện.')}</p><button class="text-button" data-action="contact">${t('Ask our team', 'Hỏi đội ngũ của chúng tôi')} ${arrow()}</button></div><div class="faq-list">${[
         [['Is there a fee to find a teaching job?', 'Tìm việc giảng dạy có mất phí không?'], ['No. Gary Agency does not charge teachers a commission or job placement fee. Separate services, such as visas, document processing or housing, may have their own costs. Ask your recruiter for the details before you commit.', 'Không. Gary Agency không thu hoa hồng hoặc phí giới thiệu việc làm của giáo viên. Các dịch vụ riêng như visa, xử lý giấy tờ hoặc nhà ở có thể có chi phí riêng. Hãy hỏi chuyên viên chi tiết trước khi quyết định.']],
@@ -528,9 +538,9 @@ function vacancyHeader(){
     <a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>
     <div class="vacancy-preferences">
       <span data-squish-key="jobs-vacancy-language"><button type="button" class="text-button dialog-job-language" data-action="language" data-squish-target="toggle" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button></span>
-      <select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
+      <span data-squish-key="jobs-vacancy-theme" data-squish-mode="theme"><select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
         <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
-      </select>
+      </select></span>
       <select id="vacancy-style" aria-label="${t('Reading style','Kiểu trình bày')}">
         ${vacancyStyles.map(([value,en,vi])=>`<option value="${value}" ${value===vacancyStyle?'selected':''}>${t(en,vi)}</option>`).join('')}
       </select>
@@ -756,7 +766,7 @@ function openPreferences() {
   preferencesOpen=true;
   const panel=$('#jobs-preferences-panel');panel.hidden=false;panel.inert=false;
   $('#jobs-preferences-trigger').setAttribute('aria-expanded','true');
-  (panel.querySelector('.squish-switch') || panel.querySelector('[data-language][aria-pressed="true"]'))?.focus({preventScroll:true});
+  (panel.querySelector('[role=switch]') || panel.querySelector('[data-language][aria-pressed="true"]'))?.focus({preventScroll:true});
 }
 document.addEventListener('pointerdown',event=>{
   if(preferencesOpen&&!event.target.closest('.jobs-preferences'))closePreferences();
@@ -784,8 +794,8 @@ document.addEventListener('click',event=>{
       if(reference&&!routeDialog)openJob(reference,{navigate:false});
       window.scrollTo({top:y,behavior:'instant'});
     }
-    const vacancyLanguage=$('#detail-dialog[open] .squish-switch')||$('#detail-dialog[open] .dialog-job-language');
-    const preferenceLanguage=$('#jobs-preferences-panel .squish-switch')||$(`[data-language="${state.lang}"]`);
+    const vacancyLanguage=$('#detail-dialog[open] [role=switch]')||$('#detail-dialog[open] .dialog-job-language');
+    const preferenceLanguage=$('#jobs-preferences-panel [role=switch]')||$(`[data-language="${state.lang}"]`);
     (vacancyLanguage||(preferencesOpen?preferenceLanguage:$('#jobs-preferences-trigger')))?.focus({preventScroll:true});
   }
   if(action==='menu'){closePreferences();toggleMenu();}
@@ -905,11 +915,22 @@ function renderManagedContent(){
     for(const job of jobs)if(job.region)locations.set(job.region,job.location);
     $('#location').innerHTML=`<option value="all">${t('Anywhere in Vietnam','Toàn Việt Nam')}</option>`+[...locations].map(([value,label])=>`<option value="${escapeText(value)}" ${state.location===value?'selected':''}>${label}</option>`).join('');
   }
-  const note=document.createElement('p');note.className='jobs-live-note';note.setAttribute('role','status');
-  note.textContent=backendReady?t('Published vacancies are current until their closing date. Submit securely and track your application in the candidate portal.','Tin đã xuất bản hiển thị đến hạn tuyển. Nộp hồ sơ an toàn và theo dõi tại cổng ứng viên.'):t('Online applications are not available yet. These reference listings require recruiter confirmation; the fallback form only prepares an email.','Ứng tuyển trực tuyến chưa khả dụng. Tin tham khảo cần được chuyên viên xác nhận; biểu mẫu dự phòng chỉ chuẩn bị email.');
-  if(!backendReady&&managedRecords)note.textContent=t('The vacancy list could not be refreshed. Open a listing to check its availability.','Chưa thể cập nhật danh sách tuyển dụng. Hãy mở tin để kiểm tra xem vị trí còn tuyển không.');
-  $('#opportunities').prepend(note);
+  syncLiveNote();
 }
+function syncLiveNote(){
+  $$('.jobs-live-note').forEach(el=>el.remove());
+  // Wait for auth to resolve, then show only for an active signed-in session.
+  if(publicAuth.loading||!publicAuth.user)return;
+  const note=document.createElement('p');note.className='jobs-live-note';note.setAttribute('role','status');
+  note.textContent=backendReady?t('Vacancies are shown until their application deadline. You can apply and track your application status in the Candidate Portal.','Các tin tuyển dụng được hiển thị đến hạn nhận hồ sơ. Bạn có thể ứng tuyển và theo dõi trạng thái hồ sơ tại Cổng ứng viên.'):t('Online applications are not available yet. These reference listings require recruiter confirmation; the fallback form only prepares an email.','Ứng tuyển trực tuyến chưa khả dụng. Tin tham khảo cần được chuyên viên xác nhận; biểu mẫu dự phòng chỉ chuẩn bị email.');
+  if(!backendReady&&managedRecords)note.textContent=t('The vacancy list could not be refreshed. Open a listing to check its availability.','Chưa thể cập nhật danh sách tuyển dụng. Hãy mở tin để kiểm tra xem vị trí còn tuyển không.');
+  const grid=$('#job-grid');
+  if(grid)grid.before(note);
+}
+document.addEventListener('jobs:public-auth',event=>{
+  publicAuth={loading:!!event.detail?.loading,user:event.detail?.user||null,failed:!!event.detail?.failed};
+  syncLiveNote();
+});
 function loadPublishedContent({interactive=false}={}){
   if(interactive){publicLoadState='loading';syncVacancyRoute();syncPublishedLattice();}
   if(catalogueFlight)return catalogueFlight;

@@ -10,6 +10,14 @@ import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 import {createVacancyHandler} from '../api/vacancy.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
+const signedInUser={id:'jobs-user',email:'teacher@example.test',user_metadata:{full_name:'Teacher One'}};
+function signedInAuth(user=signedInUser){
+ return{
+  onAuthStateChange(callback){callback('INITIAL_SESSION',{user});return{data:{subscription:{unsubscribe(){}}}};},
+  getUser:async()=>({data:{user},error:null}),
+  signOut:async()=>({error:null}),
+ };
+}
 async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),reducedMotion=false,storedStyle,loadCatalogue,shell}={}){
  const dom=new JSDOM(shell??await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;
@@ -24,7 +32,45 @@ w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.
  await settle();return dom;
 }
 test('published vacancies replace reference cards and managed categories/locations survive filter changes',async()=>{
- const dom=await publicPage(records);try{const d=dom.window.document;assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.doesNotMatch(d.querySelector('#job-grid').textContent,/Bắc Giang/);assert.match(d.querySelector('#location').textContent,/Hanoi/);d.querySelector('[data-action="filter"][data-id="public"]').click();assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.equal(d.querySelectorAll('[data-action="filter"][data-id="public"]').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/Submit securely/);}finally{dom.window.close();}
+ const dom=await publicPage(records);try{const d=dom.window.document;assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.doesNotMatch(d.querySelector('#job-grid').textContent,/Bắc Giang/);assert.match(d.querySelector('#location').textContent,/Hanoi/);d.querySelector('[data-action="filter"][data-id="public"]').click();assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.equal(d.querySelectorAll('[data-action="filter"][data-id="public"]').length,1);assert.equal(d.querySelectorAll('.jobs-live-note').length,0);}finally{dom.window.close();}
+});
+test('signed-in visitors see the vacancies guidance above the card grid with natural copy',async()=>{
+ const dom=await publicPage(records,{auth:signedInAuth()});
+ try{
+  const d=dom.window.document;
+  const note=d.querySelector('.jobs-live-note');
+  assert.ok(note);
+  assert.equal(note.nextElementSibling?.id,'job-grid');
+  assert.match(note.textContent,/application deadline/);
+  assert.match(note.textContent,/Candidate Portal/);
+  d.querySelector('[data-language="vi"]').click();
+  assert.match(d.querySelector('.jobs-live-note').textContent,/Các tin tuyển dụng được hiển thị đến hạn nhận hồ sơ/);
+  assert.match(d.querySelector('.jobs-live-note').textContent,/Cổng ứng viên/);
+ }finally{dom.window.close();}
+});
+test('vacancies guidance hides for anonymous visitors and after sign-out without flashing while auth loads',async()=>{
+ const user=signedInUser;
+ let notify,releaseIdentity;
+ const restoring=new Promise(resolve=>{releaseIdentity=resolve;});
+ const auth={
+  onAuthStateChange(callback){notify=callback;callback('INITIAL_SESSION',{user});},
+  getUser(){return restoring;},
+  signOut:async()=>({error:null}),
+ };
+ const dom=await publicPage(records,{auth,loadCapabilities:async()=>({})});
+ try{
+  const d=dom.window.document;
+  assert.equal(d.querySelectorAll('.jobs-live-note').length,0,'no banner while session is still verifying');
+  releaseIdentity({data:{user},error:null});
+  await settle();
+  assert.ok(d.querySelector('.jobs-live-note'));
+  assert.equal(d.querySelector('.jobs-live-note').nextElementSibling?.id,'job-grid');
+  d.querySelector('#sign-out').click();
+  await settle();
+  notify('SIGNED_OUT',null);
+  await settle();
+  assert.equal(d.querySelectorAll('.jobs-live-note').length,0);
+ }finally{dom.window.close();}
 });
 test('published vacancy cards keep the location, bookmark and optional image without a house badge',async()=>{
  const content=structuredClone(records),first=content[3];
@@ -63,7 +109,16 @@ test('the two reference vacancies also omit the house badge',async()=>{
  }finally{dom.window.close();}
 });
 test('missing backend remains an honest email fallback without a fake application receipt',async()=>{
- const dom=await publicPage(new Error('not provisioned'));try{const d=dom.window.document;assert.equal(d.querySelectorAll('.jobs-live-note').length,1);assert.match(d.querySelector('.jobs-live-note').textContent,/not available yet/);d.querySelector('[data-action="apply"]').click();assert.match(d.querySelector('#application-form').textContent,/Nothing is submitted/);assert.equal(d.querySelector('[data-action="copy-email"]'),null);}finally{dom.window.close();}
+ const dom=await publicPage(new Error('not provisioned'));try{const d=dom.window.document;assert.equal(d.querySelectorAll('.jobs-live-note').length,0);d.querySelector('[data-action="apply"]').click();assert.match(d.querySelector('#application-form').textContent,/Nothing is submitted/);assert.equal(d.querySelector('[data-action="copy-email"]'),null);}finally{dom.window.close();}
+});
+test('signed-in visitors see the offline vacancies note when the catalogue is unavailable',async()=>{
+ const dom=await publicPage(new Error('not provisioned'),{auth:signedInAuth()});
+ try{
+  const d=dom.window.document;
+  assert.equal(d.querySelectorAll('.jobs-live-note').length,1);
+  assert.match(d.querySelector('.jobs-live-note').textContent,/not available yet/);
+  assert.equal(d.querySelector('.jobs-live-note').nextElementSibling?.id,'job-grid');
+ }finally{dom.window.close();}
 });
 test('public desktop and mobile navigation distinguish candidate and staff login in both languages',async()=>{
  const dom=await publicPage(records);

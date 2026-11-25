@@ -7,6 +7,7 @@
   function apply() {
     const resolved = preference === 'system' ? media.matches ? 'dark' : 'light' : preference;
     document.documentElement.dataset.jobsTheme = resolved;
+    document.documentElement.dataset.jobsThemePreference = preference;
     document.documentElement.style.colorScheme = resolved;
     window.garyJobsTheme = { preference, resolved };
     document.dispatchEvent(new CustomEvent('gary-jobs:theme', { detail: window.garyJobsTheme }));

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 import {mountPortalAppearance} from '../dist/jobs-portal-appearance.js';
+import {mountSquishSwitches} from '../dist/squish-switch.js';
 import {staffPortal,settle} from './helpers/jobs-staff-portal.mjs';
 const root=new URL('../dist/',import.meta.url);
 const [html,init,publicCss,portalCss,componentCss,cmsCss,sidebarCss]=await Promise.all(['portal.html','jobs-theme-init.js','jobs-public-theme.css','jobs-portal-theme.css','jobs-portal.css','cms-foundation/styles.css','jobs-staff-sidebar.css'].map(name=>readFile(new URL(name,root),'utf8')));
@@ -81,6 +82,34 @@ test('portal semantic pairs and actual public vacancy metadata meet AA contrast 
   assert.doesNotMatch(r.style.getPropertyValue(property),/#[\da-f]{3,8}\b|\bwhite\b|\bblack\b/i,`${r.selectorText} ${property} must consume semantic roles`);
  }
  assert.match(cmsCss,/\.cms-dialog\{background:var\(--cms-surface\)/);assert.match(cmsCss,/\.cms-badge-published\{background:var\(--cms-success-bg\);color:var\(--cms-success\)/);
+});
+test('portal appearance Squish Switch keeps Light, Dark and System with the existing preference', async () => {
+  const dom=new JSDOM(html,{url:'https://jobs.garyhome.vn/portal.html?access=candidate',runScripts:'outside-only'});
+  const h={w:dom.window,d:dom.window.document},a=appearance(h,{stored:'system',dark:true});
+  const switches=mountSquishSwitches(h.d);
+  try {
+    const theme=h.d.querySelector('[data-squish-key="jobs-portal-theme"] [role=radiogroup]');
+    const select=h.d.querySelector('#portal-appearance');
+    assert.equal(select.hidden,true);
+    assert.equal(theme.dataset.choice,'system');
+    assert.equal(theme.dataset.resolved,'dark');
+    assert.equal(theme.getAttribute('aria-label'),'Appearance, System, currently dark');
+    theme.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+    assert.equal(select.value,'dark');
+    assert.equal(h.w.garyJobsTheme.preference,'dark');
+    assert.equal(h.w.localStorage.getItem('gary-jobs-theme'),'dark');
+    a.query.matches=false;a.query.listeners.forEach(fn=>fn());
+    assert.equal(h.d.documentElement.dataset.jobsTheme,'dark');
+    a.change('system');
+    assert.equal(theme.dataset.choice,'system');
+    a.query.listeners.forEach(fn=>fn());
+    assert.equal(h.d.documentElement.dataset.jobsTheme,'light');
+    assert.equal(theme.dataset.resolved,'light');
+    assert.equal(theme.getAttribute('aria-label'),'Appearance, System, currently light');
+    h.d.documentElement.lang='vi';
+    await new Promise(resolve=>h.w.queueMicrotask(resolve));
+    assert.equal(theme.querySelector('[role=radio][aria-checked=true]').textContent,'Hệ thống');
+  } finally {switches.destroy();a.controller.destroy();dom.window.close();}
 });
 const successCss=await readFile(new URL('cms-foundation/success-notification.css',root),'utf8');
 function specificity(selector){

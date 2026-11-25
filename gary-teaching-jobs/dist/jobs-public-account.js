@@ -15,7 +15,13 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
     retry: () => scheduleCheck(),
   });
   const paint = () => menu.update({...snapshot, language: doc.documentElement.lang});
-  function show(next) { snapshot = next; paint(); }
+  function announce() {
+    const EventType = win.CustomEvent || win.Event;
+    doc.dispatchEvent(new EventType('jobs:public-auth', {
+      detail: {loading: !!snapshot.loading, user: snapshot.user || null, failed: !!snapshot.failed},
+    }));
+  }
+  function show(next) { snapshot = next; paint(); announce(); }
   function withinDeadline(promise) {
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -61,6 +67,7 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
     queued = win.setTimeout(() => void verify(), 0);
   }
   paint();
+  announce();
   doc.addEventListener('jobs:public-render', paint);
   auth.onAuthStateChange((event, session) => {
     const next = session?.user?.id || null;

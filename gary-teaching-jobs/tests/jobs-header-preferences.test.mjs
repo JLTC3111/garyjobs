@@ -76,6 +76,16 @@ test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboa
     assert.equal(d.querySelector('#detail-dialog[open] [role=switch]'),button);
     assert.equal(d.activeElement,button);
     assert.equal(button.getAttribute('aria-checked'),'true');
+    const appearance=d.querySelector('#detail-dialog[open] [role=radiogroup]');
+    assert.equal(appearance.getAttribute('aria-label'),'Giao diện, Hệ thống, đang sáng');
+    appearance.focus();
+    appearance.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+    assert.equal(w.location.pathname,path);
+    assert.equal(w.garyJobsTheme.preference,'dark');
+    assert.equal(d.querySelector('#vacancy-theme').value,'dark');
+    assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
+    assert.equal(button.getAttribute('aria-checked'),'true');
+    assert.equal(d.activeElement,appearance);
   } finally {h.switches.destroy();h.dom.window.close();}
 });
 test('Jobs mounts the dashboard Squish Switch for signed-in staff and candidates', async () => {
@@ -175,4 +185,37 @@ test('the preselected theme exposes the correct transparent logo variant immedia
       assert.equal(h.d.querySelector('.jobs-preferences-trigger').getAttribute('aria-label'),'Website preferences');
     } finally {h.dom.window.close();}
   }
+});
+test('theme Squish Switch keeps Light, Dark and System across persistence and system changes', async () => {
+  const h=await page({squish:true,dark:true}),{d,w}=h;
+  try {
+    const theme=d.querySelector('#jobs-preferences-panel [role=radiogroup]');
+    assert.equal(d.querySelectorAll('#jobs-preferences-panel [role=radiogroup]').length,1);
+    assert.equal(theme.dataset.choice,'system');
+    assert.equal(theme.dataset.resolved,'dark');
+    assert.equal(theme.getAttribute('aria-label'),'Appearance, System, currently dark');
+    assert.equal(theme.style.getPropertyValue('--ss-position'),'1');
+    assert.equal(d.querySelector('[data-jobs-theme-choice=system]').hidden,true);
+    theme.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+    assert.equal(w.localStorage.getItem('gary-jobs-theme'),'dark');
+    assert.equal(theme.dataset.choice,'dark');
+    assert.equal(d.querySelector('[data-jobs-theme-choice=dark]').getAttribute('aria-pressed'),'true');
+    h.query.matches=false;h.query.listeners.forEach(fn=>fn());
+    assert.equal(d.documentElement.dataset.jobsTheme,'dark');
+    assert.equal(theme.dataset.choice,'dark');
+    theme.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));
+    assert.equal(w.garyJobsTheme.preference,'system');
+    h.query.listeners.forEach(fn=>fn());
+    assert.equal(d.documentElement.dataset.jobsTheme,'light');
+    assert.equal(theme.dataset.resolved,'light');
+    assert.equal(theme.getAttribute('aria-label'),'Appearance, System, currently light');
+    d.documentElement.lang='vi';
+    d.dispatchEvent(new w.CustomEvent('jobs:public-render'));
+    assert.equal(theme.getAttribute('aria-label'),'Giao diện, Hệ thống, đang sáng');
+    theme.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Home',bubbles:true,cancelable:true}));
+    assert.equal(w.garyJobsTheme.preference,'light');
+    h.query.matches=true;h.query.listeners.forEach(fn=>fn());
+    assert.equal(d.documentElement.dataset.jobsTheme,'light');
+    assert.equal(theme.dataset.choice,'light');
+  } finally {h.switches.destroy();h.dom.window.close();}
 });

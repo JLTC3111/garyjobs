@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {JSDOM, VirtualConsole} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
+import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 import {vacancyCard, vacancySlug, escapeText, safeLink} from '../dist/jobs-public-content.js';
 import * as jobsSeo from '../dist/jobs-seo.js';
 
@@ -303,7 +304,16 @@ test('published-vacancy refresh removes Orbit on failure, stays silent when fast
     assert.equal(slow.doc.querySelector('.lattice-loader'), null);
     assert.equal(slow.doc.getElementById('published-lattice'), null);
     assert.match(slow.doc.getElementById('job-grid').textContent, /English Teacher/);
+    assert.equal(slow.doc.querySelectorAll('.jobs-live-note').length, 0, 'anonymous visitors do not see the offline note');
+    const user = {id: 'lattice-user', email: 'teacher@example.test'};
+    mountJobsPublicAccount(slow.doc, {
+      onAuthStateChange(callback) { callback('INITIAL_SESSION', {user}); return {data: {subscription: {unsubscribe() {}}}}; },
+      getUser: async () => ({data: {user}, error: null}),
+      signOut: async () => ({error: null}),
+    }, async () => ({}));
+    await wait(20);
     assert.match(slow.doc.querySelector('.jobs-live-note').textContent, /not available yet/);
+    assert.equal(slow.doc.querySelector('.jobs-live-note').nextElementSibling?.id, 'job-grid');
   } finally { slow.dom.window.close(); }
   const fast = bootPublic({result: () => new Promise(resolve => setTimeout(() => resolve(published), 40))});
   try {

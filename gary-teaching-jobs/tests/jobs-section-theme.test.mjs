@@ -73,7 +73,8 @@ function cascade(document, width, state = {}) {
     for (const rule of list) {
       if (rule.cssRules) {
         const condition = rule.conditionText || '';
-        if (/prefers-reduced-motion\s*:\s*reduce/.test(condition)) continue;
+        if (/prefers-reduced-motion\s*:\s*reduce\b/.test(condition) && !state.reducedMotion) continue;
+        if (/prefers-reduced-motion\s*:\s*no-preference/.test(condition) && state.reducedMotion) continue;
         if (/hover\s*:\s*none/.test(condition) && width > 720) continue;
         if ([...condition.matchAll(/(min|max)-width\s*:\s*([\d.]+)px/g)].some(([, kind, n]) => kind === 'min' ? width < +n : width > +n)) continue;
         walk(rule.cssRules); continue;
@@ -158,7 +159,7 @@ function backgrounds(node, paint) {
 }
 const luminance = rgb => rgb.slice(0, 3).map(x => x / 255).map(x => x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4).reduce((sum, x, i) => sum + x * [.2126, .7152, .0722][i], 0);
 const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05);
-const textRoles = ['#services h2', '#services h2 em', '#services .eyebrow', '#services .section-intro', '.support-card h3', '.support-card p', '.support-cta', '.support-site-link', '.support-icon', '.final-cta h2', '.final-cta h2 em', '.final-cta .eyebrow', '.cta-inner>p:not(.eyebrow)', '.cta-footnote', '.cta-footnote .icon', '.cta-decoration', '.floating-contact'];
+const textRoles = ['#services h2', '#services h2 em', '#services .eyebrow', '#services .section-intro', '.support-category', '.support-card h3', '.support-card p', '.support-cta', '.support-site-link', '.support-icon', '.final-cta h2', '.final-cta h2 em', '.final-cta .eyebrow', '.cta-inner>p:not(.eyebrow)', '.cta-footnote', '.cta-footnote .icon', '.cta-decoration', '.floating-contact'];
 function palette(document, width, state = {}) {
   const paint = cascade(document, width, state);
   return Object.fromEntries(textRoles.map(selector => {
@@ -197,6 +198,10 @@ const LIGHT_BASELINE = {
     "surface": [
       "237,242,246"
     ]
+  },
+  ".support-category": {
+    "ink": "67,85,117",
+    "surface": ["255,255,255"]
   },
   ".support-card h3": {
     "ink": "64,92,124",
@@ -335,6 +340,44 @@ test('Light → Dark → System and fresh-page reload keep paired section roles 
       assert.equal(h.d.querySelectorAll('.support-card').length, 3);
     } finally { h.dom.window.close(); }
   }
+});
+
+test('the three service cards localize labels and keep each distinct destination', async () => {
+  for (const locale of ['en', 'vi']) {
+    const h = await page({locale});
+    try {
+      const cards = [...h.d.querySelectorAll('#services .support-card')];
+      assert.deepEqual(cards.map(card => card.querySelector('.support-category').textContent), locale === 'vi'
+        ? ['Hỗ trợ giấy tờ', 'Nhà ở', 'Hỗ trợ địa phương']
+        : ['Document support', 'Housing', 'Local assistance']);
+      const links = cards.flatMap(card => [...card.querySelectorAll('.support-site-link')]);
+      assert.deepEqual(links.map(link => link.href), ['https://visa.garyhome.vn/', 'https://garyhome.vn/']);
+      assert.ok(links.every(link => link.target === '_blank' && link.rel.includes('noopener')));
+      const dialog = h.d.querySelector('#detail-dialog');
+      for (const [index, id] of ['documents','housing','settling'].entries()) {
+        const button = cards[index].querySelector('button.support-cta');
+        assert.equal(cards[index].lastElementChild, button);
+        assert.ok(cards[index].querySelector('.support-icon svg[aria-hidden=true] path'));
+        button.click();
+        assert.equal(dialog.open, true);
+        assert.equal(dialog.querySelector('[data-action=service-enquiry]').dataset.id, id);
+      }
+    } finally { h.dom.window.close(); }
+  }
+});
+
+test('service card layout reaches three, two and one columns and respects reduced motion', async () => {
+  const h = await page();
+  try {
+    const grid = h.d.querySelector('.support-grid'), card = grid.firstElementChild;
+    for (const [width, columns] of [[1440, /repeat\(3,/], [768, /repeat\(2,/], [320, /^minmax\(/]]) {
+      assert.match(cascade(h.d, width).value(grid, 'grid-template-columns'), columns);
+      assert.equal(cascade(h.d, width).value(card.querySelector('.support-cta'), 'margin-top'), 'auto');
+    }
+    const hover = new Set([card]);
+    assert.equal(cascade(h.d, 1440, {hover}).value(card, 'transform'), 'translateY(-3px)');
+    assert.equal(cascade(h.d, 1440, {hover, reducedMotion: true}).own(card).has('transform'), false);
+  } finally { h.dom.window.close(); }
 });
 
 test('floating contact keeps its real contact dialog and does not claim unknown agent availability', async () => {
