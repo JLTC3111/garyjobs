@@ -25,7 +25,7 @@ const COPY={
   refresh:'Refresh',loading:'Loading staff…',empty:'No Jobs staff memberships yet.',tryAgain:'Try again',
   active:'Active',suspended:'Suspended · no access',unverified:'Email not verified · no access',
   you:'You',member:'Staff member',protectedTag:'Protected',protectedOwner:'Protected owner',
-  selfReadonly:'Your account · view only',protectedReadonly:'Protected account · view only',adminReadonly:'Administrator · only a protected owner can change this',
+  selfReadonly:'Your account',protectedReadonly:'Protected account',adminReadonly:'Administrator · only a protected owner can change this',
   editFor:name=>`Edit access for ${name}`,more:name=>`More actions for ${name}`,save:'Save changes',suspend:'Suspend access',restore:'Restore access',
   assigned:email=>`Jobs access assigned to ${email}.`,updated:email=>`Access updated for ${email}.`,noChange:'No changes to save.',
   suspendedNotice:email=>`Jobs access suspended for ${email}.`,restored:email=>`Jobs access restored for ${email}.`,
@@ -57,7 +57,7 @@ const COPY={
   refresh:'Làm mới',loading:'Đang tải danh sách nhân viên…',empty:'Chưa có thành viên nhân viên Jobs.',tryAgain:'Thử lại',
   active:'Đang hoạt động',suspended:'Đã tạm ngưng · không có quyền',unverified:'Email chưa xác minh · không có quyền',
   you:'Bạn',member:'Nhân viên',protectedTag:'Được bảo vệ',protectedOwner:'Chủ sở hữu được bảo vệ',
-  selfReadonly:'Tài khoản của bạn · chỉ xem',protectedReadonly:'Tài khoản được bảo vệ · chỉ xem',adminReadonly:'Quản trị viên · chỉ chủ sở hữu được bảo vệ mới có thể thay đổi',
+  selfReadonly:'Tài khoản của bạn',protectedReadonly:'Tài khoản được bảo vệ',adminReadonly:'Quản trị viên · chỉ chủ sở hữu được bảo vệ mới có thể thay đổi',
   editFor:name=>`Chỉnh sửa quyền truy cập của ${name}`,more:name=>`Thao tác khác cho ${name}`,save:'Lưu thay đổi',suspend:'Tạm ngưng quyền truy cập',restore:'Khôi phục quyền truy cập',
   assigned:email=>`Đã cấp quyền Jobs cho ${email}.`,updated:email=>`Đã cập nhật quyền của ${email}.`,noChange:'Không có thay đổi để lưu.',
   suspendedNotice:email=>`Đã tạm ngưng quyền Jobs của ${email}.`,restored:email=>`Đã khôi phục quyền Jobs của ${email}.`,
@@ -115,7 +115,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
    <p class="jobs-staff-feedback" data-staff-feedback="directory" role="status" tabindex="-1"></p>
    <div class="jobs-staff-list"></div>
   </section>
-  <details class="jobs-staff-panel jobs-staff-guide">
+  <details class="jobs-staff-panel jobs-staff-guide" open>
    <summary>${label('guideTitle')}</summary>
    <div class="jobs-staff-guide-body"></div>
   </details>

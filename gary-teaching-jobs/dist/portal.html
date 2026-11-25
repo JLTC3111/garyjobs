@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="jobs-staff-sidebar.css"><link rel="stylesheet" href="branched-menu.css"><script type="module" src="jobs-staff-sidebar.js"></script>
   <link rel="stylesheet" href="jobs-portal-theme.css"><script type="module" src="jobs-portal-appearance.js"></script>
   <link rel="stylesheet" href="jobs-staff-management.css">
-  <link rel="stylesheet" href="lattice-loader.css"><script type="module" src="lattice-loader.js"></script>
+  <link rel="stylesheet" href="lattice-loader.css"><link rel="stylesheet" href="squish-switch.css"><script type="module" src="squish-switch.js"></script><script type="module" src="lattice-loader.js"></script>
   <script type="module" src="jobs-portal.js"></script>
   <link rel="stylesheet" href="./ui-motion.css">
   <link rel="stylesheet" href="./action-buttons.css">
@@ -19,7 +19,7 @@
 </head>
 <body class="jobs-portal-body">
   <a class="skip-link" href="#portal-main">Skip to content</a>
-  <header class="jobs-portal-header"><a href="./" class="jobs-portal-brand" aria-label="Vietnam English Teaching Jobs — Home"><img class="jobs-logo-light" src="assets/teaching-jobs-logo-light.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"><img class="jobs-logo-dark" src="assets/teaching-jobs-logo-dark.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"></a><div class="jobs-portal-tools"><label class="jobs-portal-appearance"><span data-portal-appearance-label>Appearance</span><select id="portal-appearance" aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></label><button id="portal-language" type="button">Tiếng Việt</button><details id="portal-account" class="jobs-login-menu" hidden></details></div></header>
+  <header class="jobs-portal-header"><a href="./" class="jobs-portal-brand" aria-label="Vietnam English Teaching Jobs — Home"><img class="jobs-logo-light" src="assets/teaching-jobs-logo-light.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"><img class="jobs-logo-dark" src="assets/teaching-jobs-logo-dark.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"></a><div class="jobs-portal-tools"><label class="jobs-portal-appearance"><span data-portal-appearance-label>Appearance</span><select id="portal-appearance" aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></label><span data-squish-key="jobs-portal-language"><button id="portal-language" type="button" data-squish-target="toggle">Tiếng Việt</button></span><details id="portal-account" class="jobs-login-menu" hidden></details></div></header>
   <main id="portal-main" class="jobs-workspace">
     <nav id="portal-access" aria-label="Choose your portal"><a href="portal.html?access=candidate">Candidate portal</a><a href="portal.html?access=staff">Staff portal</a></nav>
     <div id="portal-status" role="status" aria-live="polite"></div>

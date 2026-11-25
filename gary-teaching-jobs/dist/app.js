@@ -1,6 +1,7 @@
 import { mountGaryApps, mountPhotoGallery, mountGlassHero } from './photo-gallery.js';
 import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
+import {jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePath,vacancyLanguages,vacancySeoText} from './jobs-seo.js';
 import {showActionToast,setCounterValues} from './action-toast.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
 let catalogueStamp=null,catalogueFlight=null;
@@ -21,7 +22,10 @@ const vacancyStyles = [
 const vacancyStyleKey = 'gary-jobs-vacancy-style';
 function validVacancyStyle(value) { return vacancyStyles.some(([style])=>style===value) ? value : 'original'; }
 let vacancyStyle=validVacancyStyle(readStored(vacancyStyleKey,'original'));
-const state = { lang: readStored('gary-language', document.documentElement.lang) === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
+const explicitVacancyLanguage=vacancySlug(location.pathname)&&new URL(location.href).searchParams.get('lang');
+const initialLanguage=document.documentElement.hasAttribute('data-server-vacancy')?document.documentElement.lang:
+  explicitVacancyLanguage||readStored('gary-language',document.documentElement.lang);
+const state = { lang: initialLanguage === 'vi' ? 'vi' : 'en', category: 'all', location: 'all', keyword: '', expanded: false, saved: new Set(readStored('gary-saved-jobs', []).filter?.(id => typeof id === 'string') || []) };
 let photoGalleryMount;
 let glassHeroMount;
 let headerApps = [];
@@ -173,7 +177,7 @@ function renderPage() {
       <div class="nav-actions"><details id="public-account" class="jobs-login-menu" hidden></details><div id="gary-apps-header" class="gary-apps-slot"></div>
         <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('globe')}</button>
           <div id="jobs-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="jobs-preferences-title" ${preferencesOpen?'':'hidden'}><div class="jobs-preferences-heading"><h2 id="jobs-preferences-title">${t('Website preferences','Tùy chọn website')}</h2><button type="button" class="jobs-preferences-close" data-action="close-preferences" data-preference-focus="close" aria-label="${t('Close preferences','Đóng tùy chọn')}">${icon('close')}</button></div>
-            <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options"><button type="button" data-action="language" data-language="en" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
+            <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
             <fieldset><legend>${t('Appearance','Giao diện')}</legend><div class="jobs-preferences-options">${[['light','Light','Sáng'],['dark','Dark','Tối'],['system','System','Hệ thống']].map(([value,en,vi])=>`<button type="button" data-action="theme" data-jobs-theme-choice="${value}" data-preference-focus="theme-${value}" aria-pressed="false">${t(en,vi)}</button>`).join('')}</div><p class="jobs-preferences-help">${t('System follows your device settings.','Hệ thống theo cài đặt thiết bị của bạn.')}</p></fieldset>
           </div>
         </div><a class="button button-primary button-small nav-cta" href="portal.html?access=staff&amp;view=cms">${t('Post a Job', 'Đăng tuyển')}</a><button class="icon-button button-utility menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
@@ -435,6 +439,7 @@ function openDialog(content, {workspace=false, focus=true}={}) {
   if(!dialog.open) dialogOpener=document.activeElement;
   dialog.classList.toggle('is-vacancy-workspace',workspace);
   $('#dialog-content').innerHTML=content;
+  document.dispatchEvent(new CustomEvent('jobs:switch-render'));
   if(workspace) $('.vacancy-workspace',dialog).dataset.vacancyStyle=vacancyStyle;
   $('.dialog-close').setAttribute('aria-label',t('Close dialog','Đóng hộp thoại'));
   if(!dialog.open)dialog.showModal();
@@ -446,14 +451,43 @@ function closeDialog() { leaveVacancyRoute(); $('#detail-dialog').close(); }
 
 // Public URLs use the saved slug, so changing a title never changes a live link.
 function updateVacancyMetadata(job=null){
-  const decode=value=>{const textarea=document.createElement('textarea');textarea.innerHTML=value||'';return textarea.value;};
-  document.title=job?(decode(pick(job.seoTitle))||`${decode(pick(job.title))} | Vietnam English Teaching Jobs`):t('English Teaching Jobs in Vietnam | Gary Agency','Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
-  const description=job?decode(pick(job.seoDescription)||pick(job.intro)):t('Find your next English teaching opportunity in Vietnam with Gary Agency. Fee-free placement, a local team, and support for your next chapter.','Tìm công việc giảng dạy tiếng Anh tại Việt Nam cùng Gary Agency. Giới thiệu việc làm miễn phí và đội ngũ địa phương đồng hành.');
+  const row=job&&managedRecords?.find(item=>item.kind==='vacancy'&&item.id===job.id);
+  const languages=vacancyLanguages(row),variant=languages.includes(state.lang)?state.lang:languages[0]||state.lang;
+  const {title,description}=row?vacancySeoText(row,variant):{
+    title:t('English Teaching Jobs in Vietnam | Gary Agency','Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency'),
+    description:t('Find your next English teaching opportunity in Vietnam with Gary Agency. Fee-free placement, a local team, and support for your next chapter.','Tìm công việc giảng dạy tiếng Anh tại Việt Nam cùng Gary Agency. Giới thiệu việc làm miễn phí và đội ngũ địa phương đồng hành.'),
+  };
+  document.title=title;
   for(const [selector,value] of [['meta[name="description"]',description],['meta[property="og:title"]',document.title],['meta[property="og:description"]',description]])document.querySelector(selector)?.setAttribute('content',value);
   if(defaultSocialImage)$('meta[property="og:image"]')?.setAttribute('content',job?.image?.url||defaultSocialImage);
-  let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}canonical.href=new URL(job?.url||'/',location.origin).href;
+  const path=job?.url?vacancyLanguagePath(job.slug,variant,languages):'/';
+  let canonical=document.querySelector('link[rel="canonical"]');
+  if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}
+  canonical.href=jobsOrigin+path;
   document.querySelector('meta[property="og:url"]')?.setAttribute('content',canonical.href);
   document.querySelector('meta[data-vacancy-robots]')?.remove();
+  document.head.querySelectorAll('[data-vacancy-alternate], [data-vacancy-schema]').forEach(tag=>tag.remove());
+  if(row){
+    for(const [lang,href] of vacancyAlternates(row.slug,languages)){
+      const link=document.createElement('link');
+      link.rel='alternate';link.hreflang=lang;link.href=href;link.dataset.vacancyAlternate='';
+      document.head.append(link);
+    }
+    const posting=jobPosting(row,variant,managedRecords);
+    if(posting){
+      const script=document.createElement('script');
+      script.type='application/ld+json';script.dataset.vacancySchema='';script.textContent=jobSchemaJson(posting);
+      document.head.append(script);
+    }
+    if(vacancySlug(location.pathname)===row.slug){
+      const current=new URL(location.href);
+      const lang=new URL(path,jobsOrigin).searchParams.get('lang');
+      if(current.searchParams.get('lang')!==lang){
+        if(lang)current.searchParams.set('lang',lang);else current.searchParams.delete('lang');
+        history.replaceState(history.state,'',current);
+      }
+    }
+  }
 }
 function leaveVacancyRoute(){
   if(!routeDialog)return;routeDialog=false;vacancyQuery='';updateVacancyMetadata();
@@ -493,7 +527,7 @@ function vacancyHeader(){
   return `<header class="vacancy-workspace-header">
     <a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>
     <div class="vacancy-preferences">
-      <button type="button" class="text-button dialog-job-language" data-action="language" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button>
+      <span data-squish-key="jobs-vacancy-language"><button type="button" class="text-button dialog-job-language" data-action="language" data-squish-target="toggle" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button></span>
       <select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
         <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
       </select>
@@ -616,6 +650,9 @@ function openJob(id,{navigate=true}={}) {
       const returnUrl=fromListing?location.pathname+location.search+location.hash:previousState?.garyJobsReturnUrl||'/'+location.search+'#opportunities';
       const depth=fromListing?1:previousState?.garyJobsFromListing?(previousState.garyJobsListingDepth||1)+1:0;
       const target=new URL(job.url,location.origin);target.search=location.search;
+      const row=managedRecords?.find(item=>item.kind==='vacancy'&&item.id===job.id);
+      if(state.lang==='vi'&&vacancyLanguages(row).length===2)target.searchParams.set('lang','vi');
+      else target.searchParams.delete('lang');
       history.pushState({garyJobsFromListing:depth>0,garyJobsListingDepth:depth,garyJobsReturnUrl:returnUrl},'',target);
     }
     void loadPublishedContent({interactive:differentPath});
@@ -719,7 +756,7 @@ function openPreferences() {
   preferencesOpen=true;
   const panel=$('#jobs-preferences-panel');panel.hidden=false;panel.inert=false;
   $('#jobs-preferences-trigger').setAttribute('aria-expanded','true');
-  $('#jobs-preferences-panel [data-language][aria-pressed="true"]')?.focus({preventScroll:true});
+  (panel.querySelector('.squish-switch') || panel.querySelector('[data-language][aria-pressed="true"]'))?.focus({preventScroll:true});
 }
 document.addEventListener('pointerdown',event=>{
   if(preferencesOpen&&!event.target.closest('.jobs-preferences'))closePreferences();
@@ -747,7 +784,9 @@ document.addEventListener('click',event=>{
       if(reference&&!routeDialog)openJob(reference,{navigate:false});
       window.scrollTo({top:y,behavior:'instant'});
     }
-    ($('.dialog-job-language')||(preferencesOpen?$(`[data-language="${state.lang}"]`):$('#jobs-preferences-trigger')))?.focus({preventScroll:true});
+    const vacancyLanguage=$('#detail-dialog[open] .squish-switch')||$('#detail-dialog[open] .dialog-job-language');
+    const preferenceLanguage=$('#jobs-preferences-panel .squish-switch')||$(`[data-language="${state.lang}"]`);
+    (vacancyLanguage||(preferencesOpen?preferenceLanguage:$('#jobs-preferences-trigger')))?.focus({preventScroll:true});
   }
   if(action==='menu'){closePreferences();toggleMenu();}
   if(action==='filter'){state.category=id;state.expanded=false;renderJobs();$(`[data-action="filter"][data-id="${id}"]`).focus({preventScroll:true});}

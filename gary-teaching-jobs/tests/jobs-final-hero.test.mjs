@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const init = await readFile(new URL('../dist/jobs-theme-init.js', import.meta.url), 'utf8');
 const app = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8')).split('\n').filter(line => !line.startsWith('import ')).join('\n');
@@ -35,7 +36,8 @@ async function page(options) {
   w.scrollTo = () => {};
   w.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
-  Object.assign(w, { mountGaryApps: () => ({ unmount() {} }), mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [] });
+  Object.assign(w,jobsSeo);
+ Object.assign(w, { mountGaryApps: () => ({ unmount() {} }), mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [] });
   vm.runInContext(app, h.dom.getInternalVMContext());
   await new Promise(resolve => setTimeout(resolve, 10)); return h;
 }

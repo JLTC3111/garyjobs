@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
 import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 
 const root = new URL('../dist/', import.meta.url);
 const html = await readFile(new URL('index.html', root), 'utf8');
@@ -24,7 +25,8 @@ async function page({ dark = false, stored = {}, locale = 'en' } = {}) {
   w.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
   for (const [key, value] of Object.entries({ 'gary-language': JSON.stringify(locale), ...stored })) w.localStorage.setItem(key, value);
-  Object.assign(w, { mountGaryApps: () => ({ unmount() {} }), mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [] });
+  Object.assign(w,jobsSeo);
+ Object.assign(w, { mountGaryApps: () => ({ unmount() {} }), mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [] });
   w.eval(init); vm.runInContext(app, dom.getInternalVMContext());
   await new Promise(resolve => setTimeout(resolve, 10));
   return { dom, w, d: w.document, media };

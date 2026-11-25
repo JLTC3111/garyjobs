@@ -4,13 +4,16 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
+import {staffPortal} from './helpers/jobs-staff-portal.mjs';
 import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
+import {mountSquishSwitches} from '../dist/squish-switch.js';
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const init = await readFile(new URL('../dist/jobs-theme-init.js', import.meta.url), 'utf8');
 const app = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8')).split('\n').filter(line => !line.startsWith('import ')).join('\n');
-async function page({ stored = {}, dark = false } = {}) {
-  const dom = new JSDOM(html, { url: 'https://jobs.garyhome.vn/', runScripts: 'outside-only', pretendToBeVisual: true });
+async function page({ stored = {}, dark = false, squish = false, path = '/', records = [{kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'}] } = {}) {
+  const dom = new JSDOM(html, { url: `https://jobs.garyhome.vn${path}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window, query = {
     matches: dark,
     listeners: [],
@@ -26,12 +29,71 @@ async function page({ stored = {}, dark = false } = {}) {
   w.scrollTo = () => {};
   w.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
-  Object.assign(w, { mountGaryApps: element => { element.innerHTML='<details class="gary-apps-menu"><summary>Shared platforms</summary><a href="https://garyhome.vn/">Gary Home</a></details>';return { unmount() {} }; }, mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => [{kind:"location",slug:"hanoi",title_en:"Hanoi",title_vi:"Hà Nội"}] });
-  w.eval(init);vm.runInContext(app,dom.getInternalVMContext());
+  Object.assign(w,jobsSeo);
+ Object.assign(w, { mountGaryApps: element => { element.innerHTML='<details class="gary-apps-menu"><summary>Shared platforms</summary><a href="https://garyhome.vn/">Gary Home</a></details>';return { unmount() {} }; }, mountPhotoGallery: () => ({ unmount() {} }), mountGlassHero: () => ({ unmount() {}, update() {} }), vacancyCard, vacancySlug, escapeText, safeLink, publicContent: async () => records });
+  w.eval(init);
+  const switches=squish?mountSquishSwitches(w.document):null;
+  vm.runInContext(app,dom.getInternalVMContext());
   mountJobsPublicAccount(w.document,{onAuthStateChange:callback=>callback('INITIAL_SESSION',null)});
   await new Promise(resolve=>setTimeout(resolve,10));
-  return {dom,w,d:w.document,query};
+  return {dom,w,d:w.document,query,switches};
 }
+test('Squish Switch keeps the Jobs public language control focused across a translated render', async () => {
+  const h=await page({squish:true}),{d,w}=h;
+  try {
+    d.querySelector('#keyword').value='science';
+    d.querySelector('#location').value='hanoi';
+    d.querySelector('#jobs-preferences-trigger').click();
+    const button=d.querySelector('#jobs-preferences-panel [role=switch]');
+    assert.equal(d.activeElement,button);
+    assert.equal(button.getAttribute('aria-checked'),'false');
+    button.click();
+    assert.equal(d.documentElement.lang,'vi');
+    assert.equal(w.localStorage.getItem('gary-language'),'"vi"');
+    assert.equal(d.querySelector('#jobs-preferences-panel').hidden,false);
+    assert.equal(d.querySelector('#jobs-preferences-panel [role=switch]'),button);
+    assert.equal(d.activeElement,button);
+    assert.equal(button.getAttribute('aria-label'),'Dùng tiếng Việt');
+    assert.equal(button.getAttribute('aria-checked'),'true');
+    assert.equal(d.querySelector('#keyword').value,'science');
+    assert.equal(d.querySelector('#location').value,'hanoi');
+  } finally {h.switches.destroy();h.dom.window.close();}
+});
+test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboard focus', async () => {
+  const path='/jobs/science-teacher';
+  const h=await page({squish:true,path,records:[{kind:'vacancy',id:'fixture',slug:'science-teacher',title_en:'Science Teacher',title_vi:'Giáo viên khoa học'}]}),{d,w}=h;
+  try {
+    const button=d.querySelector('#detail-dialog[open] [role=switch]');
+    assert.ok(button);
+    const style=d.querySelector('#vacancy-style');
+    style.value='modern-slate';
+    style.dispatchEvent(new w.Event('change',{bubbles:true}));
+    button.focus();
+    button.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));
+    assert.equal(w.location.pathname,path);
+    assert.equal(d.querySelector('#dialog-title').textContent,'Giáo viên khoa học');
+    assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
+    assert.equal(d.querySelector('#detail-dialog[open] [role=switch]'),button);
+    assert.equal(d.activeElement,button);
+    assert.equal(button.getAttribute('aria-checked'),'true');
+  } finally {h.switches.destroy();h.dom.window.close();}
+});
+test('Squish Switch preserves the Jobs staff and candidate portal locale handlers', async () => {
+  for (const access of ['staff','candidate']) {
+    const h=await staffPortal({access,view:access==='staff'?'cms':'mine'});
+    const switches=mountSquishSwitches(h.doc);
+    try {
+      const selector='[data-squish-key=jobs-portal-language] [role=switch]';
+      const button=h.doc.querySelector(selector),route=h.w.location.search;
+      assert.equal(button.getAttribute('aria-checked'),'false');
+      await h.click(selector);
+      assert.equal(h.doc.documentElement.lang,'vi');
+      assert.equal(h.w.localStorage.getItem('gary-language'),'"vi"');
+      assert.equal(button.getAttribute('aria-checked'),'true');
+      assert.equal(h.w.location.search,route);
+    } finally {switches.destroy();await h.close();}
+  }
+});
 test('one globe opens a nonmodal preferences dialog; Escape and close restore focus', async () => {
   const h=await page(),{d,w}=h;
   try {

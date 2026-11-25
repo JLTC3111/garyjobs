@@ -4,13 +4,15 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {JSDOM,VirtualConsole} from 'jsdom';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 import {mountPublicApplicationEditor} from '../dist/jobs-public-editors.js';
 const settle=async()=>{for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));};
 async function page({width=1280,height=900}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:new VirtualConsole()});
  const w=dom.window;Object.defineProperty(w,'innerWidth',{value:width,writable:true});Object.defineProperty(w,'innerHeight',{value:height,writable:true});
  w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
- w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});Object.assign(w,{vacancyCard,vacancySlug,escapeText,safeLink,publicContent:async()=>{throw Error('offline');}});
+ w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});Object.assign(w,jobsSeo);
+ Object.assign(w,{vacancyCard,vacancySlug,escapeText,safeLink,publicContent:async()=>{throw Error('offline');}});
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(line=>!line.startsWith('import ')).join('\n');vm.runInContext(source,dom.getInternalVMContext());await settle();
  const controller=mountPublicApplicationEditor(w.document);return {dom,w,d:w.document,controller};
 }

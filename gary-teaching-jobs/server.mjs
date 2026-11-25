@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vacancy from './api/vacancy.js';
+import discovery from './api/discovery.js';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const arg = process.argv.indexOf('--port');
@@ -11,6 +12,7 @@ const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=
 const server = createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    if (pathname === '/' || pathname === '/sitemap.xml') { await discovery(req,res); return; }
     if (/^\/jobs\/[^/]+\/?$/.test(pathname)) { await vacancy(req, res); return; }
     const path = resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
     if (!path.startsWith(root.endsWith(sep) ? root : root + sep)) { res.writeHead(403).end(); return; }

@@ -6,6 +6,7 @@ import {JSDOM, VirtualConsole} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
 import {vacancyCard, vacancySlug, escapeText, safeLink} from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const virtualConsole = new VirtualConsole();
@@ -158,7 +159,8 @@ function bootPublic({result = published, url = 'https://jobs.garyhome.vn/', lang
   w.mountGaryApps = () => ({unmount() {}});
   w.mountPhotoGallery = () => ({unmount() {}});
   w.mountGlassHero = () => ({unmount() {}, update() {}});
-  w.vacancyCard = vacancyCard;
+  Object.assign(w,jobsSeo);
+ w.vacancyCard = vacancyCard;
   w.vacancySlug = vacancySlug;
   w.escapeText = escapeText;
   w.safeLink = safeLink;

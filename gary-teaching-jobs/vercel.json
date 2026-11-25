@@ -3,8 +3,14 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/vacancy.js": { "includeFiles": "dist/index.html" } },
-  "rewrites": [
-    { "source": "/jobs/:slug", "destination": "/api/vacancy?slug=:slug" }
+  "functions": {
+    "api/vacancy.js": { "includeFiles": "dist/index.html" },
+    "api/discovery.js": { "includeFiles": "dist/index.html" }
+  },
+  "routes": [
+    { "src": "^/$", "dest": "/api/discovery" },
+    { "src": "^/sitemap\\.xml$", "dest": "/api/discovery?format=sitemap" },
+    { "src": "^/jobs/([^/]+)/?$", "dest": "/api/vacancy?slug=$1" },
+    { "handle": "filesystem" }
   ]
 }

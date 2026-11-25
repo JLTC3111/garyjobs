@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {vacancyCard,vacancyPath,vacancySlug,escapeText,safeLink} from '../dist/jobs-public-content.js';
+import * as jobsSeo from '../dist/jobs-seo.js';
 import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 import {createVacancyHandler} from '../api/vacancy.js';
 const records=[{id:'employer',kind:'employer',slug:'school',title_en:'School',title_vi:'Trường',summary_en:'A school',summary_vi:'Một trường'},{id:'location',kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'},{id:'category',kind:'category',slug:'public',title_en:'Public schools',title_vi:'Trường công'},{id:'10000000-0000-4000-8000-000000000001',kind:'vacancy',slug:'teacher',title_en:'New teacher vacancy',title_vi:'Tuyển giáo viên mới',summary_en:'A current teaching vacancy',summary_vi:'Tin tuyển dụng đang mở',body_en:'Details of this current role',body_vi:'Thông tin vị trí hiện tại',published_at:'2026-11-13T00:00:00Z',data:{location_slug:'hanoi',category_slug:'public',employer_slug:'school',hours:60,benefits_en:'Support',benefits_vi:'Hỗ trợ',contact_email:'jobs@example.test',requirements_en:'Degree',requirements_vi:'Bằng cấp'}}];
@@ -15,7 +16,8 @@ async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthSt
  if(storedStyle!==undefined)w.localStorage.setItem('gary-jobs-vacancy-style',JSON.stringify(storedStyle));
   bindFeedbackDom(dom.window);
 w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.scrollIntoView=function(){};w.scrollTo=()=>{};w.matchMedia=media=>({matches:reducedMotion&&media.includes("prefers-reduced-motion"),addEventListener(){},removeEventListener(){}});w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){if(this.open){this.open=false;this.dispatchEvent(new w.Event('close'));}};
- w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=loadCatalogue||(()=>result instanceof Error?Promise.reject(result):Promise.resolve(result));
+ w.mountGaryApps=()=>({unmount(){}});w.mountPhotoGallery=()=>({unmount(){}});w.mountGlassHero=()=>({unmount(){},update(){}});Object.assign(w,jobsSeo);
+ w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=loadCatalogue||(()=>result instanceof Error?Promise.reject(result):Promise.resolve(result));
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());
  mountJobsPublicAccount(w.document,auth,loadCapabilities);
@@ -455,15 +457,15 @@ test('closing a directly opened vacancy returns to current listings without leav
  }finally{dom.window.close();}
 });
 
-test('language switching keeps the vacancy URL and translates its open detail',async()=>{
+test('language switching keeps the vacancy and campaign parameters with localized metadata',async()=>{
  const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
  try{
   const w=dom.window,d=w.document;d.querySelector('.dialog-job-language').click();
-  assert.equal(w.location.pathname,'/jobs/teacher');assert.equal(w.location.search,'?utm_source=test');
+  assert.equal(w.location.pathname,'/jobs/teacher');assert.equal(w.location.search,'?utm_source=test&lang=vi');
   assert.equal(d.querySelector('#detail-dialog').open,true);
   assert.match(d.querySelector('#dialog-title').textContent,/Tuyển giáo viên mới/);
   assert.match(d.title,/Tuyển giáo viên mới/);
-  assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/jobs/teacher');
+  assert.equal(d.querySelector('link[rel="canonical"]').href,'https://jobs.garyhome.vn/jobs/teacher?lang=vi');
  }finally{dom.window.close();}
 });
 
@@ -533,7 +535,7 @@ test('the server serves public vacancy text and metadata, with distinct missing 
   assert.equal(doc.querySelector('#app h1').textContent,row.title_vi);
   assert.equal(doc.querySelector('#app em'),null);
   assert.match(doc.querySelector('#app').textContent,/<em>thuần văn bản<\/em>/);
-  assert.equal(doc.querySelector('link[rel=canonical]').href,'https://jobs.garyhome.vn/jobs/teacher');
+  assert.equal(doc.querySelector('link[rel=canonical]').href,'https://jobs.garyhome.vn/jobs/teacher?lang=vi');
  }finally{doc.defaultView.close();}
  let resolveCatalogue;
  const catalogue=new Promise(resolve=>{resolveCatalogue=resolve;});
@@ -566,9 +568,14 @@ test('modified vacancy link clicks retain native open-in-new-tab behavior',async
  }finally{dom.window.close();}
 });
 
-test('Vercel rewrites only the public job route and the HTML supplies a root asset base',async()=>{
+test('Vercel routes public SEO handlers before static files and keeps a root asset base',async()=>{
  const config=JSON.parse(await readFile(new URL('../vercel.json',import.meta.url),'utf8'));
- assert.deepEqual(config.rewrites,[{source:'/jobs/:slug',destination:'/api/vacancy?slug=:slug'}]);
+ assert.deepEqual(config.routes,[
+  {src:'^/$',dest:'/api/discovery'},
+  {src:'^/sitemap\\.xml$',dest:'/api/discovery?format=sitemap'},
+  {src:'^/jobs/([^/]+)/?$',dest:'/api/vacancy?slug=$1'},
+  {handle:'filesystem'},
+ ]);
  assert.equal(config.functions['api/vacancy.js'].includeFiles,'dist/index.html');
  const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
  assert.match(html,/<base href="\/">/);

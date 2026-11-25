@@ -83,8 +83,8 @@ test('the directory leads with compact identities and actions gated by Jobs memb
   assert.match(h.row('u-recruiter').textContent,/Suspended · no access/);
   assert.match(h.row('u-pending').textContent,/Email not verified · no access/);
   const guide=h.$('details.jobs-staff-guide');
-  assert.equal(guide.open,false);
-  guide.querySelector('summary').click();assert.equal(guide.open,true);
+  assert.equal(guide.open,true);
+  guide.querySelector('summary').click();assert.equal(guide.open,false);
   assert.deepEqual([...guide.querySelectorAll('dt')].map(term=>term.textContent),['Editor','Publisher','Recruiter','Admin','No access']);
   assert.match(guide.querySelectorAll('dd')[1].textContent,/Create and edit drafts.*upload media, publish and archive/);
   h.openAdd();
