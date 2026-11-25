@@ -1,4 +1,5 @@
 import {jobsConfig} from './jobs-config.js';
+import {editorialPhoto,imageOptimizationErrorText,optimizeImage} from './image-optimization.js';
 
 const maxBytes = 4 * 1024 * 1024;
 const mimeByExtension = {jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp'};
@@ -159,21 +160,24 @@ const messages = {
 const imageError = code => new Error(`jobs.vacancy_image_${code}`);
 export function vacancyImageErrorText(error, language) {
   const message = String(error?.message || '').match(/^jobs\.vacancy_image_([a-z_]+)$/);
-  return message ? messages[message[1]]?.[language === 'vi' ? 1 : 0] || '' : '';
+  return imageOptimizationErrorText(error,language) || (message ? messages[message[1]]?.[language === 'vi' ? 1 : 0] || '' : '');
 }
 
 export async function uploadVacancyImage(db, vacancyId, file, onProgress) {
-  const token = (await db.auth.getSession()).data.session?.access_token;
-  if (!token) throw imageError('forbidden');
+  const start = (await db.auth.getSession()).data.session;
+  if (!start?.access_token) throw imageError('forbidden');
   const type = types.includes(file.type) ? file.type : mimeByExtension[file.name?.split('.').pop().toLowerCase()];
   if (!type) throw imageError('invalid');
   if (file.size < 1 || file.size > maxBytes) throw imageError('file_size');
+  const photo = await optimizeImage(file,editorialPhoto,{inputMax:maxBytes,types,stillOnly:true});
+  const session = (await db.auth.getSession()).data.session;
+  if (!session?.access_token || session.user?.id !== start.user?.id) throw imageError('forbidden');
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${endpoint}?vacancy=${encodeURIComponent(vacancyId)}`);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
     xhr.setRequestHeader('apikey', jobsConfig.publishableKey);
-    xhr.setRequestHeader('Content-Type', type);
+    xhr.setRequestHeader('Content-Type', photo.contentType);
     xhr.responseType = 'json';
     xhr.timeout = 60000;
     xhr.upload.onprogress = event => { if (event.lengthComputable) onProgress(event.loaded / event.total); };
@@ -184,7 +188,7 @@ export async function uploadVacancyImage(db, vacancyId, file, onProgress) {
       const code = xhr.response?.code;
       reject(imageError(code === 'invalid_file' ? 'invalid' : messages[code] ? code : 'upload_failed'));
     };
-    xhr.send(file);
+    xhr.send(photo.body);
   });
 }
 
@@ -489,8 +493,10 @@ export function mountVacancyImageEditor(root, {record, language, editable, previ
     const photo = win.document.createElement('img');
     if (pendingIndex != null) photo.dataset.imagePreview = '';
     photo.alt = alt || '';
-    photo.src = src || '';
-    if (!src) photo.hidden = true;
+    photo.decoding = 'async';
+    if (savedId) photo.loading = 'lazy';
+    if (src) photo.src = src;
+    else photo.hidden = true;
     placeImage(photo, crop);
     frame.append(photo);
     if (cover) {

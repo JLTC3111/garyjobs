@@ -16,8 +16,8 @@ const readStored = (key, fallback) => { try { return JSON.parse(localStorage.get
 const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Private browser sessions can still use the site. */ } };
 const vacancyStyles = [
   ['original', 'Original style', 'Giao diện gốc'],
-  ['warm-editorial', 'Warm Editorial', 'Ấm áp'],
-  ['modern-slate', 'Modern Slate', 'Xanh xám hiện đại'],
+  ['warm-editorial', 'Warm Editorial', 'Mộc bản'],
+  ['modern-slate', 'Graphite', 'Xanh xám hiện đại'],
 ];
 const vacancyStyleKey = 'gary-jobs-vacancy-style';
 function validVacancyStyle(value) { return vacancyStyles.some(([style])=>style===value) ? value : 'original'; }

@@ -78,20 +78,24 @@ test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboa
     assert.equal(button.getAttribute('aria-checked'),'true');
   } finally {h.switches.destroy();h.dom.window.close();}
 });
-test('Squish Switch preserves the Jobs staff and candidate portal locale handlers', async () => {
+test('Jobs mounts the dashboard Squish Switch for signed-in staff and candidates', async () => {
   for (const access of ['staff','candidate']) {
     const h=await staffPortal({access,view:access==='staff'?'cms':'mine'});
-    const switches=mountSquishSwitches(h.doc);
     try {
-      const selector='[data-squish-key=jobs-portal-language] [role=switch]';
+      const selector='.jobs-portal-header #portal-language[role=switch]';
       const button=h.doc.querySelector(selector),route=h.w.location.search;
+      assert.equal(h.doc.querySelector('#signed-panel').hidden,false);
+      assert.equal(button.disabled,false);
       assert.equal(button.getAttribute('aria-checked'),'false');
+      button.focus();
       await h.click(selector);
       assert.equal(h.doc.documentElement.lang,'vi');
       assert.equal(h.w.localStorage.getItem('gary-language'),'"vi"');
       assert.equal(button.getAttribute('aria-checked'),'true');
+      assert.equal(button.getAttribute('aria-label'),'Dùng tiếng Việt');
+      assert.equal(h.doc.activeElement,button);
       assert.equal(h.w.location.search,route);
-    } finally {switches.destroy();await h.close();}
+    } finally {await h.close();}
   }
 });
 test('one globe opens a nonmodal preferences dialog; Escape and close restore focus', async () => {

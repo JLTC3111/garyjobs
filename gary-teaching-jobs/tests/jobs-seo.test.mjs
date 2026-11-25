@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import {createDiscoveryHandler} from '../api/discovery.js';
 import {createVacancyHandler} from '../api/vacancy.js';
+import {mountSquishSwitches} from '../dist/squish-switch.js';
 
 const row={
   id:'fixture-job',kind:'vacancy',slug:'teacher',published_at:'2026-11-04T08:00:00Z',expires_on:'2099-11-30',
@@ -55,6 +56,32 @@ test('translated vacancies expose self canonicals, reciprocal alternates and esc
       assert.equal(doc.querySelector('#main img'),null);
       if(variant)assert.match(doc.title,/^Giáo viên tiếng Anh/);
     }finally{window.close();}
+  }
+});
+
+test('Squish Switch follows both bilingual vacancy URLs from the server-rendered page',async()=>{
+  const handler=createVacancyHandler(async()=>row);
+  for(const vi of [false,true]){
+    const path='/jobs/teacher'+(vi?'?lang=vi':'');
+    const res=await request(handler,path);
+    const {window}=new JSDOM(res.body,{url:`https://jobs.garyhome.vn${path}`});
+    const doc=window.document;
+    const nav=doc.querySelector('#main [data-squish-key=jobs-vacancy-page-language]');
+    const alternate=nav.querySelector(vi?'a[hreflang=en]':'a[hreflang=vi]');
+    assert.equal(alternate.hidden,false);
+    const switches=mountSquishSwitches(doc);
+    try{
+      const button=nav.querySelector('[role=switch]');
+      assert.equal(button.getAttribute('aria-checked'),String(vi));
+      assert.equal(alternate.hidden,true);
+      let destination;
+      alternate.addEventListener('click',event=>{
+        event.preventDefault();
+        destination=event.currentTarget.pathname+event.currentTarget.search;
+      });
+      button.click();
+      assert.equal(destination,vi?'/jobs/teacher':'/jobs/teacher?lang=vi');
+    }finally{switches.destroy();window.close();}
   }
 });
 

@@ -5,6 +5,7 @@ import {attachCv, validateCv as validateCvFile} from './jobs-cv.js';
 import {createJobsPublishingAdapter} from './jobs-publishing-adapter.js';
 import {categoryOptions, locationOptions} from './jobs-vacancy-options.js';
 import {forgetVacancyImage, mountVacancyImageEditor, uploadVacancyImage, vacancyImageErrorText} from './jobs-vacancy-image.js';
+import {editorialPhoto,optimizeImage} from './image-optimization.js';
 // Observe only this app's data/Storage denials; Auth login failures are unrelated.
 async function permissionFetch(input,options){
  const response=await globalThis.fetch(input,options);
@@ -71,9 +72,10 @@ export function createCmsAdapter(){return {
  async uploadMedia(file,metadata={}){
   if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)||file.size<1||file.size>8388608)throw new Error('Choose an image under 8 MB.');
   const user=(await db.auth.getUser()).data.user;if(!user)throw new Error('Sign in again.');
-  const extension={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'}[file.type],path=`${user.id}/${crypto.randomUUID()}.${extension}`;
-  unwrap(await db.storage.from(jobsConfig.mediaBucket).upload(path,file,{upsert:false,contentType:file.type}));
-  const r=unwrap(await db.from('jobs_cms_media').insert({object_path:path,file_name:file.name.slice(0,200),mime_type:file.type,size_bytes:file.size,alt_en:String(metadata.alt_en||'').trim(),alt_vi:String(metadata.alt_vi||'').trim()}).select().single());
+  const {body,extension}=await optimizeImage(file,editorialPhoto);
+  const path=`${user.id}/${crypto.randomUUID()}.${extension}`;
+  unwrap(await db.storage.from(jobsConfig.mediaBucket).upload(path,body,{upsert:false,contentType:body.type,cacheControl:'86400'}));
+  const r=unwrap(await db.from('jobs_cms_media').insert({object_path:path,file_name:file.name.slice(0,200),mime_type:body.type,size_bytes:body.size,alt_en:String(metadata.alt_en||'').trim(),alt_vi:String(metadata.alt_vi||'').trim()}).select().single());
   return {...r,url:db.storage.from(jobsConfig.mediaBucket).getPublicUrl(path).data.publicUrl};
  }
 };}

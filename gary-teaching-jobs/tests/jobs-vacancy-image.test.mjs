@@ -3,6 +3,36 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {inspectImage, maxImageBytes, storedVacancyImage} from '../supabase/functions/jobs-vacancy-image/image.mjs';
 import {vacancyImageHandler} from '../supabase/functions/jobs-vacancy-image/handler.mjs';
+import {uploadVacancyImage} from '../dist/jobs-vacancy-image.js';
+
+test('browser upload uses verified image bytes and stops if the account changes during optimization',async t=>{
+ const png=await readFile(new URL('../dist/assets/favicon-32.png',import.meta.url));
+ const mislabeled=new File([png],'photo.jpg',{type:'image/jpeg'});
+ const priorBitmap=globalThis.createImageBitmap, priorXhr=globalThis.XMLHttpRequest;
+ t.after(()=>{
+  if(priorBitmap)globalThis.createImageBitmap=priorBitmap;else delete globalThis.createImageBitmap;
+  if(priorXhr)globalThis.XMLHttpRequest=priorXhr;else delete globalThis.XMLHttpRequest;
+ });
+ globalThis.createImageBitmap=async()=>({width:32,height:32,close(){}});
+ const requests=[];
+ globalThis.XMLHttpRequest=class {
+  headers={};upload={};
+  open(method,url){this.method=method;this.url=url;}
+  setRequestHeader(key,value){this.headers[key]=value;}
+  send(bytes){requests.push({bytes,headers:this.headers,method:this.method});this.status=201;this.response={id:'created'};this.onload();}
+ };
+ const session=id=>({data:{session:{access_token:'fixture-'+id,user:{id}}}});
+ const db={auth:{getSession:async()=>session('editor')}};
+ const vacancy='11000000-0000-4000-8000-000000000001';
+ assert.deepEqual(await uploadVacancyImage(db,vacancy,mislabeled,()=>{}),{id:'created'});
+ assert.equal(requests[0].headers['Content-Type'],'image/png');
+ assert.equal(requests[0].headers.Authorization,'Bearer fixture-editor');
+ assert.deepEqual(Buffer.from(await requests[0].bytes.arrayBuffer()),png);
+ let reads=0;
+ db.auth.getSession=async()=>session(++reads===1?'editor':'another-user');
+ await assert.rejects(uploadVacancyImage(db,vacancy,mislabeled,()=>{}),/jobs.vacancy_image_forbidden/);
+ assert.equal(requests.length,1);
+});
 
 test('server distinguishes supported image bytes, rejects truncation, mismatch and oversized dimensions',async()=>{
  const png=await readFile(new URL('../dist/assets/favicon-32.png',import.meta.url));

@@ -52,8 +52,8 @@ function renderVacancy(shell, row, {slug, language, status}) {
   const location=posting?.jobLocation.address;
   const publishedDetails=posting?`<p>${[posting.hiringOrganization.name,location.streetAddress,location.addressLocality].filter(Boolean).map(escapeText).join(' · ')}</p>`
     + (posting.validThrough?`<p>${vi?'Hạn nộp hồ sơ':'Applications close'} <time datetime="${posting.validThrough}">${posting.validThrough.slice(0,10)}</time></p>`:''):'';
-  const languageLinks=languages.length===2?`<nav aria-label="${vi?'Ngôn ngữ':'Language'}">${languages.map(lang=>
-    `<a lang="${lang}" hreflang="${lang}" href="${escapeText(vacancyLanguagePath(slug,lang,languages))}"${language===lang?' aria-current="page"':''}>${lang==='en'?'English':'Tiếng Việt'}</a>`).join(' · ')}</nav>`:'';
+  const languageLinks=languages.length===2?`<nav aria-label="${vi?'Ngôn ngữ':'Language'}" data-squish-key="jobs-vacancy-page-language">${languages.map(lang=>
+    `<a lang="${lang}" hreflang="${lang}" href="${escapeText(vacancyLanguagePath(slug,lang,languages))}" data-squish-target="${lang==='vi'?'on':'off'}"${language===lang?' aria-current="page"':''}>${lang==='en'?'English':'Tiếng Việt'}</a>`).join('<span aria-hidden="true"> · </span>')}</nav>`:'';
   const apply = row ? `/portal.html?${new URLSearchParams({access:'candidate', view:'apply', vacancy:row.id})}` : '';
   const main = `<main id="main" class="container section-pad"><h1>${escapeText(heading)}</h1>`
     + `${languageLinks}${publishedDetails}${message ? `<p>${escapeText(message)}</p>` : ''}${body}`
