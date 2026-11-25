@@ -182,23 +182,28 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 
  function memberMarkup(member){
   const c=copy(),state=statusOf(member),id=esc(member.user_id),name=nameOf(member)||c.member;
+  const editable=canEdit(member);
   const reason=member.is_self?c.selfReadonly:member.protected?c.protectedReadonly:member.role==='admin'?c.adminReadonly:c.viewOnly;
   const action=member.active?'suspend':'restore';
   const stateLabel=state==='active'?c.active:state==='suspended'?c.suspendedHint:c.unverifiedHint;
-  const email=member.email&&member.email!==name
-   ?`<span class="jobs-meta jobs-staff-email" title="${esc(member.email)}">${esc(member.email)}</span>`
-   :'';
+  const address=member.email&&member.email!==name?esc(member.email):'';
   return `<article class="jobs-staff-member" data-user-id="${id}">
-   <div class="jobs-staff-identity">
-    <span class="jobs-staff-avatar" aria-hidden="true">${esc(initials(member))}</span>
-    <div class="jobs-staff-member-name"><strong title="${esc(name)}">${esc(name)}</strong>${email}</div>
+   <details class="jobs-staff-identity" name="jobs-staff-identities">
+    <summary class="jobs-staff-person">
+     <span class="jobs-staff-avatar" aria-hidden="true">${esc(initials(member))}</span>
+     <span class="jobs-staff-member-name"><strong title="${esc(name)}">${esc(name)}</strong>${address?`<span class="jobs-meta jobs-staff-email" title="${address}">${address}</span>`:''}</span>
+    </summary>
+    <div class="jobs-staff-identity-full"><strong>${esc(name)}</strong>${address?`<span class="jobs-meta">${address}</span>`:''}</div>
+   </details>
+   <div class="jobs-staff-member-badges">
+    <span class="jobs-staff-role">${esc(c.roles[member.role]||member.role)}</span>
+    <div class="jobs-staff-tags">
+     <span class="jobs-staff-state" data-state="${state}" title="${esc(stateLabel)}">${esc(c[state])}</span>
+     ${member.is_self?`<span class="jobs-staff-tag">${esc(c.you)}</span>`:''}
+    </div>
+    ${editable?'':`<p class="jobs-staff-readonly">${esc(reason)}</p>`}
    </div>
-   <span class="jobs-staff-role">${esc(c.roles[member.role]||member.role)}</span>
-   <div class="jobs-staff-tags">
-    <span class="jobs-staff-state" data-state="${state}" title="${esc(stateLabel)}">${esc(c[state])}</span>
-    ${member.is_self?`<span class="jobs-staff-tag">${esc(c.you)}</span>`:''}
-   </div>
-   ${canEdit(member)?`<div class="jobs-staff-row-actions">
+   ${editable?`<div class="jobs-staff-row-actions">
     <button type="button" class="jobs-staff-edit" data-staff-action="edit" data-button-variant="edit" aria-haspopup="dialog" aria-controls="jobs-staff-drawer" aria-label="${esc(c.editFor(name))}">${esc(c.edit)}</button>
     <div class="jobs-staff-menu">
      <button type="button" class="jobs-staff-icon-button" data-staff-action="more" aria-label="${esc(c.more(name))}" aria-expanded="false" aria-controls="jobs-staff-menu-${id}"><span aria-hidden="true">⋮</span></button>
@@ -207,7 +212,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
       <button type="button" class="jobs-staff-menu-edit" data-staff-action="edit" aria-haspopup="dialog" aria-controls="jobs-staff-drawer">${esc(c.edit)}</button>
      </div>
     </div>
-   </div>`:`<p class="jobs-staff-readonly">${esc(reason)}</p>`}
+   </div>`:''}
   </article>`;
  }
 
@@ -218,9 +223,11 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   return `<li><span><strong>${esc(c.actions[event.action]||event.action)}</strong> · ${esc(event.target_email||event.target_user_id)} · ${esc(change)}</span><span class="jobs-meta">${esc(c.by)} ${esc(actor)} · ${esc(new Date(event.created_at).toLocaleString(lang==='vi'?'vi-VN':'en-GB'))}</span></li>`;
  }
 
- function rowAction(id,action){
+ function rowLauncher(id,action){
   const row=[...list.children].find(node=>node.dataset.userId===id);
-  return row?.querySelector(`[data-staff-action="${action}"]`);
+  if(action==='identity')return row?.querySelector('.jobs-staff-person');
+  const edit=row?.querySelector('.jobs-staff-edit'),more=row?.querySelector('[data-staff-action=more]');
+  return action==='more'||(edit&&win.getComputedStyle(edit).display==='none')?more:edit;
  }
 
  function closeMenu(restore=false){
@@ -248,7 +255,9 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 
  function renderList(){
   const c=copy(),active=doc.activeElement,id=active?.closest('[data-user-id]')?.dataset.userId;
-  const action=active?.dataset.staffAction;
+  const person=active?.matches('.jobs-staff-person');
+  const identityOpen=person&&active.parentElement.open;
+  const action=person?'identity':active?.matches('.jobs-staff-edit')?'edit':'more';
   closeMenu();
   const query=searchable(search.value),roleFilter=filters.elements.role.value,statusFilter=filters.elements.status.value;
   const filtered=Boolean(query||roleFilter||statusFilter),members=data?.members||[];
@@ -274,7 +283,11 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
    list.innerHTML=shown.length?shown.map(memberMarkup).join(''):`<p class="jobs-empty">${esc(filtered?c.noMatches:c.empty)}</p>`;
   }
   syncControls();
-  if(id&&!blocked())rowAction(id,['edit','more'].includes(action)?action:'more')?.focus({preventScroll:true});
+  if(id&&!blocked()){
+   const launcher=rowLauncher(id,action);
+   if(identityOpen&&launcher)launcher.parentElement.open=true;
+   launcher?.focus({preventScroll:true});
+  }
  }
 
  function syncControls(){
@@ -327,22 +340,23 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  }
 
  function returnFocus(member,action='edit'){
-  const button=member?rowAction(member.user_id,action):addButton;
+  const button=member?rowLauncher(member.user_id,action):addButton;
   (button&&!button.disabled?button:search).focus({preventScroll:true});
  }
 
  function dismissDrawer(restore=true){
   if(!editor)return;
   captureDraft();
-  const member=editor.member;
+  const {member,launcher}=editor;
   editor=null;
   if(drawer.open)drawer.close();
   syncControls();
-  if(restore)returnFocus(member);
+  if(restore)returnFocus(member,launcher);
  }
 
- function openDrawer(draft){
+ function openDrawer(draft,launcher='edit'){
   closeMenu();
+  draft.launcher=launcher;
   editor=draft;
   renderForm();syncControls();
   drawer.showModal();
@@ -417,7 +431,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(draft){if(member)drafts.delete(member.user_id);else addDraft=addValues();}
   onNotice(message(copy()),false,true);
   await load();
-  if(!disposed&&(restore||!draft))returnFocus(member,draft?'edit':'more');
+  if(!disposed&&(restore||!draft))returnFocus(member,draft?.launcher||'more');
  }
 
  function submitForm(event){
@@ -453,7 +467,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(!canEdit(member))return;
   if(action==='edit'){
    if(!drafts.has(member.user_id))drafts.set(member.user_id,editValues(member));
-   openDrawer(drafts.get(member.user_id));
+   openDrawer(drafts.get(member.user_id),button.matches('.jobs-staff-menu-edit')?'more':'edit');
   }else if(action==='more')openMenu(button);
   else if(menu?.panel.contains(button)&&(action==='suspend'||action==='restore')){
    const active=action==='restore',c=copy(),address=member.email||nameOf(member);
@@ -476,11 +490,17 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   const rect=drawer.getBoundingClientRect();
   if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dismissDrawer();
  }
- function outsideMenu(event){
+ function outsideDisclosures(event){
   if(menu&&!menu.button.parentElement.contains(event.target))closeMenu();
+  const identity=list.querySelector('.jobs-staff-identity[open]');
+  if(identity&&!identity.contains(event.target))identity.open=false;
  }
  function menuKey(event){
-  if(event.key==='Escape'&&menu){event.preventDefault();closeMenu(true);}
+  if(event.key==='Escape'){
+   const identity=event.target.closest('.jobs-staff-identity[open]');
+   if(identity){event.preventDefault();identity.open=false;}
+   if(menu){event.preventDefault();closeMenu(true);}
+  }
   if(event.key==='ArrowDown'&&event.target.matches('[data-staff-action=more]')&&!blocked()){
    event.preventDefault();
    if(menu?.button===event.target)menu.panel.querySelector('button').focus();
@@ -499,8 +519,8 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  drawer.addEventListener('cancel',cancel);
  drawer.addEventListener('close',onClose);
  drawer.addEventListener('click',backdrop);
- doc.addEventListener('pointerdown',outsideMenu);
- doc.addEventListener('focusin',outsideMenu);
+ doc.addEventListener('pointerdown',outsideDisclosures);
+ doc.addEventListener('focusin',outsideDisclosures);
  render();
  const ready=load();
  return {ready,reload:load,setLanguage(next){captureDraft();lang=next==='vi'?'vi':'en';render();},destroy(){
@@ -508,8 +528,8 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   disposed=true;request++;
   closeMenu();dismissDrawer(false);
   root.removeEventListener('click',clicked);
-  doc.removeEventListener('pointerdown',outsideMenu);
-  doc.removeEventListener('focusin',outsideMenu);
+  doc.removeEventListener('pointerdown',outsideDisclosures);
+  doc.removeEventListener('focusin',outsideDisclosures);
   root.replaceChildren();
  }};
 }

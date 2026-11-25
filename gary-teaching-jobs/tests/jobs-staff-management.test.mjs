@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 import {mountStaffManagement} from '../dist/jobs-staff-management.js';
 import {staffPortal,settle} from './helpers/jobs-staff-portal.mjs';
@@ -63,6 +64,38 @@ function mount({data=overview(),fail=null,respond=()=>{}}={}){
  return h;
 }
 const values=select=>[...select.options].map(option=>option.value);
+
+test('compact staff cards group badges, disclose the full identity and return Edit focus to the kebab',async()=>{
+ const data=overview(),member=data.members.find(item=>item.user_id==='u-editor');
+ member.display_name='Nguyễn '+ 'Minh '.repeat(12)+'Anh';
+ member.email='long.staff.address.'.repeat(7)+'@example.test';
+ const h=mount({data});try{
+  await h.page.ready;
+  h.page.setLanguage('vi');
+  const row=h.row(member.user_id),person=row.querySelector('summary'),identity=person.parentElement;
+  const badges=row.querySelector('.jobs-staff-member-badges');
+  assert.ok(badges.querySelector('.jobs-staff-role'));
+  assert.ok(badges.querySelector('.jobs-staff-state'));
+  assert.equal(badges.contains(h.action(member.user_id,'more')),false);
+  person.focus();person.click();
+  assert.equal(identity.open,true);
+  assert.equal(identity.querySelector('.jobs-staff-identity-full strong').textContent,member.display_name);
+  assert.equal(identity.querySelector('.jobs-staff-identity-full .jobs-meta').textContent,member.email);
+  h.key(person,'Escape');
+  assert.equal(identity.open,false);
+  assert.equal(h.doc.activeElement,person);
+  const more=h.action(member.user_id,'more');
+  h.action(member.user_id,'edit').style.display='none';
+  more.click();row.querySelector('.jobs-staff-menu-edit').click();
+  assert.equal(h.drawer.open,true);
+  h.$('.jobs-staff-drawer-header button').click();
+  assert.equal(h.doc.activeElement,more);
+ }finally{h.close();}
+ const css=await readFile(new URL('../dist/jobs-staff-management.css',import.meta.url),'utf8');
+ assert.match(css,/grid-template-areas: "identity actions" "badges badges";/);
+ assert.match(css,/\.jobs-staff-row-actions \{ grid-area: actions; --jobs-staff-icon-target: 44px; \}/);
+ assert.match(css,/\.jobs-staff-menu > \.jobs-staff-icon-button > span \{[^}]*width: 36px; height: 36px;/);
+});
 
 test('the directory leads with compact identities and actions gated by Jobs membership',async()=>{
  const h=mount();try{

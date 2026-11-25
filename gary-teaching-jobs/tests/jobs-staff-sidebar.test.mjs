@@ -156,12 +156,18 @@ test('sidebar preferences and nested groups persist without changing editor pref
   const trigger=h.doc.getElementById('jobs-mobile-nav-trigger');
   assert.ok(h.doc.querySelector('[data-jobs-sidebar-resize]').hidden);
   assert.equal(trigger.hidden,false);
+  assert.equal(trigger.parentElement,h.doc.querySelector('.jobs-portal-header'));
   assert.equal(sidebar.getState().mobile,true);
   assert.equal(sidebar.getState().mobileExpanded,false);
   assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
   trigger.click();
   const drawer=h.doc.getElementById('jobs-mobile-nav');
+  const close=drawer.querySelector('[data-jobs-sidebar-toggle]');
   assert.equal(drawer.open,true);
+  assert.equal(close.querySelector('.jobs-sidebar-toggle-icon').textContent,'×');
+  assert.equal(h.doc.activeElement,close);
+  assert.ok(drawer.querySelector('#account-summary'));
+  assert.equal(h.doc.body.classList.contains('jobs-sidebar-scroll-locked'),true);
   assert.equal(sidebar.getState().overlay,true);
   assert.equal(trigger.getAttribute('aria-expanded'),'true');
   assert.equal(h.doc.querySelector('#workspace-nav').inert,false);
@@ -170,8 +176,30 @@ test('sidebar preferences and nested groups persist without changing editor pref
   drawer.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
   assert.equal(drawer.open,false);assert.equal(h.doc.activeElement,trigger);
   assert.equal(h.doc.querySelector('#workspace-nav').inert,true);
+  trigger.click();close.click();
+  assert.equal(drawer.open,false);assert.equal(h.doc.activeElement,trigger);
+  trigger.click();drawer.dispatchEvent(new h.w.MouseEvent('click',{clientX:300,clientY:20,bubbles:true}));
+  assert.equal(drawer.open,false);assert.equal(h.doc.activeElement,trigger);
+  trigger.click();
+  await h.click('[data-collection=employer]');
+  assert.equal(drawer.open,false);
+  assert.equal(employer.getAttribute('aria-current'),'page');
+  assert.equal(h.doc.activeElement,h.doc.getElementById('workspace-view'));
+  assert.equal(h.doc.body.classList.contains('jobs-sidebar-scroll-locked'),false);
+  h.w.innerWidth=980;h.w.dispatchEvent(new h.w.Event('resize'));
+  assert.equal(trigger.hidden,true);
+  assert.ok(h.doc.querySelector('#workspace-nav[data-branched-rail]'));
   assert.equal(JSON.parse(h.w.localStorage.getItem('gary-jobs:staff-sidebar:v1')).width,216);sidebar.destroy();
  }finally{await h.close();}
+});
+
+test('desktop sticky geometry is scoped to the dock and mobile drawer spacing keeps a scroll area',async()=>{
+ const [sidebar,theme]=await Promise.all(['jobs-staff-sidebar.css','jobs-portal-theme.css'].map(name=>readFile(new URL(`../dist/${name}`,import.meta.url),'utf8')));
+ assert.match(sidebar,/\.jobs-staff-layout>\.jobs-staff-sidebar\{\s*position:sticky;top:calc\(var\(--jobs-portal-header-height/);
+ assert.doesNotMatch(theme,/\.jobs-staff-active \.jobs-staff-sidebar\s*\{/);
+ assert.match(sidebar,/\.jobs-mobile-nav-drawer\{[^}]*position:fixed;inset:0 auto 0 0;[^}]*width:min\(320px,calc\(100% - 44px\)\)/);
+ assert.match(sidebar,/\.jobs-mobile-nav-drawer>\.jobs-staff-sidebar\{[^}]*--jobs-nav-group-target:44px;[^}]*height:100%/);
+ assert.match(sidebar,/#workspace-nav\{[^}]*min-height:0;[^}]*overflow-y:auto;overscroll-behavior-y:contain/);
 });
 
 test('a vacancy still validates, saves and publishes after navigation panel changes, and media uploads keep their original input',async()=>{

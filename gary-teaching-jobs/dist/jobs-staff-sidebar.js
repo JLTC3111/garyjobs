@@ -14,7 +14,9 @@ export function mountJobsStaffSidebar(doc=document){
  const win=doc.defaultView;
  const layout=sidebar.closest('.jobs-staff-layout');
  const panel=doc.getElementById('signed-panel');
+ const workspace=doc.getElementById('workspace-view');
  const toggle=sidebar.querySelector('[data-jobs-sidebar-toggle]');
+ const toggleIcon=toggle.querySelector('.jobs-sidebar-toggle-icon');
  const nav=sidebar.querySelector('#workspace-nav');
  const handle=sidebar.querySelector('[data-jobs-sidebar-resize]');
  const trigger=doc.getElementById('jobs-mobile-nav-trigger');
@@ -43,7 +45,7 @@ export function mountJobsStaffSidebar(doc=document){
  const tablet=()=>!mobile()&&win.innerWidth<1060;
  const bounds=()=>({min:216,max:Math.max(216,Math.min(384,(win.innerWidth||1440)-640-72))});
  const save=()=>{try{storage?.setItem(key,JSON.stringify({version:2,...preferred}));}catch{}};
- const staffActive=()=>doc.body.dataset.jobsStaff==='true'&&panel?.classList.contains('jobs-staff-active');
+ const staffActive=()=>doc.body.dataset.jobsStaff==='true'&&!panel.hidden&&panel.classList.contains('jobs-staff-active');
 
  function stop(){
   if(!drag)return;
@@ -66,6 +68,7 @@ export function mountJobsStaffSidebar(doc=document){
   drawer.id='jobs-mobile-nav';
   drawer.className='jobs-mobile-nav-drawer';
   drawer.setAttribute('aria-modal','true');
+  trigger?.setAttribute('aria-controls',drawer.id);
   layout.append(drawer);
   drawer.addEventListener('close',syncDrawer);
   drawer.addEventListener('cancel',event=>{event.preventDefault();closeDrawer();});
@@ -91,13 +94,18 @@ export function mountJobsStaffSidebar(doc=document){
   nav.inert=staffActive()&&mobile()&&!open;
  }
 
- function closeDrawer(restoreFocus=true){
+ function closeDrawer({focusWorkspace=false}={}){
   if(!drawer?.open)return;
   drawer.close();
   syncDrawer();
-  if(!restoreFocus)return;
-  if(trigger&&!trigger.hidden)trigger.focus({preventScroll:true});
-  else toggle.focus({preventScroll:true});
+  if(focusWorkspace){
+   // The workspace stays mounted while a collection replaces its headings and results.
+   queueMicrotask(()=>{
+    if(disposed||!staffActive()||doc.querySelector('dialog[open]'))return;
+    workspace.tabIndex=-1;
+    workspace.focus();
+   });
+  }else if(trigger&&!trigger.hidden)trigger.focus({preventScroll:true});
  }
 
  function openDrawer(){
@@ -105,7 +113,6 @@ export function mountJobsStaffSidebar(doc=document){
   ensureDrawer();
   if(sidebar.parentElement!==drawer)drawer.append(sidebar);
   drawer.showModal();
-  syncDrawer();
   refresh({revealActive:true});
   toggle.focus({preventScroll:true});
  }
@@ -120,15 +127,9 @@ export function mountJobsStaffSidebar(doc=document){
   if(mobile()){
    ensureDrawer();
    if(sidebar.parentElement!==drawer)drawer.append(sidebar);
-   if(trigger){
-    trigger.hidden=false;
-    trigger.setAttribute('aria-controls',drawer.id);
-    trigger.setAttribute('aria-haspopup','dialog');
-   }
   }else{
    if(drawer?.open)drawer.close();
    if(sidebar.parentElement!==layout)layout.prepend(sidebar);
-   if(trigger)trigger.hidden=true;
   }
   syncDrawer();
  }
@@ -156,12 +157,12 @@ export function mountJobsStaffSidebar(doc=document){
   if(trigger){
    trigger.setAttribute('aria-label',copy.show);
    trigger.title=copy.show;
-   trigger.hidden=!active||!phone;
   }
 
   const action=phone?copy.hide:showCollapsed?copy.expand:copy.collapse;
   toggle.setAttribute('aria-label',action);
   toggle.title=action;
+  toggleIcon.textContent=phone?'×':'☰';
   toggle.querySelector('.jobs-sidebar-toggle-label').textContent=action;
   if(phone){
    toggle.removeAttribute('aria-expanded');
@@ -175,6 +176,10 @@ export function mountJobsStaffSidebar(doc=document){
   sidebar.querySelector('[data-jobs-sidebar-title]').textContent=copy.title;
   if(drawer)drawer.setAttribute('aria-label',copy.navigation);
   nav.setAttribute('aria-label',copy.navigation);
+  if(active){
+   workspace.setAttribute('role','region');
+   workspace.setAttribute('aria-label',copy.title);
+  }else removeWorkspaceFocus();
 
   handle.hidden=!active||phone||showCollapsed;
   handle.setAttribute('aria-label',copy.resize);
@@ -184,7 +189,7 @@ export function mountJobsStaffSidebar(doc=document){
   handle.setAttribute('aria-valuenow',String(Math.round(width)));
   handle.setAttribute('aria-valuetext',copy.width+': '+Math.round(width)+' px');
 
-  accountFooter(active&&!phone);
+  accountFooter(active);
   if(active&&!nav.inert)nav.tabIndex=0;else nav.removeAttribute('tabindex');
 
   branches.refresh({
@@ -197,7 +202,7 @@ export function mountJobsStaffSidebar(doc=document){
   const next=nav.querySelector('[aria-current="page"]');
   const moved=activeLink!==next;
   activeLink=next;
-  if(phone&&drawer?.open&&moved&&next)closeDrawer(false);
+  if(phone&&moved&&next)closeDrawer({focusWorkspace:true});
  }
 
  function click(event){
@@ -222,7 +227,7 @@ export function mountJobsStaffSidebar(doc=document){
    return;
   }
   if(mobile()&&drawer?.open&&event.target.closest('#workspace-nav button[aria-current="page"]')){
-   queueMicrotask(()=>{if(!disposed)closeDrawer(false);});
+   queueMicrotask(()=>{if(!disposed)closeDrawer({focusWorkspace:true});});
   }
  }
 
@@ -263,11 +268,20 @@ export function mountJobsStaffSidebar(doc=document){
  }
  function resized(){
   stop();
-  const focusWasInNavigation=sidebar.contains(doc.activeElement)||doc.activeElement===trigger;
+  const focused=doc.activeElement;
+  const focusWasInNavigation=sidebar.contains(focused)||focused===trigger;
   refresh();
   if(!staffActive()||!focusWasInNavigation)return;
   if(mobile()&&!drawer?.open&&trigger&&!trigger.hidden)trigger.focus({preventScroll:true});
-  if(!mobile()&&!sidebar.contains(doc.activeElement))toggle.focus({preventScroll:true});
+  if(!mobile()&&(!sidebar.contains(doc.activeElement)||
+    (focused===handle&&handle.hidden)||
+    (focused.matches('.jobs-nav-group-toggle')&&layout.classList.contains('jobs-sidebar-collapsed'))))toggle.focus({preventScroll:true});
+ }
+
+ function removeWorkspaceFocus(){
+  workspace.removeAttribute('role');
+  workspace.removeAttribute('aria-label');
+  workspace.removeAttribute('tabindex');
  }
 
  if(trigger)trigger.addEventListener('click',openDrawer);
@@ -311,6 +325,7 @@ export function mountJobsStaffSidebar(doc=document){
    layout.removeAttribute('data-sidebar-closing');
    layout.style.removeProperty('--jobs-sidebar-width');
    doc.body.classList.remove('jobs-sidebar-scroll-locked');
+   removeWorkspaceFocus();
    nav.inert=false;
    nav.removeAttribute('tabindex');
    sidebar.removeEventListener('click',click);

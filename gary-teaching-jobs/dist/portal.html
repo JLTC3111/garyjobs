@@ -20,10 +20,10 @@
 <body class="jobs-portal-body">
   <a class="skip-link" href="#portal-main">Skip to content</a>
   <header class="jobs-portal-header">
+    <button id="jobs-mobile-nav-trigger" class="jobs-mobile-nav-trigger" type="button" aria-label="Open staff navigation" aria-haspopup="dialog" aria-expanded="false" aria-controls="jobs-mobile-nav" hidden>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
     <div class="jobs-portal-branding">
-      <button id="jobs-mobile-nav-trigger" class="jobs-mobile-nav-trigger" type="button" aria-label="Open staff navigation" aria-haspopup="dialog" aria-expanded="false" aria-controls="jobs-mobile-nav" hidden>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
       <a href="./" class="jobs-portal-brand" aria-label="Vietnam English Teaching Jobs — Home">
         <img class="jobs-logo-light" src="assets/teaching-jobs-logo-light.svg" width="772" height="394" alt="Vietnam English Teaching Jobs">
         <img class="jobs-logo-dark" src="assets/teaching-jobs-logo-dark.svg" width="772" height="394" alt="Vietnam English Teaching Jobs">
@@ -83,7 +83,22 @@
     <div id="portal-loading" class="jobs-empty" role="status" aria-live="polite">Checking your session…</div>
     <noscript><p class="jobs-alert">Enable JavaScript to sign in. / Bật JavaScript để đăng nhập.</p></noscript>
     <section id="auth-panel" hidden></section>
-    <section id="signed-panel" hidden><p id="account-summary" class="jobs-meta"></p><div class="jobs-staff-layout"><aside id="jobs-staff-sidebar" class="jobs-staff-sidebar" aria-label="Staff navigation"><header class="jobs-sidebar-heading"><div><span class="jobs-sidebar-brand">TEACHING JOBS</span><strong data-jobs-sidebar-title>Staff workspace</strong></div><button type="button" data-jobs-sidebar-toggle aria-controls="workspace-nav" aria-expanded="true" title="Collapse navigation"><span aria-hidden="true">☰</span><span class="jobs-sidebar-toggle-label">Collapse navigation</span></button></header><nav id="workspace-nav" aria-label="Workspace"></nav><button type="button" class="jobs-sidebar-resize" data-jobs-sidebar-resize role="separator" aria-orientation="vertical" aria-label="Resize staff navigation"></button></aside><div id="workspace-view"></div></div></section>
+    <section id="signed-panel" hidden>
+      <p id="account-summary" class="jobs-meta"></p>
+      <div class="jobs-staff-layout">
+        <aside id="jobs-staff-sidebar" class="jobs-staff-sidebar" aria-label="Staff navigation">
+          <header class="jobs-sidebar-heading">
+            <div><span class="jobs-sidebar-brand">TEACHING JOBS</span><strong data-jobs-sidebar-title>Staff workspace</strong></div>
+            <button type="button" data-jobs-sidebar-toggle aria-controls="workspace-nav" aria-expanded="true" title="Collapse navigation">
+              <span class="jobs-sidebar-toggle-icon" aria-hidden="true">☰</span><span class="jobs-sidebar-toggle-label">Collapse navigation</span>
+            </button>
+          </header>
+          <nav id="workspace-nav" aria-label="Workspace"></nav>
+          <button type="button" class="jobs-sidebar-resize" data-jobs-sidebar-resize role="separator" aria-orientation="vertical" aria-label="Resize staff navigation"></button>
+        </aside>
+        <div id="workspace-view"></div>
+      </div>
+    </section>
   </main>
 </body>
 </html>
