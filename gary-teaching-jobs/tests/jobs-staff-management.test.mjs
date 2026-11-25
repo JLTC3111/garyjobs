@@ -6,7 +6,7 @@ import {staffPortal,settle} from './helpers/jobs-staff-portal.mjs';
 
 const member=(user_id,email,role,extra={})=>({user_id,email,display_name:'',name:null,role,active:true,protected:false,email_confirmed:true,version:1,is_self:false,can_manage:true,...extra});
 const overview=({owner=false}={})=>({
- viewer:{user_id:'u-self',protected:owner,can_manage_admins:owner},
+ viewer:{user_id:'u-self',protected:owner,can_manage_staff:true,can_manage_admins:owner},
  members:[
   member('u-self','self@example.test','admin',{is_self:true,can_manage:false,protected:owner}),
   member('u-owner','owner@example.test','admin',{display_name:'Gary Owner',name:'Gary Owner',protected:true,can_manage:false,version:3}),
@@ -72,7 +72,9 @@ test('the directory leads with compact identities and actions gated by Jobs memb
   assert.equal(h.doc.querySelectorAll('.jobs-staff-member').length,6);
   assert.equal(h.doc.querySelectorAll('.jobs-staff-member form, .jobs-staff-member input, .jobs-staff-member select').length,0);
   assert.match(h.$('[data-staff-count]').textContent,/6 memberships/);
-  assert.match(h.row('u-owner').textContent,/Gary Owner.*owner@example\.test.*Admin.*Active.*Protected owner/s);
+  assert.match(h.row('u-owner').textContent,/Gary Owner.*owner@example\.test.*Admin.*Active.*Protected account/s);
+  assert.equal(h.row('u-owner').querySelector('.jobs-staff-tag'),null);
+  assert.equal(h.row('u-owner').querySelector('.jobs-staff-readonly')?.className,'jobs-staff-readonly');
   assert.equal(h.row('u-owner').querySelector('.jobs-staff-avatar').textContent,'GO');
   assert.equal(h.doc.querySelector('#root img'),null,'display names are escaped');
   assert.equal(h.row('u-editor').querySelector('strong').textContent,'<img src=x onerror=alert(1)>');
@@ -247,7 +249,8 @@ test('Vietnamese labels and drawer drafts survive language changes and dismissal
   assert.equal(h.form.elements.role.selectedOptions[0].textContent,'Chuyên viên tuyển dụng');
   assert.match(h.form.elements.role.selectedOptions[0].title,/Chỉ tuyển dụng/);
   assert.match(h.row('u-recruiter').textContent,/Đã tạm ngưng · không có quyền/);
-  assert.match(h.row('u-self').textContent,/Tài khoản của bạn · chỉ xem/);
+  assert.match(h.row('u-self').textContent,/Tài khoản của bạn/);
+  assert.doesNotMatch(h.row('u-owner').textContent,/Chủ sở hữu được bảo vệ/);
   assert.match(h.$('.jobs-staff-history').textContent,/Bởi Quản trị cơ sở dữ liệu/);
   h.$('.jobs-staff-drawer-header button').click();
   h.action('u-editor','edit').click();
@@ -256,9 +259,9 @@ test('Vietnamese labels and drawer drafts survive language changes and dismissal
  }finally{h.close();}
 });
 
-test('the portal offers staff management only to Jobs administrators',async()=>{
+test('the portal gives Jobs staff a read-only directory and keeps management with administrators',async()=>{
  const adapter={calls:0,overview:async()=>{adapter.calls++;return overview();},assign:async()=>({}),update:async()=>({})};
- const admin=await staffPortal({caps:{read:true,edit:true,publish:true,media:true,recruit:true,role:'admin',manage_staff:true},staff:adapter});
+ const admin=await staffPortal({caps:{read:true,edit:true,publish:true,media:true,recruit:true,role:'admin',view_staff:true,manage_staff:true},staff:adapter});
  try{
   assert.equal(admin.doc.querySelector('[data-jobs-nav-group=administration] [data-view=staff] .jobs-nav-label').textContent,'Staff management');
   await admin.click('[data-view=staff]');
@@ -280,7 +283,16 @@ test('the portal offers staff management only to Jobs administrators',async()=>{
   await admin.click('[data-view=applications]');
   assert.equal(admin.doc.querySelector('.jobs-staff-admin'),null,'leaving the view removes the staff list');
  }finally{await admin.close();}
- for(const caps of [{read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},{read:true,edit:true,role:'editor',manage_staff:false}]){
+ const editor=await staffPortal({caps:{read:true,edit:true,role:'editor',view_staff:true},view:'staff',staff:{
+  overview:async()=>({viewer:{can_manage_staff:false},members:[],events:[]}),
+ }});
+ try{
+  assert.ok(editor.doc.querySelector('[data-view=staff]'));
+  assert.equal(editor.doc.querySelector('[data-staff-action=add]').hidden,true);
+  assert.equal(editor.doc.querySelector('.jobs-staff-history').hidden,true);
+  assert.equal(editor.doc.querySelector('[data-collection=media]'),null);
+ }finally{await editor.close();}
+ for(const caps of [{read:true,edit:true,publish:true,media:true,recruit:true,role:'admin'},{read:true,edit:true,role:'editor',view_staff:false}]){
   const h=await staffPortal({caps,view:'staff',staff:adapter});
   try{
    assert.equal(h.doc.querySelector('[data-view=staff]'),null);

@@ -22,7 +22,7 @@ test('Jobs staff sidebar exposes every implemented CMS destination and permitted
 });
 
 test('sidebar visibility remains capability-dependent and candidate navigation is unchanged',async()=>{
- for(const [caps,expected]of [[{read:true,edit:false,publish:false,role:'reader'},7],[{recruit:true,role:'recruiter'},0],[{},0]]){
+ for(const [caps,expected]of [[{read:true,edit:false,publish:false,role:'reader'},6],[{recruit:true,role:'recruiter'},0],[{},0]]){
   const h=await staffPortal({caps});try{assert.equal(h.doc.querySelectorAll('#workspace-nav [data-collection]').length,expected);assert.equal(!!h.doc.querySelector('[data-view=applications]'),!!caps.recruit);if(!caps.read)assert.equal(h.cms,null);if(caps.read)assert.equal(h.doc.querySelector('[data-action=new]'),null);}finally{await h.close();}
  }
  const h=await staffPortal({access:'candidate',view:'mine'});try{assert.equal(h.doc.body.dataset.jobsStaff,'false');assert.equal(h.doc.querySelectorAll('[data-jobs-nav-group]').length,0);assert.equal(h.doc.querySelector('[data-view=mine]').textContent,'My applications');assert.equal(h.doc.querySelectorAll('#workspace-nav button').length,1);}finally{await h.close();}
@@ -30,7 +30,7 @@ test('sidebar visibility remains capability-dependent and candidate navigation i
 
 test('Jobs renders unique Lucide symbols for headings and destinations across sidebar modes',async()=>{
  const sprite=new JSDOM(await readFile(new URL('../dist/assets/staff-nav-icons.svg',import.meta.url),'utf8'),{contentType:'image/svg+xml'});
- const h=await staffPortal({caps:{read:true,edit:true,recruit:true,manage_staff:true,role:'admin'}});
+ const h=await staffPortal({caps:{read:true,edit:true,recruit:true,media:true,view_staff:true,manage_staff:true,role:'admin'}});
  try{
   const nav=h.doc.querySelector('#workspace-nav');
   const controls=[...nav.querySelectorAll('.branched-menu__head, [data-collection], [data-view]')];
@@ -93,7 +93,7 @@ test('Jobs Back and Forward restore collection routes without rebuilding the bra
 });
 
 test('Jobs removes revoked links and their traces and keeps the permitted navigation node',async()=>{
- const h=await staffPortal({caps:{read:true,edit:true,recruit:true,manage_staff:true,role:'admin'}});try{
+ const h=await staffPortal({caps:{read:true,edit:true,recruit:true,media:true,view_staff:true,manage_staff:true,role:'admin'}});try{
   const nav=h.doc.querySelector('#workspace-nav'),applications=nav.querySelector('[data-view=applications]');
   assert.ok(nav.querySelector('[data-view=staff]'));
   await h.changeCapabilities({recruit:true,role:'recruiter'});
@@ -124,7 +124,7 @@ test('navigation resizing and collapse preserve an unsaved invalid vacancy and e
 });
 
 test('Administration opens by default and survives unrelated group collapse',async()=>{
- const h=await staffPortal({caps:{read:true,edit:true,publish:true,recruit:true,manage_staff:true,role:'admin'}});try{
+ const h=await staffPortal({caps:{read:true,edit:true,publish:true,recruit:true,media:true,view_staff:true,manage_staff:true,role:'admin'}});try{
   const admin=h.doc.querySelector('[data-jobs-nav-group=administration]');
   assert.equal(admin.dataset.open,'true');
   assert.equal(h.sidebar.getState().groups.administration,true);

@@ -111,19 +111,23 @@ test('unauthorized or in-use forget does not delete storage',async()=>{
   url:api,publishableKey:'publishable',serviceKey:'server',cleanupKey:'disabled-test',
   fetcher:async(url,options)=>{
    requests.push({url,options});
-   if(url.endsWith('/jobs_vacancy_image_forget')) return Response.json({message:'jobs.vacancy_image_in_use',code:'23514'},{status:400});
+   if(url.endsWith('/jobs_vacancy_image_forget')&&options.headers.authorization==='Bearer site-owner')
+    return Response.json({message:'jobs.vacancy_image_in_use',code:'23514'},{status:400});
    return Response.json({}, {status:403});
   },
  });
  const missing=await handler(new Request(api+'/?forget='+id,{method:'POST'}));
  assert.equal(missing.status,401);
  assert.equal(requests.length,0);
- const inUse=await handler(new Request(api+'/?forget='+id,{method:'POST',headers:{authorization:'Bearer staff'}}));
+ const forbidden=await handler(new Request(api+'/?forget='+id,{method:'POST',headers:{authorization:'Bearer staff'}}));
+ assert.equal(forbidden.status,403);
+ const inUse=await handler(new Request(api+'/?forget='+id,{method:'POST',headers:{authorization:'Bearer site-owner'}}));
  assert.equal(inUse.status,409);
  assert.equal((await inUse.json()).code,'in_use');
- assert.equal(requests.length,1);
+ assert.equal(requests.length,2);
  assert.match(requests[0].url,/\/jobs_vacancy_image_forget$/);
  assert.equal(requests[0].options.headers.authorization,'Bearer staff');
+ assert.equal(requests[1].options.headers.authorization,'Bearer site-owner');
  assert.equal(requests.some(request=>request.options.method==='DELETE'),false);
 });
 

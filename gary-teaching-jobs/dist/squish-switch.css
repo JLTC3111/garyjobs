@@ -140,9 +140,9 @@
   display: inline-grid;
   place-items: center;
   box-sizing: border-box;
-  flex: 1 0 var(--ss-width);
+  flex: 1 1 auto;
   width: 100%;
-  min-width: var(--ss-width);
+  min-width: min(100%, var(--ss-width));
   min-height: 44px;
   padding: 0;
   overflow: visible;
@@ -169,7 +169,7 @@ html[data-jobs-theme-preference="system"] [data-squish-mode="theme"] > .squish-c
 .squish-choice .squish-switch__options {
   inset: var(--ss-inset);
   z-index: 1;
-  grid-template-columns: repeat(3, minmax(4.5rem, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   place-items: center;
   overflow: visible;
   font-family: inherit;
@@ -177,22 +177,26 @@ html[data-jobs-theme-preference="system"] [data-squish-mode="theme"] > .squish-c
   font-weight: 650;
   line-height: 1.25;
 }
-html[lang="vi"] .squish-choice { font-family: "Be Vietnam Pro", Arial, sans-serif; }
+html[lang="vi"] .squish-choice {
+  --ss-width: 276px;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+}
+html[lang="vi"] .squish-choice .squish-switch__options { font-size: 12px; }
 .squish-choice .squish-switch__options span {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: max-content;
-  max-width: none;
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   margin: 0;
-  padding: 0;
-  overflow: visible;
+  padding: 0 2px;
+  overflow: hidden;
   color: var(--ss-ink);
   font: inherit;
   line-height: 1.25;
   text-align: center;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .squish-choice .squish-switch__options span[aria-checked="true"] { color: var(--ss-accent); font-weight: 700; }

@@ -651,13 +651,16 @@ export function mountVacancyImageEditor(root, {record, language, editable, previ
       const toolbar = win.document.createElement('div');
       toolbar.className = 'jobs-vacancy-image-actions';
       const restore = textButton('imageRestore', image.id, t('Restore', 'Khôi phục'), 'restore');
-      const erase = textButton('imageForget', image.id, t('Permanently delete', 'Xóa vĩnh viễn'), 'danger');
       restore.setAttribute('aria-label', `${t('Restore', 'Khôi phục')}: ${localizedAlt(image)}`);
-      erase.setAttribute('aria-label', `${t('Permanently delete', 'Xóa vĩnh viễn')}: ${localizedAlt(image)}`);
-      erase.disabled = image.published === true;
-      toolbar.append(restore, erase);
+      toolbar.append(restore);
+      if (forget) {
+        const erase = textButton('imageForget', image.id, t('Permanently delete', 'Xóa vĩnh viễn'), 'danger');
+        erase.setAttribute('aria-label', `${t('Permanently delete', 'Xóa vĩnh viễn')}: ${localizedAlt(image)}`);
+        erase.disabled = image.published === true;
+        toolbar.append(erase);
+      }
       item.append(photo, description, toolbar);
-      if (image.published === true) {
+      if (forget && image.published === true) {
         const note = win.document.createElement('p');
         note.className = 'cms-hint';
         note.textContent = t('Publish the removal before this photo can be deleted permanently.', 'Xuất bản việc xóa ảnh trước khi có thể xóa vĩnh viễn.');

@@ -54,7 +54,10 @@
 }
 .jobs-staff-state[data-state=active] { background: var(--jobs-success-bg); color: var(--jobs-success); }
 .jobs-staff-state:is([data-state=suspended], [data-state=unverified]) { background: var(--jobs-warning-bg); color: var(--jobs-warning); }
-.jobs-staff-readonly { margin: 0; color: var(--jobs-portal-muted); font-size: .76rem; overflow-wrap: anywhere; }
+.jobs-staff-readonly {
+  margin: 0; justify-self: end; text-align: end; color: var(--jobs-portal-muted);
+  font-size: .76rem; overflow-wrap: anywhere;
+}
 .jobs-staff-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
 .jobs-staff-row-actions button { min-height: 36px; padding: 6px 9px; font-size: .78rem; overflow-wrap: anywhere; }
 .jobs-workspace button.jobs-staff-icon-button {

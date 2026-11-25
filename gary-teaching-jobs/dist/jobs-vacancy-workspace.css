@@ -18,7 +18,7 @@
   animation: none;
 }
 #vacancy-public-header {
-  --vacancy-header-height: 66px;
+  --vacancy-header-height: 60px;
   position: relative;
   z-index: 5;
 }
@@ -32,7 +32,7 @@
   height: var(--vacancy-header-height);
   padding-inline: clamp(14px, 3vw, 42px);
 }
-#vacancy-public-header .brand-logo { width: 124px; max-height: 56px; }
+#vacancy-public-header .brand-logo { width: 140px; max-height: 48px; }
 #detail-dialog.is-vacancy-workspace > .dialog-shell { padding: 0; }
 .is-vacancy-workspace :is(.dialog-shell, #dialog-content, .vacancy-workspace) { height: 100%; min-height: 0; }
 .is-vacancy-workspace .dialog-close { display: none; }

@@ -19,13 +19,63 @@
 </head>
 <body class="jobs-portal-body">
   <a class="skip-link" href="#portal-main">Skip to content</a>
-  <header class="jobs-portal-header"><a href="./" class="jobs-portal-brand" aria-label="Vietnam English Teaching Jobs — Home"><img class="jobs-logo-light" src="assets/teaching-jobs-logo-light.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"><img class="jobs-logo-dark" src="assets/teaching-jobs-logo-dark.svg" width="772" height="394" alt="Vietnam English Teaching Jobs"></a><div class="jobs-portal-tools"><div class="jobs-portal-appearance"><span data-portal-appearance-label>Appearance</span><span data-squish-key="jobs-portal-theme" data-squish-mode="theme"><select id="portal-appearance" aria-label="Appearance" tabindex="-1" aria-hidden="true"><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select><div class="squish-switch squish-choice" role="radiogroup" tabindex="0" aria-orientation="horizontal" aria-label="Appearance, System" data-choice="system"><span class="squish-switch__track"><span class="squish-switch__options"><span role="radio" aria-checked="false">Light</span><span role="radio" aria-checked="false">Dark</span><span role="radio" aria-checked="true">System</span></span><span class="squish-switch__thumb" aria-hidden="true"><span>S</span></span></span><span class="squish-switch__status" aria-live="polite"></span></div></span></div><span data-squish-key="jobs-portal-language" data-squish-ready>
+  <header class="jobs-portal-header">
+    <div class="jobs-portal-branding">
+      <a href="./" class="jobs-portal-brand" aria-label="Vietnam English Teaching Jobs — Home">
+        <img class="jobs-logo-light" src="assets/teaching-jobs-logo-light.svg" width="772" height="394" alt="Vietnam English Teaching Jobs">
+        <img class="jobs-logo-dark" src="assets/teaching-jobs-logo-dark.svg" width="772" height="394" alt="Vietnam English Teaching Jobs">
+      </a>
+      <p class="jobs-portal-context" data-portal-context>Candidate</p>
+    </div>
+    <nav id="portal-access" class="jobs-portal-access" aria-label="Choose your portal">
+      <button type="button" data-action="access" data-access="candidate" aria-current="page">Candidate</button>
+      <button type="button" data-action="access" data-access="staff">Staff</button>
+    </nav>
+    <div class="jobs-portal-tools">
+      <div class="jobs-preferences jobs-portal-preferences">
+        <button type="button" class="jobs-preferences-trigger" id="portal-preferences-trigger" data-portal-preferences aria-label="Site preferences" aria-haspopup="dialog" aria-controls="portal-preferences-panel" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/></svg>
+        </button>
+        <div id="portal-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="portal-preferences-title" hidden>
+          <div class="jobs-preferences-heading">
+            <h2 id="portal-preferences-title">Site preferences</h2>
+            <button type="button" class="jobs-preferences-close" data-portal-preferences-close aria-label="Close preferences">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg>
+            </button>
+          </div>
+          <fieldset>
+            <legend data-portal-appearance-label>Appearance</legend>
+            <div class="jobs-preferences-options" data-squish-key="jobs-portal-theme" data-squish-mode="theme">
+              <select id="portal-appearance" aria-label="Appearance" tabindex="-1" aria-hidden="true">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System</option>
+              </select>
+              <div class="squish-switch squish-choice" role="radiogroup" tabindex="0" aria-orientation="horizontal" aria-label="Appearance, System" data-choice="system">
+                <span class="squish-switch__track">
+                  <span class="squish-switch__options">
+                    <span role="radio" aria-checked="false">Light</span>
+                    <span role="radio" aria-checked="false">Dark</span>
+                    <span role="radio" aria-checked="true">System</span>
+                  </span>
+                  <span class="squish-switch__thumb" aria-hidden="true"><span>S</span></span>
+                </span>
+                <span class="squish-switch__status" aria-live="polite"></span>
+              </div>
+            </div>
+            <p class="jobs-preferences-help" data-portal-appearance-help>System follows your device settings.</p>
+          </fieldset>
+        </div>
+      </div>
+      <span data-squish-key="jobs-portal-language" data-squish-ready>
         <button id="portal-language" class="squish-switch" type="button" role="switch" aria-label="Use Vietnamese" aria-checked="false" disabled>
           <span class="squish-switch__track" aria-hidden="true"><span class="squish-switch__options"><span>EN</span><span>VI</span></span><span class="squish-switch__thumb"><span>EN</span></span></span>
         </button>
-      </span><details id="portal-account" class="jobs-login-menu" hidden></details></div></header>
+      </span>
+      <details id="portal-account" class="jobs-login-menu" hidden></details>
+    </div>
+  </header>
   <main id="portal-main" class="jobs-workspace">
-    <nav id="portal-access" aria-label="Choose your portal"><a href="portal.html?access=candidate">Candidate portal</a><a href="portal.html?access=staff">Staff portal</a></nav>
     <div id="portal-status" role="status" aria-live="polite"></div>
     <div id="portal-loading" class="jobs-empty" role="status" aria-live="polite">Checking your session…</div>
     <noscript><p class="jobs-alert">Enable JavaScript to sign in. / Bật JavaScript để đăng nhập.</p></noscript>

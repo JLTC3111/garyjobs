@@ -48,8 +48,10 @@ function renderChrome(){
  $('.skip-link').textContent=t('Skip to content','Chuyển đến nội dung');
  updateLanguageSwitch(language);
  accountMenu.update({language,user:recovery?null:user,caps,loading});
+ const context=$('[data-portal-context]');
+ if(context)context.textContent=access==='staff'?t('Staff','Nhân viên'):t('Candidate','Ứng viên');
  $('#portal-access').setAttribute('aria-label',t('Choose your portal','Chọn cổng đăng nhập'));
- $('#portal-access').innerHTML=[['candidate',t('Candidate portal','Cổng ứng viên')],['staff',t('Staff portal','Cổng nhân viên')]].map(([id,label])=>`<button type="button" data-action="access" data-access="${id}" ${access===id?'aria-current="page"':''}>${label}</button>`).join('');
+ $('#portal-access').innerHTML=[['candidate',t('Candidate','Ứng viên')],['staff',t('Staff','Nhân viên')]].map(([id,label])=>`<button type="button" data-action="access" data-access="${id}" ${access===id?'aria-current="page"':''}>${label}</button>`).join('');
  $('#portal-loading').textContent=t('Checking your session…','Đang kiểm tra phiên đăng nhập…');$('#portal-loading').hidden=!loading;
  $('#auth-panel').hidden=loading||!!user&&!recovery;$('#signed-panel').hidden=loading||!user||recovery;
  $('#account-summary').textContent=user?`${t('Signed in as','Đã đăng nhập bằng')} ${user.email||''} · ${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')}`:'';
@@ -99,7 +101,7 @@ function staffNavGroups(){
   faq:['FAQs','Câu hỏi thường gặp','circle-help'],
   media:['Media Library','Thư viện tư liệu','folder-open']
  };
- const content=(...kinds)=>caps.read?kinds.filter(kind=>kind==='media'||collections.some(item=>item.kind===kind)).map(id=>{
+ const content=(...kinds)=>caps.read?kinds.filter(kind=>kind==='media'?caps.media===true:collections.some(item=>item.kind===kind)).map(id=>{
   const [en,vi,icon]=collectionsNav[id];
   return {id,collection:true,label:t(en,vi),icon};
  }):[];
@@ -111,7 +113,7 @@ function staffNavGroups(){
   ['directory',t('Directories','Danh mục'),'list-tree',content('employer','category','location')],
   ['knowledge',t('Guides & answers','Cẩm nang & giải đáp'),'library-big',content('guide','faq')],
   ['media',t('Content & media','Nội dung & tư liệu'),'images',content('media')],
-  ['administration',t('Administration','Quản trị'),'shield-check',caps.manage_staff?[{id:'staff',label:t('Staff management','Quản lý nhân viên'),icon:'key-round'}]:[]]
+  ['administration',t('Administration','Quản trị'),'shield-check',caps.view_staff?[{id:'staff',label:t('Staff management','Quản lý nhân viên'),icon:'key-round'}]:[]]
  ].filter(([, , ,items])=>items.length);
 }
 function renderStaffNavigation(nav){
@@ -157,8 +159,9 @@ function renderStaffNavigation(nav){
  }
 }
 function nav(){
- const permitted=access==='staff'?[...(caps.read?['cms']:[]),...(caps.recruit?['applications']:[]),...(caps.recruit===true?['talent']:[]),...(caps.manage_staff?['staff']:[])]:['mine'];
+ const permitted=access==='staff'?[...(caps.read?['cms']:[]),...(caps.recruit?['applications']:[]),...(caps.recruit===true?['talent']:[]),...(caps.view_staff?['staff']:[])]:['mine'];
  const requested=view;
+ if(staffCollection==='media'&&caps.media!==true)staffCollection='vacancy';
  if(!permitted.includes(view)&&!(access==='candidate'&&view==='apply'))view=permitted[0]||'';
  $('#signed-panel').classList.toggle('jobs-staff-active',access==='staff'&&!!user&&(caps.read||caps.recruit));
  const navigation=$('#workspace-nav');
@@ -172,7 +175,7 @@ function nav(){
  updateCmsNavigation();
 }
 async function openStaffCollection(destination){
- if(access!=='staff'||!caps.read||destination!=='media'&&!collections.some(item=>item.kind===destination))return;
+ if(access!=='staff'||!caps.read||(destination==='media'?caps.media!==true:!collections.some(item=>item.kind===destination)))return;
  if(view!=='cms'){setView('cms',undefined,destination);return;}
  const mounted=cms;
  await mounted?.ready;
@@ -438,7 +441,7 @@ async function refreshPermissions(denied=false){
   if(identity.error){if([401,403].includes(identity.error.status)||['AuthSessionMissingError','AuthInvalidJwtError'].includes(identity.error.name)||['session_not_found','user_banned','user_not_found','bad_jwt'].includes(identity.error.code)){generation++;clearWorkspace();user=null;caps={};roster=[];loading=false;renderChrome();renderAuth();}else if(denied||permissionDenied){generation++;clearWorkspace();caps={};roster=[];capabilityError=true;await renderView();}return;}
   if(identity.data?.user?.id!==id){await authenticate();return;}
   const next=await deadline(capabilities());if(g!==generation)return;
-  const keys=['role','read','edit','publish','media','recruit','manage_staff','manage_admins'];
+  const keys=['role','read','edit','publish','media','recruit','view_staff','manage_staff','manage_admins'];
   if(denied||permissionDenied||keys.some(key=>(next?.[key]??null)!==(caps?.[key]??null)))await authenticate();
  }catch(e){if(g===generation&&(denied||permissionDenied||e?.code==='42501'||[401,403].includes(e?.status))){generation++;clearWorkspace();caps={};roster=[];capabilityError=true;loading=false;renderChrome();await renderView();}}
  finally{permissionRefreshing=false;permissionDenied=false;}

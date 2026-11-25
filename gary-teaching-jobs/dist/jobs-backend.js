@@ -55,7 +55,7 @@ export function createCmsAdapter(){return {
    ...options,
    upload:(id,file,progress)=>uploadVacancyImage(db,id,file,progress),
    removed:async id=>unwrap(await db.rpc('jobs_vacancy_removed_images',{p_vacancy_id:id})),
-   forget:id=>forgetVacancyImage(db,id),
+   forget:options.canForget?id=>forgetVacancyImage(db,id):undefined,
    async preview(id){return unwrap(await db.storage.from('jobs-vacancy-images').createSignedUrl(id,120)).signedUrl;},
   });
  },

@@ -6,6 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 const migrations=['20261116043122_teaching_jobs_cms_and_recruitment.sql','20261117102706_simplify_vacancy_publication.sql','20261117195500_jobs_staff_role_management.sql'];
 const eligibility='20261117202945_staff_eligibility_assignment.sql';
 const conflicts='20261124202611_jobs_postgrest_conflict_sqlstates.sql';
+const visibility='20261125182549_jobs_staff_visibility_and_media_ownership.sql';
 const sql=name=>readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
 const bootstrap=()=>readFile(new URL('../supabase/setup-jobs-staff.sql',import.meta.url),'utf8');
 const ids={owner:'30000000-0000-4000-8000-000000000001',admin:'30000000-0000-4000-8000-000000000002',editor:'30000000-0000-4000-8000-000000000003',publisher:'30000000-0000-4000-8000-000000000004',recruiter:'30000000-0000-4000-8000-000000000005',candidate:'30000000-0000-4000-8000-000000000006',unverified:'30000000-0000-4000-8000-000000000007',outsider:'30000000-0000-4000-8000-000000000008'};
@@ -42,6 +43,127 @@ async function setup({upgrade=true}={}){
  if(upgrade)await h.upgrade();
  return h;
 }
+
+test('Jobs staff visibility, direct requests and media management respect the existing roles and protected Owners',async()=>{
+ const h=await setup();
+ const id=n=>`a1000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+ const email=person=>`${person.name}@example.test`;
+ const roles=['editor','publisher','recruiter','admin'];
+ const people=roles.flatMap((role,index)=>[
+  {id:ids[role],name:role,role},
+  {id:id(index+1),name:`other-${role}`,role},
+ ]);
+ const owner={id:ids.owner,name:'owner',role:'admin',protected:true};
+ const ownerPeer={id:id(5),name:'other-owner',role:'admin',protected:true};
+ const blockedOwner={id:id(6),name:'blocked-owner',role:'admin',protected:true,eligible:false};
+ const inactiveEditor={id:id(7),name:'inactive-editor',role:'editor',active:false};
+ const roster=[...people,owner,ownerPeer,blockedOwner,inactiveEditor];
+ const lower={admin:['editor','publisher','recruiter'],publisher:['editor'],editor:[],recruiter:[]};
+ const q=(statement,params=[])=>h.db.query(statement,params);
+ const rows=async(statement,params)=>(await q(statement,params)).rows;
+ const expectError=(promise,code,message)=>assert.rejects(promise,error=>error.code===code&&(!message||error.message===message));
+ try{
+  await h.operator();
+  await h.db.exec(`create role service_role;
+   grant select,insert on storage.objects to authenticated,anon;
+   create policy unrelated_permissive_policy on storage.objects for all to authenticated,anon using(true) with check(true);`);
+  for(const migration of ['20261119041527_jobs_vacancy_featured_images.sql','20261123081300_jobs_vacancy_image_gallery.sql',
+   '20261123091000_jobs_vacancy_removed_images.sql','20261123161500_jobs_vacancy_image_crop.sql',
+   '20261123164000_jobs_vacancy_image_forgotten.sql',visibility])await h.db.exec(await sql(migration));
+  for(const person of roster){
+   if(!Object.values(ids).includes(person.id)){
+    await q('insert into auth.users(id,email,email_confirmed_at) values($1,$2,case when $3 then now() end)',[person.id,email(person),person.eligible!==false]);
+    await q('insert into jobs_private.staff_members(user_id,role,active,protected) values($1,$2,$3,$4)',[
+     person.id,person.role,person.active!==false,person.protected===true
+    ]);
+   }
+   await q("insert into public.jobs_candidates(id,full_name,email) values($1,'Test person',$2)",[person.id,email(person)]);
+  }
+  await q("insert into public.jobs_candidates(id,full_name,email) values($1,'Candidate','candidate@example.test')",[ids.candidate]);
+
+  // all Jobs roles hide peers and incomparable roles while Owners see the full roster.
+  {
+   for(const viewer of [...people,owner,ownerPeer]){
+    await h.as(viewer.id);
+    const data=await h.overview();
+    const visible=roster.filter(person=>person.id===viewer.id||viewer.protected||(!person.protected&&lower[viewer.role].includes(person.role)));
+    assert.deepEqual(data.members.map(member=>member.user_id).sort(),visible.map(person=>person.id).sort(),viewer.name);
+    assert.equal(data.viewer.can_manage_staff,viewer.role==='admin');
+    assert.equal(data.viewer.can_manage_admins,viewer.protected===true);
+    assert.ok(data.members.every(member=>!member.can_manage||viewer.role==='admin'&&!member.protected&&!member.is_self));
+    assert.equal((await h.caps()).media,viewer.protected===true);
+   }
+   for(const rejected of [ids.outsider,ids.unverified,blockedOwner.id,inactiveEditor.id,null]){
+    await h.as(rejected);
+    await expectError(h.overview(),'42501');
+   }
+  }
+
+  // direct account requests, search, counts and audit history cannot identify hidden staff.
+  {
+   await h.operator();
+   // A privileged actor may have changed a visible lower-tier account.
+   await q("select set_config('request.jwt.claim.sub',$1,false)",[owner.id]);
+   await q('update jobs_private.staff_members set active=false where user_id=$1',[ids.editor]);
+   await q('update jobs_private.staff_members set active=true where user_id=$1',[ids.editor]);
+   await h.as(ids.admin);
+   for(const target of [owner,ownerPeer,people.find(p=>p.name==='other-admin'),{id:id(90),name:'missing'}]){
+    await expectError(h.assign(email(target),'editor'),'P0002','jobs.account_unavailable');
+    await expectError(h.update(target.id,'editor',false,1),'P0002','jobs.staff_not_found');
+   }
+   await expectError(h.assign('editor@example.test','editor'),'23505','jobs.staff_exists');
+   await expectError(q('select * from jobs_private.staff_members'),'42501');
+   const data=await h.overview();
+   assert.ok(data.events.length>0);
+   assert.ok(data.events.every(event=>!('id' in event)&&!roster.some(person=>person.protected&&person.id===event.target_user_id)));
+   const redacted=data.events.find(event=>event.actor_hidden);
+   assert.ok(redacted);
+   assert.equal(redacted.actor_email,undefined);
+   assert.equal(redacted.actor_user_id,undefined);
+   assert.equal((await h.one("select count(*)::int n from public.jobs_candidates where email like '%owner%@example.test'")).n,0);
+   assert.equal((await h.one('select count(*)::int n from public.jobs_candidates')).n,9);
+   assert.deepEqual(await rows('select id from public.jobs_candidates order by id offset 9 limit 1'),[]);
+   await h.as(ids.recruiter);
+   assert.deepEqual(await rows('select id from public.jobs_candidates where id=$1',[owner.id]),[]);
+   assert.deepEqual(await rows('select id from public.jobs_candidates where id=$1',[ids.candidate]),[{id:ids.candidate}]);
+   const assignable=await rows('select * from public.jobs_staff_directory()');
+   assert.ok(assignable.some(member=>member.user_id===owner.id),'keep eligible recruitment assignees');
+   assert.ok(assignable.every(member=>member.role===null&&!member.full_name.includes('@')));
+   assert.ok(!assignable.some(member=>member.user_id===blockedOwner.id));
+   await expectError(h.update(ids.editor,'editor',false,1),'42501');
+   await h.as(owner.id);
+   await expectError(h.update(ownerPeer.id,'editor',false,1),'42501','jobs.protected_account');
+  }
+
+  // manual media removal and inventory are Owner-only, and vacancy uploads remain available.
+  {
+   await h.operator();
+   const vacancy=(await h.one("insert into public.jobs_cms_entries(kind,slug) values('vacancy','staff-test') returning id")).id;
+   const path=owner.id+'/test.png';
+   await q("insert into storage.objects(bucket_id,name) values('jobs-media',$1)",[path]);
+   await q("insert into public.jobs_cms_media(object_path,file_name,mime_type,size_bytes,alt_en,alt_vi,created_by) values($1,'Test','image/png',100,'Test','Ảnh',$2)",[path,owner.id]);
+   await h.as(ids.editor);
+   const image=(await h.one("select public.jobs_vacancy_image_reserve($1,'image/png',100,10,10) id",[vacancy])).id;
+   await h.operator();
+   await q("update jobs_private.vacancy_images set state='ready' where id=$1",[image]);
+   for(const actor of [...people,blockedOwner]){
+    await h.as(actor.id);
+    await expectError(q('select public.jobs_vacancy_image_forget($1)',[image]),'42501');
+    await expectError(q('select * from public.jobs_vacancy_image_cleanup_claim()'),'42501');
+    assert.deepEqual(await rows('select id from public.jobs_cms_media'),[]);
+    assert.deepEqual(await rows("select name from storage.objects where bucket_id='jobs-media'"),[]);
+    await expectError(q("insert into storage.objects(bucket_id,name) values('jobs-media',$1)",[actor.id+'/disallowed.png']),'42501');
+   }
+   await h.as(null);
+   assert.deepEqual(await rows("select name from storage.objects where bucket_id='jobs-media'"),[]);
+   await expectError(q('select public.jobs_vacancy_image_forget($1)',[image]),'42501');
+   await h.as(owner.id);
+   assert.deepEqual(await rows("select name from storage.objects where bucket_id='jobs-media'"),[{name:path}]);
+   assert.equal((await rows('select id from public.jobs_cms_media')).length,1);
+   assert.equal((await h.one('select public.jobs_vacancy_image_forget($1) id',[image])).id,image);
+  }
+ }finally{await h.db.close();}
+});
 
 test('upgrade preserves memberships and assignments; only current verified Jobs admins reach staff management',async()=>{
  const h=await setup({upgrade:false});try{

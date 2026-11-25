@@ -86,33 +86,38 @@ html[data-jobs-theme=dark] {
 .jobs-public ::selection { background:var(--jobs-raised);color:var(--jobs-ink); }
 .jobs-public .announcement { display:none; }
 .jobs-public .site-header { background:var(--jobs-hero-bg);border:0;backdrop-filter:none; }
-.jobs-public .nav-wrap { height:88px;max-width:1600px;padding-inline:clamp(24px,5.1vw,82px);gap:24px; }
-.jobs-public .brand { flex:none;border-radius:0;background:transparent;padding:0; }
-.jobs-public .brand-logo { display:block;width:148px;height:auto;max-height:76px;object-fit:contain; }
+.jobs-public .nav-wrap { height:68px;max-width:1600px;padding-inline:clamp(20px,4.5vw,72px);gap:16px; }
+.jobs-public .brand { flex:none;border-radius:0;background:transparent;padding:0;line-height:0; }
+.jobs-public .brand-logo { display:block;width:158px;height:auto;max-height:54px;object-fit:contain;object-position:left center; }
 .jobs-public .brand-logo.jobs-logo-dark { display:none; }
 html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-light { display:none; }
 html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:block; }
-.jobs-public .desktop-nav { margin-left:auto;padding:0;gap:24px; }
-.jobs-public .desktop-nav a { font-size:15px;color:var(--jobs-ink); }
-.jobs-public .nav-actions { gap:12px; }
+.jobs-public .desktop-nav { margin-left:auto;padding:0;gap:18px; }
+.jobs-public .desktop-nav a { font-size:14px;color:var(--jobs-ink); }
+.jobs-public .nav-actions { gap:8px;align-items:center; }
 .jobs-public .nav-actions .nav-cta { border-radius:30px;font-size:14px;padding:11px 22px;min-height:44px;background:var(--jobs-action);border-color:var(--jobs-action);color:var(--jobs-action-ink); }
 /* One preference trigger; panel uses the current site's semantic palette. */
 #jobs-public-header-home { display: contents; }
 .jobs-public .jobs-preferences { position:relative; }
-.jobs-public .jobs-preferences-trigger,.jobs-public .jobs-preferences-close { display:grid;place-items:center;width:44px;height:44px;border:1px solid transparent;border-radius:50%;padding:10px;background:transparent;color:var(--jobs-ink);cursor:pointer; }
+.jobs-public .jobs-preferences-trigger,.jobs-public .jobs-preferences-close { display:grid;place-items:center;width:40px;height:40px;border:1px solid transparent;border-radius:50%;padding:8px;background:transparent;color:var(--jobs-ink);cursor:pointer; }
 .jobs-public .jobs-preferences-trigger:hover,.jobs-public .jobs-preferences-trigger[aria-expanded=true] { background:var(--jobs-raised);border-color:var(--jobs-line); }
-.jobs-public .jobs-preferences-panel { position:absolute;right:0;top:calc(100% + 14px);z-index:50;width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - 112px);overflow:auto;overscroll-behavior:contain;padding:20px;border:1px solid var(--jobs-line);border-radius:12px;background:var(--jobs-surface);color:var(--jobs-ink);box-shadow:0 16px 45px #00000020;text-align:left; }
+.jobs-public .jobs-preferences-panel { position:absolute;right:0;top:calc(100% + 10px);z-index:50;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 96px);overflow:auto;overscroll-behavior:contain;padding:18px;border:1px solid var(--jobs-line);border-radius:12px;background:var(--jobs-surface);color:var(--jobs-ink);box-shadow:0 16px 45px #00000020;text-align:left; }
 .jobs-public .jobs-preferences-panel[hidden] { display:none; }
 .jobs-public .jobs-preferences-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px; }
 .jobs-public .jobs-preferences-heading h2 { margin:0;font:600 17px/1.4 var(--sans);letter-spacing:-.01em;color:var(--jobs-ink); }
 .jobs-public .jobs-preferences-close { width:36px;height:36px;flex:none;padding:8px;color:var(--jobs-muted); }
 .jobs-public .jobs-preferences-close:hover { background:var(--jobs-raised);color:var(--jobs-ink); }
-.jobs-public .jobs-preferences-switches { display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:end;gap:12px; }
+.jobs-public .jobs-preferences-switches { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px; }
+.jobs-public .jobs-preferences-switches > fieldset:last-child { text-align:end; }
+.jobs-public .jobs-preferences-switches > fieldset:last-child .jobs-preferences-options { margin-inline-start:auto;width:max-content; }
 .jobs-public .jobs-preferences-panel fieldset { min-width:0;margin:0;padding:16px 0 0;border:0; }
 .jobs-public .jobs-preferences-switches+fieldset { margin-top:18px;border-top:1px solid var(--jobs-line); }
 .jobs-public .jobs-preferences-panel legend { float:left;width:100%;margin:0 0 10px;padding:0;font-size:13px;font-weight:600;line-height:1.5;color:var(--jobs-ink); }
-.jobs-public .jobs-preferences-options { clear:both;display:flex;gap:5px;padding:4px;background:var(--jobs-soft);border:1px solid var(--jobs-line);border-radius:9px; }
+.jobs-public .jobs-preferences-options { clear:both;display:flex;gap:5px;padding:4px;background:var(--jobs-soft);border:1px solid var(--jobs-line);border-radius:9px;overflow:visible; }
+.jobs-public .jobs-preferences-options[data-squish-ready] { display:block;width:100%;padding:0;border:0;background:transparent; }
 .jobs-public .jobs-preferences-switches .jobs-preferences-options:not([data-squish-ready]) { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5rem),1fr)); }
+.jobs-public .jobs-preferences-panel [data-squish-mode=theme] { width:100%;min-width:0;overflow:visible; }
+.jobs-public .jobs-preferences-panel [data-squish-mode=theme] > .squish-choice { --ss-width:100%;min-width:0; }
 .jobs-public .jobs-preferences-options button { flex:1;min-width:0;min-height:44px;padding:9px 7px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--jobs-muted);font-size:13px;line-height:1.4;cursor:pointer; }
 .jobs-public .jobs-preferences-options button:lang(vi) { font-family:"Be Vietnam Pro",Arial,sans-serif;line-height:1.6; }
 .jobs-public .jobs-preferences-options button:hover { background:var(--jobs-raised);color:var(--jobs-ink); }
@@ -126,7 +131,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .nav-actions #gary-apps-header summary>span { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
 .jobs-public .nav-actions #gary-apps-header summary>svg:last-child { display:none; }
 .jobs-public .jobs-hero-shell { position:relative;isolation:isolate;background:var(--jobs-hero-bg);overflow:hidden; }
-.jobs-public .hero.jobs-final-hero { position:relative;z-index:1;max-width:1600px;padding:65px clamp(24px,5.1vw,82px) 145px;min-height:calc(100svh - 88px);display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:70px;align-items:center; }
+.jobs-public .hero.jobs-final-hero { position:relative;z-index:1;max-width:1600px;padding:65px clamp(24px,5.1vw,82px) 145px;min-height:calc(100svh - 68px);display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:70px;align-items:center; }
 .jobs-public .jobs-final-hero .hero-copy { padding:0;min-width:0; }
 .jobs-public .jobs-final-hero .eyebrow { font-size:14px;letter-spacing:.15em;color:var(--jobs-accent);display:flex;align-items:center;gap:30px;margin-bottom:25px;line-height:1.6; }
 .jobs-public .jobs-final-hero .eyebrow>span { width:70px;height:2px;background:var(--jobs-accent);flex:none; }
@@ -339,14 +344,14 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .toast { background:var(--jobs-ink);color:var(--jobs-bg); }.jobs-public .jobs-live-note { background:var(--jobs-soft);border-color:var(--jobs-line);color:var(--jobs-muted);text-align:left; }
 @media(min-width:1001px) { .jobs-public .jobs-hub { align-self:start;padding-top:28px; } }
 @media(min-width:1600px) { .jobs-public .hero.jobs-final-hero { padding-top:75px;padding-bottom:165px;gap:95px; }.jobs-public .jobs-final-hero h1 { font-size:68px; }.jobs-public .jobs-final-hero h1 em { font-size:73px; }.jobs-public .jobs-final-hero .hero-description { font-size:19px; } }
-@media(max-width:1380px) { .jobs-public .hero.jobs-final-hero { min-height:calc(100svh - 88px);gap:35px;padding-top:55px; }.jobs-public .jobs-final-hero h1 { font-size:clamp(42px,4.7vw,61px); }.jobs-public .jobs-final-hero h1 em { font-size:clamp(45px,4.95vw,64px); }.jobs-public .hero-trust li { padding-inline:11px;font-size:11px; } }
+@media(max-width:1380px) { .jobs-public .hero.jobs-final-hero { min-height:calc(100svh - 68px);gap:35px;padding-top:55px; }.jobs-public .jobs-final-hero h1 { font-size:clamp(42px,4.7vw,61px); }.jobs-public .jobs-final-hero h1 em { font-size:clamp(45px,4.95vw,64px); }.jobs-public .hero-trust li { padding-inline:11px;font-size:11px; } }
 @media(max-width:1200px) { .jobs-public .desktop-nav,.jobs-public .nav-actions .nav-cta { display:none; }.jobs-public .menu-toggle { display:inline-flex; } }
 @media(max-width:1000px) { .jobs-public .hero.jobs-final-hero { grid-template-columns:minmax(0,1fr);padding-top:46px;padding-bottom:120px;gap:48px;min-height:0; }.jobs-public .jobs-final-hero .hero-copy { max-width:700px; }.jobs-public .jobs-final-hero h1 { font-size:58px; }.jobs-public .jobs-final-hero h1 em { font-size:62px; }.jobs-public .jobs-final-hero .hero-description { max-width:640px; }.jobs-public .jobs-hub { padding:30px 0 36px; }.jobs-public .hero-waves { height:100px; } }
 @media(max-width:720px) {
- .jobs-public .nav-wrap { height:76px;padding:6px 24px;position:relative;gap:12px; }.jobs-public .brand-logo { width:122px;max-height:64px; }.jobs-public .nav-actions { gap:5px; }
- .jobs-public .nav-actions #gary-apps-header { display:flex; }.jobs-public .nav-actions #gary-apps-header summary { width:36px;min-width:36px;min-height:44px;padding:8px; }.jobs-public .menu-toggle { width:40px;height:44px; }.jobs-public .mobile-nav { max-height:calc(100svh - 76px); }
- .jobs-public .jobs-preferences-panel { position:fixed;top:76px;right:16px;max-height:calc(100dvh - 92px); }
- .jobs-public #gary-apps-header .gary-apps-menu-panel { position:fixed;top:76px;right:16px;left:16px;width:auto;max-height:calc(100dvh - 92px); }
+ .jobs-public .nav-wrap { height:60px;padding:4px 20px;position:relative;gap:10px; }.jobs-public .brand-logo { width:132px;max-height:46px; }.jobs-public .nav-actions { gap:4px; }
+ .jobs-public .nav-actions #gary-apps-header { display:flex; }.jobs-public .nav-actions #gary-apps-header summary { width:36px;min-width:36px;min-height:40px;padding:8px; }.jobs-public .menu-toggle { width:40px;height:40px; }.jobs-public .mobile-nav { max-height:calc(100svh - 60px); }
+ .jobs-public .jobs-preferences-panel { position:fixed;top:68px;right:12px;max-height:calc(100dvh - 84px); }
+ .jobs-public #gary-apps-header .gary-apps-menu-panel { position:fixed;top:68px;right:12px;left:12px;width:auto;max-height:calc(100dvh - 84px); }
  .jobs-public .hero.jobs-final-hero { padding:38px 24px 100px;gap:36px; }.jobs-public .jobs-final-hero .eyebrow { font-size:10px;letter-spacing:.12em;gap:15px;line-height:1.8;margin-bottom:18px; }.jobs-public .jobs-final-hero .eyebrow>span { width:34px; }
  .jobs-public .jobs-final-hero h1,.jobs-public:lang(vi) .jobs-final-hero h1,html:lang(vi) .jobs-public .jobs-final-hero h1 { font-size:clamp(36px,9.8vw,54px);line-height:1.12;letter-spacing:-.035em; }.jobs-public .jobs-final-hero h1 em { font-size:clamp(38px,10.4vw,58px);line-height:1.1;letter-spacing:-.04em;white-space:normal; }
  .jobs-public .jobs-final-hero .hero-description { font-size:15px;line-height:1.75;margin-top:23px; }.jobs-public .jobs-final-hero .career-discovery { margin-top:26px; }.jobs-public .jobs-final-hero .job-search { grid-template-columns:minmax(0,1fr) 56px; }
@@ -357,7 +362,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 @media(hover:none) { .jobs-public .jobs-glass-hub.glass-icons--labels-hover .glass-icon-label { opacity:1;transform:translate(-50%,0); }.jobs-public .jobs-hub-fallback a>span { opacity:1; } }
 @media(prefers-reduced-motion:reduce) { .jobs-public *, .jobs-public *:before,.jobs-public *:after { animation:none!important;transition:none!important;scroll-behavior:auto!important; } }
 
-@media(max-width:380px){.jobs-public .nav-wrap {padding-inline:20px;}.jobs-public .brand-logo{width:114px;}}
+@media(max-width:380px){.jobs-public .nav-wrap {padding-inline:16px;}.jobs-public .brand-logo{width:118px;max-height:42px;}}
 
 @media(min-width:721px) and (max-width:1000px){.jobs-public .nav-actions #gary-apps-header{display:flex;}}
 

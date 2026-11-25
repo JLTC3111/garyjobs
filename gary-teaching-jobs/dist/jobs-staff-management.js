@@ -24,8 +24,8 @@ const COPY={
   search:'Search by name or email',allRoles:'All roles',allStatuses:'All statuses',clear:'Clear filters',noMatches:'No staff match your search or filters.',
   refresh:'Refresh',loading:'Loading staff…',empty:'No Jobs staff memberships yet.',tryAgain:'Try again',
   active:'Active',suspended:'Suspended · no access',unverified:'Email not verified · no access',
-  you:'You',member:'Staff member',protectedTag:'Protected',protectedOwner:'Protected owner',
-  selfReadonly:'Your account',protectedReadonly:'Protected account',adminReadonly:'Administrator · only a protected owner can change this',
+  you:'You',member:'Staff member',
+  selfReadonly:'Your account',protectedReadonly:'Protected account',adminReadonly:'Administrator · only a protected owner can change this',viewOnly:'View only',
   editFor:name=>`Edit access for ${name}`,more:name=>`More actions for ${name}`,save:'Save changes',suspend:'Suspend access',restore:'Restore access',
   assigned:email=>`Jobs access assigned to ${email}.`,updated:email=>`Access updated for ${email}.`,noChange:'No changes to save.',
   suspendedNotice:email=>`Jobs access suspended for ${email}.`,restored:email=>`Jobs access restored for ${email}.`,
@@ -33,7 +33,7 @@ const COPY={
   confirmSuspend:email=>`Suspend Jobs access for ${email}? Their history and recruitment assignments are kept.`,
   confirmRestore:(email,role)=>`Restore Jobs access for ${email} as ${role}?`,
   confirmAdmin:(email,from,to)=>`Change Administrator access for ${email} from ${from} to ${to}?`,
-  historyTitle:'Recent access changes',historyNote:'Latest 50 changes, including database operator changes.',historyEmpty:'No access changes recorded yet.',operator:'Database operator',by:'By',
+  historyTitle:'Recent access changes',historyNote:'Up to 50 changes you can view, including database operator changes.',historyEmpty:'No access changes recorded yet.',operator:'Database operator',hiddenActor:'Staff member',by:'By',
   actions:{granted:'Access assigned',role_changed:'Role changed',suspended:'Access suspended',restored:'Access restored',protected:'Marked protected',unprotected:'Protection removed',removed:'Membership removed'},
  },
  vi:{
@@ -56,8 +56,8 @@ const COPY={
   search:'Tìm theo tên hoặc email',allRoles:'Tất cả vai trò',allStatuses:'Tất cả trạng thái',clear:'Xóa bộ lọc',noMatches:'Không tìm thấy nhân viên phù hợp với từ khóa hoặc bộ lọc.',
   refresh:'Làm mới',loading:'Đang tải danh sách nhân viên…',empty:'Chưa có thành viên nhân viên Jobs.',tryAgain:'Thử lại',
   active:'Đang hoạt động',suspended:'Đã tạm ngưng · không có quyền',unverified:'Email chưa xác minh · không có quyền',
-  you:'Bạn',member:'Nhân viên',protectedTag:'Được bảo vệ',protectedOwner:'Chủ sở hữu được bảo vệ',
-  selfReadonly:'Tài khoản của bạn',protectedReadonly:'Tài khoản được bảo vệ',adminReadonly:'Quản trị viên · chỉ chủ sở hữu được bảo vệ mới có thể thay đổi',
+  you:'Bạn',member:'Nhân viên',
+  selfReadonly:'Tài khoản của bạn',protectedReadonly:'Tài khoản được bảo vệ',adminReadonly:'Quản trị viên · chỉ chủ sở hữu được bảo vệ mới có thể thay đổi',viewOnly:'Chỉ xem',
   editFor:name=>`Chỉnh sửa quyền truy cập của ${name}`,more:name=>`Thao tác khác cho ${name}`,save:'Lưu thay đổi',suspend:'Tạm ngưng quyền truy cập',restore:'Khôi phục quyền truy cập',
   assigned:email=>`Đã cấp quyền Jobs cho ${email}.`,updated:email=>`Đã cập nhật quyền của ${email}.`,noChange:'Không có thay đổi để lưu.',
   suspendedNotice:email=>`Đã tạm ngưng quyền Jobs của ${email}.`,restored:email=>`Đã khôi phục quyền Jobs của ${email}.`,
@@ -65,7 +65,7 @@ const COPY={
   confirmSuspend:email=>`Tạm ngưng quyền Jobs của ${email}? Lịch sử và phân công tuyển dụng vẫn được giữ lại.`,
   confirmRestore:(email,role)=>`Khôi phục quyền Jobs của ${email} với vai trò ${role}?`,
   confirmAdmin:(email,from,to)=>`Đổi quyền Quản trị viên của ${email} từ ${from} sang ${to}?`,
-  historyTitle:'Thay đổi quyền gần đây',historyNote:'50 thay đổi gần nhất, gồm cả thay đổi của quản trị cơ sở dữ liệu.',historyEmpty:'Chưa có thay đổi quyền nào được ghi lại.',operator:'Quản trị cơ sở dữ liệu',by:'Bởi',
+  historyTitle:'Thay đổi quyền gần đây',historyNote:'Tối đa 50 thay đổi bạn có thể xem, gồm cả thay đổi của quản trị cơ sở dữ liệu.',historyEmpty:'Chưa có thay đổi quyền nào được ghi lại.',operator:'Quản trị cơ sở dữ liệu',hiddenActor:'Nhân viên',by:'Bởi',
   actions:{granted:'Đã cấp quyền',role_changed:'Đã đổi vai trò',suspended:'Đã tạm ngưng quyền',restored:'Đã khôi phục quyền',protected:'Đã đánh dấu bảo vệ',unprotected:'Đã bỏ bảo vệ',removed:'Đã xoá tư cách thành viên'},
  },
 };
@@ -85,6 +85,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  const copy=()=>COPY[lang];
  const blocked=()=>loading||busy;
  const owner=()=>data?.viewer?.can_manage_admins===true;
+ const canAssign=()=>data?.viewer?.can_manage_staff===true;
  const canEdit=member=>member?.can_manage===true&&!member.is_self&&!member.protected&&(member.role!=='admin'||owner());
  const memberFor=id=>data?.members.find(member=>member.user_id===id);
  const label=key=>`<span data-staff-copy="${key}"></span>`;
@@ -169,7 +170,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
 
  function memberMarkup(member){
   const c=copy(),state=statusOf(member),id=esc(member.user_id),name=nameOf(member)||c.member;
-  const reason=member.is_self?c.selfReadonly:member.protected?c.protectedReadonly:c.adminReadonly;
+  const reason=member.is_self?c.selfReadonly:member.protected?c.protectedReadonly:member.role==='admin'?c.adminReadonly:c.viewOnly;
   const action=member.active?'suspend':'restore';
   return `<article class="jobs-staff-member" data-user-id="${id}">
    <div class="jobs-staff-identity">
@@ -179,7 +180,6 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
    <span class="jobs-staff-role">${esc(c.roles[member.role]||member.role)}</span>
    <div class="jobs-staff-tags">
     <span class="jobs-staff-state" data-state="${state}">${esc(c[state])}</span>
-    ${member.protected?`<span class="jobs-staff-tag">${esc(member.role==='admin'?c.protectedOwner:c.protectedTag)}</span>`:''}
     ${member.is_self?`<span class="jobs-staff-tag">${esc(c.you)}</span>`:''}
    </div>
    ${canEdit(member)?`<div class="jobs-staff-row-actions">
@@ -197,7 +197,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  function eventMarkup(event){
   const c=copy(),access=(role,active)=>role==null?'—':active?c.roles[role]||role:c.roles.none;
   const change=event.action==='granted'?access(event.new_role,event.new_active):event.action==='removed'?access(event.previous_role,event.previous_active):`${access(event.previous_role,event.previous_active)} → ${access(event.new_role,event.new_active)}`;
-  const actor=event.actor_user_id?event.actor_email||event.actor_user_id:c.operator;
+  const actor=event.actor_hidden?c.hiddenActor:event.actor_user_id?event.actor_email||event.actor_user_id:c.operator;
   return `<li><span><strong>${esc(c.actions[event.action]||event.action)}</strong> · ${esc(event.target_email||event.target_user_id)} · ${esc(change)}</span><span class="jobs-meta">${esc(c.by)} ${esc(actor)} · ${esc(new Date(event.created_at).toLocaleString(lang==='vi'?'vi-VN':'en-GB'))}</span></li>`;
  }
 
@@ -255,7 +255,8 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
  }
 
  function syncControls(){
-  addButton.disabled=blocked()||!data;
+  addButton.hidden=!canAssign();
+  addButton.disabled=blocked()||!canAssign();
   for(const button of root.querySelectorAll('[data-staff-action=refresh], [data-user-id] button'))button.disabled=blocked();
   list.setAttribute('aria-busy',String(blocked()));
   submit.disabled=blocked()||!editor||!data;
@@ -289,6 +290,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   options(filters.elements.role,[['',c.allRoles],...ROLES.map(value=>[value,c.roles[value]])]);
   options(filters.elements.status,[['',c.allStatuses],...STATUSES.map(value=>[value,c[value]])]);
   $('.jobs-staff-guide-body').innerHTML=`<dl class="jobs-staff-permissions">${[...ROLES,'none'].map(value=>`<div><dt>${esc(c.roles[value])}</dt><dd>${esc(c.roleHelp[value])}</dd></div>`).join('')}</dl>`;
+  $('.jobs-staff-history').hidden=!canAssign();
   $('.jobs-staff-events').innerHTML=data?data.events.length?`<ol>${data.events.map(eventMarkup).join('')}</ol>`:`<p class="jobs-empty">${esc(c.historyEmpty)}</p>`:'';
   paintFeedback(notice,directoryFeedback);
   renderForm();renderList();
@@ -423,7 +425,7 @@ export function mountStaffManagement(root,{adapter,language='en',errorText=error
   if(blocked())return;
   if(action==='refresh'){directoryFeedback=null;void load();return;}
   if(!data)return;
-  if(action==='add'){openDrawer(addDraft);return;}
+  if(action==='add'){if(canAssign())openDrawer(addDraft);return;}
   const member=memberFor(button.closest('[data-user-id]')?.dataset.userId);
   if(!canEdit(member))return;
   if(action==='edit'){

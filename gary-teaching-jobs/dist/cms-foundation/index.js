@@ -59,7 +59,7 @@ export function mountCms(root, options) {
   const navigationState = () => ({kind, view, capabilities: {...capabilities}});
   function announceNavigation() { options.onNavigationChange?.(navigationState()); }
   async function navigate(destination) {
-    if (disposed || busy || !capabilities.read || destination !== 'media' && !options.collections.some(item => item.kind === destination)) return false;
+    if (disposed || busy || !capabilities.read || (destination === 'media' ? !capabilities.media : !options.collections.some(item => item.kind === destination))) return false;
     if (!canLeave()) return false;
     ++editorEpoch; draft = null; baseline = ''; query = ''; page = 1;
     if (destination === 'media') view = 'media'; else { kind = destination; view = 'content'; }
@@ -70,7 +70,7 @@ export function mountCms(root, options) {
     editorWorkspace?.destroy(); editorWorkspace = null;
     root.classList.add('gary-cms'); root.dataset.cmsApp = options.appId || 'content';
     const tabs = options.collections.map(item => button('collection', label(item.label), `data-kind="${escape(item.kind)}" aria-pressed="${item.kind === kind && view === 'content'}"`)).join('');
-    root.innerHTML = `<header class="cms-header"><div><p class="cms-eyebrow">${escape(label(options.appName) || options.appId || 'Gary Group')}</p><h2>${t('cms')}</h2><p>${t(collection().directPublish ? 'vacancyIntro' : 'intro')}</p></div><div class="cms-role">${t('role')}: ${escape(capabilities.role ? t(capabilities.role) : t('readOnly'))}</div></header><p class="cms-notice" data-cms-notice role="${noticeKind}" aria-live="polite">${escape(notice)}</p>${options.navigation === false ? '' : `<nav class="cms-collections" aria-label="${t('content')}">${tabs}${button('media', t('media'), `aria-pressed="${view === 'media'}"`)}</nav>`}<div class="cms-workspace" data-cms-workspace></div><dialog class="cms-dialog" id="${id}-editor" aria-labelledby="${id}-editor-heading"></dialog>`;
+    root.innerHTML = `<header class="cms-header"><div><p class="cms-eyebrow">${escape(label(options.appName) || options.appId || 'Gary Group')}</p><h2>${t('cms')}</h2><p>${t(collection().directPublish ? 'vacancyIntro' : 'intro')}</p></div><div class="cms-role">${t('role')}: ${escape(capabilities.role ? t(capabilities.role) : t('readOnly'))}</div></header><p class="cms-notice" data-cms-notice role="${noticeKind}" aria-live="polite">${escape(notice)}</p>${options.navigation === false ? '' : `<nav class="cms-collections" aria-label="${t('content')}">${tabs}${capabilities.media ? button('media', t('media'), `aria-pressed="${view === 'media'}"`) : ''}</nav>`}<div class="cms-workspace" data-cms-workspace></div><dialog class="cms-dialog" id="${id}-editor" aria-labelledby="${id}-editor-heading"></dialog>`;
     renderWorkspace(); announceNavigation();
   }
   function renderWorkspace() {
@@ -89,6 +89,7 @@ export function mountCms(root, options) {
         if (disposed || requestEpoch !== epoch) return;
         if (!capabilities.read) { shell(); return; }
       }
+      if (view === 'media' && !capabilities.media) { view = 'content'; media = []; }
       if (view === 'media') {
         const result = adapter.listMedia ? await adapter.listMedia() : [];
         if (disposed || requestEpoch !== epoch) return;
@@ -232,7 +233,7 @@ export function mountCms(root, options) {
       const slot = root.ownerDocument.createElement('section');
       dialog.querySelector('[data-cms-history]').closest('details').before(slot);
       releaseVacancyImage = adapter.mountVacancyImage(slot, {
-        record: draft, language, editable: capabilities.edit && !busy,
+        record: draft, language, editable: capabilities.edit && !busy, canForget: capabilities.media === true,
         changeImages(images) {
           if (Array.isArray(images) && images.length) { draft.data.vacancy_images = images; delete draft.data.vacancy_image; }
           else { delete draft.data.vacancy_images; delete draft.data.vacancy_image; }

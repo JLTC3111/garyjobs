@@ -482,10 +482,10 @@ dialog[open]{animation:dialog-in .25s ease-out}
 .mobile-nav>.service-site-link{display:flex;justify-content:space-between}
 @media(max-width:1000px){.announcement-links,.related-sites-nav{gap:13px}.related-sites-nav{padding-left:13px}.announcement-inner>span{font-size:9px}}
 @media(max-width:720px){.announcement-links{display:none}}
-.brand-logo{display:block;width:178px;height:90px;object-fit:contain;object-position:left center}
-.nav-wrap{height:106px}
-@media(min-width:721px) and (max-width:1000px){.nav-wrap{height:96px}.brand-logo{width:164px;height:84px}}
-@media(max-width:720px){.nav-wrap{height:88px}.brand-logo{width:145px;height:74px}}
+.brand-logo{display:block;width:158px;height:auto;max-height:54px;object-fit:contain;object-position:left center}
+.nav-wrap{height:68px}
+@media(min-width:721px) and (max-width:1000px){.nav-wrap{height:64px}.brand-logo{width:146px;max-height:50px}}
+@media(max-width:720px){.nav-wrap{height:60px}.brand-logo{width:132px;max-height:46px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 /* Career editorial release: use the actual static font weights, never synthetic faces. */

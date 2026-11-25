@@ -145,6 +145,6 @@ html[data-jobs-theme="dark"] .jobs-login-menu { --account-danger: #EC8686; }
 }
 @media (max-width: 380px) {
   .jobs-public .nav-wrap { padding-inline: 12px; gap: 8px; }
-  .jobs-public .brand-logo { width: 106px; }
+  .jobs-public .brand-logo { width: 118px; max-height: 42px; }
   .jobs-public .nav-actions { gap: 3px; }
 }
