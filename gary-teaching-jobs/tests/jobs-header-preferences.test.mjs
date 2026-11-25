@@ -55,7 +55,7 @@ test('Language and Holographic Background share one row and keep their state acr
     assert.equal(row.querySelector('[role=radiogroup]'),null);
     assert.equal(row.nextElementSibling.querySelector('[role=radiogroup]').getAttribute('aria-label'),'Appearance, System, currently light');
     assert.equal(d.activeElement,button);
-    assert.equal(holographic.getAttribute('aria-label'),'Holographic background');
+    assert.equal(holographic.getAttribute('aria-label'),'Iridescent Background');
     holographic.click();
     assert.equal(holographic.getAttribute('aria-checked'),'false');
     button.focus();
@@ -69,7 +69,7 @@ test('Language and Holographic Background share one row and keep their state acr
     assert.equal(button.getAttribute('aria-label'),'Dùng tiếng Việt');
     assert.equal(button.getAttribute('aria-checked'),'true');
     assert.equal(d.querySelector('.jobs-preferences-switches '+holoSwitch),holographic);
-    assert.equal(holographic.getAttribute('aria-label'),'Hiệu ứng nền hologram');
+    assert.equal(holographic.getAttribute('aria-label'),'Quang Phổ');
     assert.equal(holographic.getAttribute('aria-checked'),'false');
     assert.equal(d.querySelector('#keyword').value,'science');
     assert.equal(d.querySelector('#location').value,'hanoi');
@@ -113,7 +113,7 @@ test('the compact vacancy header shares Site Preferences, focus, and a separate 
     assert.equal(button.getAttribute('aria-checked'),'true');
     assert.equal(d.activeElement,appearance);
     const holographic=d.querySelector(holoSwitch);
-    assert.equal(holographic.getAttribute('aria-label'),'Hiệu ứng nền hologram');
+    assert.equal(holographic.getAttribute('aria-label'),'Quang Phổ');
     holographic.focus();
     holographic.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
     assert.equal(holographic.getAttribute('aria-checked'),'false');
@@ -147,7 +147,7 @@ test('homepage Holo selects the two presets, persists Off, and yields to reduced
     assert.deepEqual(changes.at(-1),['mount',{}]);
     d.querySelector('#jobs-preferences-trigger').click();
     const toggle=d.querySelector(holoSwitch);
-    assert.equal(toggle.getAttribute('aria-label'),'Holographic background');
+    assert.equal(toggle.getAttribute('aria-label'),'Iridescent Background');
     toggle.click();
     assert.equal(toggle.getAttribute('aria-checked'),'false');
     offPreference=w.localStorage.getItem(key);
