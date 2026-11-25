@@ -3,6 +3,7 @@ import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
 import {jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePath,vacancyLanguages,vacancySeoText} from './jobs-seo.js';
 import {showActionToast,setCounterValues} from './action-toast.js';
+import {createHoloBackground} from './jobs-hero-background.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
 let catalogueStamp=null,catalogueFlight=null;
 let publicAuth={loading:true,user:null,failed:false};
@@ -15,6 +16,10 @@ const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector
 const esc = (value = '') => String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const readStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Private browser sessions can still use the site. */ } };
+const holoPreferenceKey = 'gary-jobs-holographic-background';
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+const showMosaic = typeof createHoloBackground === 'function' ? createHoloBackground() : null;
+let holoEnabled = readStored(holoPreferenceKey, true) !== false;
 const vacancyStyles = [
   ['original', 'Original style', 'Giao diện gốc'],
   ['warm-editorial', 'Warm Editorial', 'Mộc bản'],
@@ -152,19 +157,41 @@ function heroHeading() {
   return t('<span class="hero-title-line">Build your career.</span> <em>Explore a new culture.</em>','<span class="hero-title-line">Phát triển sự nghiệp.</span> <em>Khám phá nền văn hóa mới.</em>');
 }
 
+function syncHoloBackground() {
+  const home = /^\/(?:index\.html)?$/.test(location.pathname) && !$('#detail-dialog.is-vacancy-workspace[open]');
+  const target = home && holoEnabled && !reducedMotion?.matches ? $('#jobs-hero-mosaic') : null;
+  showMosaic?.(target, window.garyJobsTheme?.resolved || 'light');
+}
+
+function renderHoloPreference() {
+  const control = $('[data-action="holo-background"]');
+  control?.setAttribute('aria-checked', String(holoEnabled));
+  const copy = control?.querySelector('[data-holo-status]');
+  if (copy) copy.textContent = holoEnabled ? t('On','Bật') : t('Off','Tắt');
+  document.dispatchEvent(new CustomEvent('jobs:switch-render'));
+  syncHoloBackground();
+}
+
 function renderThemeControls() {
   const preference=window.garyJobsTheme?.preference||'system';
   $$('[data-jobs-theme-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.jobsThemeChoice===preference)));
-  const vacancyTheme=$('#vacancy-theme');
-  if(vacancyTheme)vacancyTheme.value=preference;
 }
-document.addEventListener('gary-jobs:theme',renderThemeControls);
+document.addEventListener('gary-jobs:theme', () => { renderThemeControls(); syncHoloBackground(); });
+reducedMotion?.addEventListener?.('change', syncHoloBackground);
+window.addEventListener('storage', event => {
+  if (event.key !== holoPreferenceKey && event.key !== null) return;
+  holoEnabled = readStored(holoPreferenceKey, true) !== false;
+  renderHoloPreference();
+});
+window.addEventListener('pagehide', () => showMosaic?.(null));
 
 function renderPage() {
   const preferenceFocus=$('.jobs-preferences-panel')?.contains(document.activeElement)?document.activeElement.dataset.preferenceFocus:null;
   const previousHub=$('#jobs-glass-hero');
+  const previousMosaic=$('#jobs-hero-mosaic');
   const previousAccount=$('#public-account');
   const accountFocus=previousAccount?.contains(document.activeElement)?document.activeElement:null;
+  $('#vacancy-public-header .site-header')?.remove();
   if(managedRecords)jobs=managedRecords.filter(r=>r.kind==='vacancy').map((r,i)=>vacancyCard(r,i,managedRecords,state.lang));
   photoGalleryMount?.unmount();
   photoGalleryMount = null;
@@ -174,20 +201,27 @@ function renderPage() {
   $('.skip-link').textContent = t('Skip to content', 'Chuyển đến nội dung');
   $('#app').innerHTML = `
     <div class="announcement"><div class="container announcement-inner"><span>${icon('globe')} ${t('Your local connection to a world of opportunity.', 'Kết nối địa phương, mở ra cơ hội mới.')}</span><div class="announcement-links"><a href="#why-gary">${t('No placement fees. Ever.', 'Không phí giới thiệu việc làm.')} ${icon('arrow')}</a></div></div></div>
-    <header class="site-header"><div class="container nav-wrap">${brand()}
+    <div id="jobs-public-header-home"><header class="site-header"><div class="container nav-wrap">${brand()}
       <nav class="desktop-nav" aria-label="${t('Main navigation', 'Điều hướng chính')}">
         <a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a>
       </nav>
       <div class="nav-actions"><details id="public-account" class="jobs-login-menu" hidden></details><div id="gary-apps-header" class="gary-apps-slot"></div>
         <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('globe')}</button>
           <div id="jobs-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="jobs-preferences-title" ${preferencesOpen?'':'hidden'}><div class="jobs-preferences-heading"><h2 id="jobs-preferences-title">${t('Website preferences','Tùy chọn website')}</h2><button type="button" class="jobs-preferences-close" data-action="close-preferences" data-preference-focus="close" aria-label="${t('Close preferences','Đóng tùy chọn')}">${icon('close')}</button></div>
-            <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
+            <div class="jobs-preferences-switches">
+              <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
+              <fieldset><legend id="jobs-holo-label">${t('Holographic background','Hiệu ứng nền hologram')}</legend>
+                <div class="jobs-preferences-options" data-squish-key="jobs-public-holographic" data-squish-mode="effects">
+                  <button type="button" role="switch" aria-labelledby="jobs-holo-label" aria-checked="${holoEnabled}" data-action="holo-background" data-squish-target="toggle" data-preference-focus="holographic"><span data-holo-status aria-hidden="true">${holoEnabled?t('On','Bật'):t('Off','Tắt')}</span></button>
+                </div>
+              </fieldset>
+            </div>
             <fieldset><legend>${t('Appearance','Giao diện')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-theme" data-squish-mode="theme">${[['light','Light','Sáng'],['dark','Dark','Tối'],['system','System','Hệ thống']].map(([value,en,vi])=>`<button type="button" data-action="theme" data-jobs-theme-choice="${value}" data-preference-focus="theme-${value}" aria-pressed="false">${t(en,vi)}</button>`).join('')}</div><p class="jobs-preferences-help">${t('System follows your device settings.','Hệ thống theo cài đặt thiết bị của bạn.')}</p></fieldset>
           </div>
         </div><a class="button button-primary button-small nav-cta" href="portal.html?access=staff&amp;view=cms">${t('Post a Job', 'Đăng tuyển')}</a><button class="icon-button button-utility menu-toggle" data-action="menu" aria-expanded="false" aria-controls="mobile-nav" aria-label="${t('Open navigation', 'Mở điều hướng')}">${icon('menu')}</button></div>
-    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header>
+    </div><nav id="mobile-nav" class="mobile-nav" hidden aria-label="${t('Mobile navigation', 'Điều hướng di động')}"><a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a><a href="#contact">${t('Contact us', 'Liên hệ')}</a><button class="button" data-action="apply">${t('Let’s get started', 'Bắt đầu ngay')} ${arrow()}</button></nav></header></div>
     <main id="main">
-      <section class="jobs-hero-shell" aria-labelledby="hero-title"><div class="hero container career-hero jobs-final-hero">
+      <section class="jobs-hero-shell" aria-labelledby="hero-title"><div id="jobs-hero-mosaic" aria-hidden="true"></div><div class="hero container career-hero jobs-final-hero">
         <div class="hero-copy"><p class="eyebrow">${t('VIETNAM ENGLISH TEACHING JOBS', 'VIỆC LÀM GIẢNG DẠY TIẾNG ANH TẠI VIỆT NAM')}<span aria-hidden="true"></span></p>
           <h1 id="hero-title">${heroHeading()}</h1>
           <p class="hero-description">${t('Find teaching opportunities, get expert support, and experience life in Vietnam — a vibrant culture, welcoming communities, and a rewarding teaching career.', 'Tìm cơ hội giảng dạy, nhận hỗ trợ tận tâm và trải nghiệm cuộc sống tại Việt Nam — một nền văn hóa đầy sức sống, cộng đồng cởi mở và sự nghiệp giảng dạy ý nghĩa.')}</p>
@@ -241,8 +275,8 @@ function renderPage() {
     <button class="floating-contact" data-action="contact" aria-label="${t('Talk to Gary Agency', 'Trò chuyện với Gary Agency')}">${icon('chat')}<span>${t('Let’s talk', 'Trò chuyện')}</span><i aria-hidden="true" data-availability="unknown"></i></button>`;
   if(previousAccount){
     $('#public-account').replaceWith(previousAccount);
-    accountFocus?.focus({preventScroll:true});
   }
+  if(previousMosaic)$('#jobs-hero-mosaic').replaceWith(previousMosaic);
   if(previousHub&&glassHeroMount){$('#jobs-glass-hero').replaceWith(previousHub);glassHeroMount.update?.({locale:state.lang,guidesTarget:managedRecords?.some(record=>record.kind==='guide')?'#published-guides':'#questions'})}
   else if(typeof mountGlassHero==='function')glassHeroMount=mountGlassHero($('#jobs-glass-hero'),{locale:state.lang,guidesTarget:managedRecords?.some(record=>record.kind==='guide')?'#published-guides':'#questions'});
   renderThemeControls();
@@ -253,7 +287,9 @@ function renderPage() {
   mountHeaderApps();
   photoGalleryMount = mountPhotoGallery($('#photo-gallery'), { locale: state.lang, onExploreRegion: openDestination });
   syncVacancyRoute();
+  syncHoloBackground();
   syncPublishedLattice();
+  accountFocus?.focus({preventScroll:true});
   if($('#vacancy-gallery')?.open) renderVacancyGallery();
   if(preferencesOpen&&preferenceFocus)$(`[data-preference-focus="${preferenceFocus}"]`)?.focus({preventScroll:true});
 }
@@ -384,6 +420,11 @@ function stepVacancyGallery(delta) {
   renderVacancyGallery();
 }
 
+function workHoursLabel(job, short = false) {
+  if (job.flexibleHours) return t('Flexible Hours', 'Giờ làm việc linh hoạt');
+  return `${job.hours} ${short ? t('hrs / month','giờ / tháng') : t('hours / month','giờ / tháng')}`;
+}
+
 function renderJobs() {
   const results = filteredJobs();
   const visible = state.expanded ? results : results.slice(0,3);
@@ -393,7 +434,7 @@ function renderJobs() {
   if (managedRecords !== null) setCounterValues(document, {'job-count-value': results.length}, state.lang);
   else $('#job-count-value').textContent = String(results.length);
   $('#active-filters').innerHTML = state.keyword || state.location !== 'all' ? `<div class="active-filter"><span>${t('Your search', 'Tìm kiếm')}: <strong>${esc(state.keyword || t('All roles', 'Tất cả vị trí'))}</strong>${state.location !== 'all' ? ` · ${esc(jobs.find(j=>j.region===state.location)?.location || '')}` : ''}</span><button data-action="clear-search">${t('Clear search', 'Xóa tìm kiếm')} ${icon('close')}</button></div>` : '';
-  $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card">${vacancyPhoto(job)}<div class="job-card-top"><div class="job-location">${icon('pin')} ${job.location}</div><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-button-variant="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags"><span>${icon('clock')}${job.hours} ${t('hrs / month','giờ / tháng')}</span><span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
+  $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card">${vacancyPhoto(job)}<div class="job-card-top"><div class="job-location">${icon('pin')} ${job.location}</div><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-button-variant="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags">${job.flexibleHours||job.hours>0?`<span>${icon('clock')}${workHoursLabel(job,true)}</span>`:''}<span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
   const more = $('#more-jobs');
   more.hidden = results.length <= 3;
   more.innerHTML = `${state.expanded?t('Show fewer opportunities','Thu gọn danh sách'):t(`Explore all ${results.length} opportunities`,`Xem cả ${results.length} cơ hội`)} ${icon(state.expanded?'chevron':'arrow')}`;
@@ -444,20 +485,36 @@ function toggleShortlist(id) {
 }
 
 let dialogOpener;
+function placePublicHeader(workspace) {
+  const vacancy = $('#vacancy-public-header');
+  const target = workspace ? vacancy : $('#jobs-public-header-home');
+  const header = $('.site-header');
+  if (!vacancy || !target || !header) return;
+  vacancy.hidden = !workspace;
+  if (header.parentElement !== target) target.append(header);
+}
+
 function openDialog(content, {workspace=false, focus=true}={}) {
   const dialog=$('#detail-dialog');
   if(!dialog.open) dialogOpener=document.activeElement;
   dialog.classList.toggle('is-vacancy-workspace',workspace);
+  placePublicHeader(workspace);
   $('#dialog-content').innerHTML=content;
   document.dispatchEvent(new CustomEvent('jobs:switch-render'));
   if(workspace) $('.vacancy-workspace',dialog).dataset.vacancyStyle=vacancyStyle;
   $('.dialog-close').setAttribute('aria-label',t('Close dialog','Đóng hộp thoại'));
   if(!dialog.open)dialog.showModal();
+  syncHoloBackground();
   document.body.classList.add('dialog-open');dialog.scrollTop=0;
-  const target=focus&&$(workspace?'#dialog-title':'.dialog-close',dialog);
+  const target=focus&&!(workspace&&preferencesOpen)&&$(workspace?'#dialog-title':'.dialog-close',dialog);
   if(target)requestAnimationFrame(()=>{if(dialog.open&&target.isConnected)target.focus({preventScroll:true});});
 }
-function closeDialog() { leaveVacancyRoute(); $('#detail-dialog').close(); }
+function closeDialog() {
+  leaveVacancyRoute();
+  $('#detail-dialog').close();
+  placePublicHeader(false);
+  syncHoloBackground();
+}
 
 // Public URLs use the saved slug, so changing a title never changes a live link.
 function updateVacancyMetadata(job=null){
@@ -511,7 +568,7 @@ function leaveVacancyRoute(){
 }
 function syncVacancyRoute(){
   const slug=vacancySlug(location.pathname);
-  if(!slug&&!location.pathname.startsWith('/jobs/')){if(routeDialog){routeDialog=false;vacancyQuery='';$('#detail-dialog').close();updateVacancyMetadata();}return;}
+  if(!slug&&!location.pathname.startsWith('/jobs/')){if(routeDialog)closeDialog();return;}
   if(publicLoadState==='ready'){
     const job=jobs.find(item=>item.persistent&&item.slug===slug);
     if(job){openJob(job.id,{navigate:false});return;}
@@ -526,7 +583,7 @@ function syncVacancyRoute(){
 }
 window.addEventListener('popstate',()=>{
   if(vacancySlug(location.pathname))void loadPublishedContent({interactive:true});
-  else syncVacancyRoute();
+  else {syncVacancyRoute();syncHoloBackground();}
 });
 
 function openDestination(id) {
@@ -537,11 +594,8 @@ function vacancyHeader(){
   return `<header class="vacancy-workspace-header">
     <a class="text-button" href="/#opportunities" data-action="vacancy-listings">${t('View current vacancies','Xem tin tuyển dụng hiện tại')}</a>
     <div class="vacancy-preferences">
-      <span data-squish-key="jobs-vacancy-language"><button type="button" class="text-button dialog-job-language" data-action="language" data-squish-target="toggle" lang="${t('vi','en')}"><span>${t('Tiếng Việt','English')}</span></button></span>
-      <span data-squish-key="jobs-vacancy-theme" data-squish-mode="theme"><select id="vacancy-theme" aria-label="${t('Theme','Giao diện')}">
-        <option value="system">${t('System','Hệ thống')}</option><option value="light">${t('Light','Sáng')}</option><option value="dark">${t('Dark','Tối')}</option>
-      </select></span>
-      <select id="vacancy-style" aria-label="${t('Reading style','Kiểu trình bày')}">
+      <label for="vacancy-style">${t('Reading style','Kiểu trình bày')}</label>
+      <select id="vacancy-style">
         ${vacancyStyles.map(([value,en,vi])=>`<option value="${value}" ${value===vacancyStyle?'selected':''}>${t(en,vi)}</option>`).join('')}
       </select>
     </div>
@@ -615,7 +669,7 @@ function vacancySidebar(job, apply){
     <section aria-labelledby="vacancy-facts-heading">
       <h2 id="vacancy-facts-heading">${t('Key facts','Thông tin chính')}</h2>
       <dl class="vacancy-facts">
-        ${job.hours?`<div><dt>${t('Teaching hours','Giờ giảng dạy')}</dt><dd>${job.hours} ${t('hours / month','giờ / tháng')}</dd></div>`:''}
+        ${job.flexibleHours||job.hours>0?`<div><dt>${t('Teaching hours','Giờ giảng dạy')}</dt><dd class="vacancy-hours">${job.flexibleHours?icon('clock'):''}${workHoursLabel(job)}</dd></div>`:''}
         <div><dt>${t('Contract type','Hình thức')}</dt><dd>${t('Full-time','Toàn thời gian')}</dd></div>
         ${students?`<div><dt>${t('Students','Học sinh')}</dt><dd>${students}</dd></div>`:''}
         ${posted?`<div><dt>${t('Posted','Ngày đăng')}</dt><dd><time datetime="${esc(job.date)}">${posted}</time></dd></div>`:''}
@@ -766,7 +820,7 @@ function openPreferences() {
   preferencesOpen=true;
   const panel=$('#jobs-preferences-panel');panel.hidden=false;panel.inert=false;
   $('#jobs-preferences-trigger').setAttribute('aria-expanded','true');
-  (panel.querySelector('[role=switch]') || panel.querySelector('[data-language][aria-pressed="true"]'))?.focus({preventScroll:true});
+  (panel.querySelector('[data-squish-key="jobs-public-language"] [role=switch]') || panel.querySelector('[data-language][aria-pressed="true"]'))?.focus({preventScroll:true});
 }
 document.addEventListener('pointerdown',event=>{
   if(preferencesOpen&&!event.target.closest('.jobs-preferences'))closePreferences();
@@ -785,6 +839,11 @@ document.addEventListener('click',event=>{
   if(action==='preferences')openPreferences();
   if(action==='close-preferences')closePreferences(true);
   if(action==='theme')window.setGaryJobsTheme?.(control.dataset.jobsThemeChoice);
+  if(action==='holo-background'){
+    holoEnabled=!holoEnabled;
+    persist(holoPreferenceKey,holoEnabled);
+    renderHoloPreference();
+  }
   if(action==='language'){
     const next=control.dataset.language||(state.lang==='en'?'vi':'en');
     if(next!==state.lang){
@@ -794,9 +853,8 @@ document.addEventListener('click',event=>{
       if(reference&&!routeDialog)openJob(reference,{navigate:false});
       window.scrollTo({top:y,behavior:'instant'});
     }
-    const vacancyLanguage=$('#detail-dialog[open] [role=switch]')||$('#detail-dialog[open] .dialog-job-language');
-    const preferenceLanguage=$('#jobs-preferences-panel [role=switch]')||$(`[data-language="${state.lang}"]`);
-    (vacancyLanguage||(preferencesOpen?preferenceLanguage:$('#jobs-preferences-trigger')))?.focus({preventScroll:true});
+    const preferenceLanguage=$('[data-squish-key="jobs-public-language"] [role=switch]')||$(`[data-language="${state.lang}"]`);
+    (preferencesOpen?preferenceLanguage:$('#jobs-preferences-trigger'))?.focus({preventScroll:true});
   }
   if(action==='menu'){closePreferences();toggleMenu();}
   if(action==='filter'){state.category=id;state.expanded=false;renderJobs();$(`[data-action="filter"][data-id="${id}"]`).focus({preventScroll:true});}
@@ -833,7 +891,6 @@ document.addEventListener('input',event=>{
   renderVacancyResults(event.target.closest('.vacancy-workspace'));
 });
 document.addEventListener('change',event=>{
-  if(event.target.id==='vacancy-theme')window.setGaryJobsTheme?.(event.target.value);
   if(event.target.id==='vacancy-style'){
     vacancyStyle=validVacancyStyle(event.target.value);
     persist(vacancyStyleKey,vacancyStyle);
@@ -871,9 +928,11 @@ $('#detail-dialog').addEventListener('close',event=>{
   document.body.classList.remove('dialog-open');
   const workspace=dialog.classList.contains('is-vacancy-workspace');
   if(workspace){
+    placePublicHeader(false);
     dialog.classList.remove('is-vacancy-workspace');
     $('#dialog-content').replaceChildren();
   }
+  syncHoloBackground();
   if(dialogOpener?.isConnected&&dialogOpener!==document.body)dialogOpener.focus({preventScroll:true});
   else if(workspace){
     const heading=$('#opportunities h2');
@@ -951,5 +1010,5 @@ function loadPublishedContent({interactive=false}={}){
   return catalogueFlight;
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void loadPublishedContent();});
-window.addEventListener('pageshow',event=>{if(event.persisted)void loadPublishedContent();});
+window.addEventListener('pageshow',event=>{if(event.persisted){syncHoloBackground();void loadPublishedContent();}});
 void loadPublishedContent();

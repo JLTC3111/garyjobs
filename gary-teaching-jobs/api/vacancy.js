@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {createClient} from '@supabase/supabase-js';
 import {jobsConfig} from '../dist/jobs-config.js';
-import {escapeText, vacancyPath, vacancySlug} from '../dist/jobs-public-content.js';
+import {escapeText, hasFlexibleHours, vacancyPath, vacancySlug} from '../dist/jobs-public-content.js';
 import {jobParagraphs,jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePath,vacancyLanguages,vacancySeoText} from '../dist/jobs-seo.js';
 import {locationOptions} from '../dist/jobs-vacancy-options.js';
 
@@ -55,8 +55,11 @@ function renderVacancy(shell, row, {slug, language, status}) {
   const languageLinks=languages.length===2?`<nav aria-label="${vi?'Ngôn ngữ':'Language'}" data-squish-key="jobs-vacancy-page-language">${languages.map(lang=>
     `<a lang="${lang}" hreflang="${lang}" href="${escapeText(vacancyLanguagePath(slug,lang,languages))}" data-squish-target="${lang==='vi'?'on':'off'}"${language===lang?' aria-current="page"':''}>${lang==='en'?'English':'Tiếng Việt'}</a>`).join('<span aria-hidden="true"> · </span>')}</nav>`:'';
   const apply = row ? `/portal.html?${new URLSearchParams({access:'candidate', view:'apply', vacancy:row.id})}` : '';
+  const schedule = hasFlexibleHours(row?.data)
+    ? `<p class="vacancy-hours"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${vi?'Giờ làm việc linh hoạt':'Flexible Hours'}</p>`
+    : '';
   const main = `<main id="main" class="container section-pad"><h1>${escapeText(heading)}</h1>`
-    + `${languageLinks}${publishedDetails}${message ? `<p>${escapeText(message)}</p>` : ''}${body}`
+    + `${languageLinks}${publishedDetails}${schedule}${message ? `<p>${escapeText(message)}</p>` : ''}${body}`
     + `${apply ? `<p><a class="button" href="${escapeText(apply)}">${vi ? 'Ứng tuyển' : 'Apply for this role'}</a></p>` : ''}`
     + `<p><a href="/#opportunities">${vi ? 'Xem tin đang tuyển' : 'Browse vacancies'}</a></p></main>`;
 

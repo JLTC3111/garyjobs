@@ -24,7 +24,12 @@ function preferences({ dark = false, stored } = {}) {
   const dom = new JSDOM(html, { url: 'https://jobs.garyhome.vn/', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   bindFeedbackDom(dom.window);
- const query = { matches: dark, listeners: [], addEventListener(_, fn) { this.listeners.push(fn); } };
+ const query = {
+   matches: dark,
+   listeners: [],
+   addEventListener(_, fn) { this.listeners.push(fn); },
+   removeEventListener(_, fn) { this.listeners = this.listeners.filter(listener => listener !== fn); }
+ };
   w.matchMedia = () => query;
   if (stored) w.localStorage.setItem('gary-jobs-theme', stored);
   w.eval(init); return { dom, w, d: w.document, query };

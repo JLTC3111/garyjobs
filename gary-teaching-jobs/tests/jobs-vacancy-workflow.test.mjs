@@ -7,7 +7,7 @@ import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {PGlite} from '@electric-sql/pglite';
 import {mountCms} from '../dist/cms-foundation/index.js';
 import {createJobsPublishingAdapter} from '../dist/jobs-publishing-adapter.js';
-import {emptyEntry} from '../dist/cms-foundation/content.js';
+import {emptyEntry,validateEntry} from '../dist/cms-foundation/content.js';
 import {mountVacancyImageEditor} from '../dist/jobs-vacancy-image.js';
 import {vacancyCard} from '../dist/jobs-public-content.js';
 import {vacancyImageHandler} from '../supabase/functions/jobs-vacancy-image/handler.mjs';
@@ -167,6 +167,48 @@ test('end-to-end: invalid publication focuses exact fields, keeps entered text a
     h.input('data.employer_name_en','Independent School');h.input('data.contact_email','correct@example.test');
     await h.click('publish');
     await until(async()=>(await h.one("select count(*)::int n from public.jobs_public_content where kind='vacancy'")).n===1,h.root.querySelector('dialog').textContent);
+  }finally{await h.close();}
+});
+
+test('Flexible Hours requires opt-in and survives draft, preview, edit and publication',async()=>{
+  const h=await setup({language:'vi'});
+  try{
+    const toggle=()=>h.root.querySelector('[name="data.flexible_hours"]');
+    const preview=()=>h.root.querySelector('[data-cms-preview]');
+    await h.click('new');
+    h.fill();
+    assert.equal(toggle().checked,false);
+    assert.equal(toggle().disabled,false);
+    toggle().click();
+    assert.equal(toggle().checked,true);
+    assert.match(preview().querySelector('article[lang="vi"]').textContent,/Giờ làm việc linh hoạt/);
+    assert.match(preview().querySelector('article[lang="en"]').textContent,/Flexible Hours/);
+    h.root.querySelector('[data-cms-editor]').dispatchEvent(new h.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+    await until(async()=>Boolean(await h.one("select id from public.jobs_cms_entries where kind='vacancy'")),'Save a vacancy draft');
+    const draft=await h.one("select id,data from public.jobs_cms_entries where kind='vacancy'");
+    assert.equal(draft.data.flexible_hours,true);
+    assert.equal(draft.data.hours,null);
+
+    await settle();
+    await h.click('close');
+    await h.click('edit');
+    assert.equal(toggle().checked,true);
+    h.input('data.hours','60');
+    assert.equal(toggle().checked,false);
+    assert.equal(toggle().disabled,true);
+    assert.doesNotMatch(preview().textContent,/Flexible Hours/);
+    h.input('data.hours','0');
+    assert.equal(toggle().checked,false);
+    assert.equal(toggle().disabled,false);
+    toggle().click();
+    await h.click('publish');
+    await until(async()=>Boolean(await h.one('select id from public.jobs_public_content where id=$1',[draft.id])),'Publish the flexible vacancy');
+    await h.as(false);
+    const live=await h.one('select * from public.jobs_public_content where id=$1',[draft.id]);
+    assert.equal(live.data.flexible_hours,true);
+    assert.equal(live.data.hours,0);
+    assert.equal(vacancyCard(live,0,[live]).flexibleHours,true);
+    assert.ok(validateEntry({...live,data:{...live.data,hours:60}},h.collections[0]).some(item=>item.field==='data.flexible_hours'));
   }finally{await h.close();}
 });
 

@@ -59,6 +59,22 @@ test('translated vacancies expose self canonicals, reciprocal alternates and esc
   }
 });
 
+test('server-rendered vacancy shows only an explicitly selected flexible schedule',async()=>{
+  const handler=createVacancyHandler(async()=>({...row,data:{...row.data,hours:0,flexible_hours:true}}));
+  for(const [query,label] of [['','Flexible Hours'],['?lang=vi','Giờ làm việc linh hoạt']]){
+    const res=await request(handler,'/jobs/teacher'+query);
+    const {window}=new JSDOM(res.body);
+    try{
+      const hours=window.document.querySelector('.vacancy-hours');
+      assert.equal(hours.textContent,label);
+      assert.ok(hours.querySelector('svg[aria-hidden=true]'));
+      assert.doesNotMatch(hours.textContent,/0 hours/);
+    }finally{window.close();}
+  }
+  const legacy=await request(createVacancyHandler(async()=>({...row,data:{...row.data,hours:0}})),'/jobs/teacher');
+  assert.doesNotMatch(legacy.body,/Flexible Hours/);
+});
+
 test('Squish Switch follows both bilingual vacancy URLs from the server-rendered page',async()=>{
   const handler=createVacancyHandler(async()=>row);
   for(const vi of [false,true]){

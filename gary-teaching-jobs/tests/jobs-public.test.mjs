@@ -435,12 +435,22 @@ test('vacancy workspace searches published roles and keeps Back, Forward and ret
  }finally{dom.window.close();}
 });
 
+function websitePreferences(document) {
+ const panel=document.querySelector('#jobs-preferences-panel');
+ if(panel.hidden)document.querySelector('#jobs-preferences-trigger').click();
+ return panel;
+}
+function switchVacancyLanguage(document) {
+ const next=document.documentElement.lang==='vi'?'en':'vi';
+ websitePreferences(document).querySelector(`[data-language="${next}"]`).click();
+}
+
 test('vacancy workspace restores reading position across language changes and supports Share, Save and theme selection',async()=>{
  const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
  try{
   const w=dom.window,d=w.document;
   d.querySelector('.vacancy-reading').scrollTop=123;
-  d.querySelector('.dialog-job-language').click();
+  switchVacancyLanguage(d);
   assert.equal(d.querySelector('.vacancy-reading').scrollTop,123);
   assert.equal(d.querySelector('h1#dialog-title').textContent,'Tuyển giáo viên mới');
   const share=d.querySelector('[data-action="share-vacancy"]');
@@ -453,12 +463,11 @@ test('vacancy workspace restores reading position across language changes and su
   saved.click();
   assert.equal(saved.getAttribute('aria-pressed'),'true');
   assert.ok(d.querySelector('#detail-dialog [data-action-toast-host]'));
-  const theme=d.querySelector('#vacancy-theme');
-  assert.deepEqual([...theme.options].map(option=>option.value),['system','light','dark']);
+  const themes=[...websitePreferences(d).querySelectorAll('[data-jobs-theme-choice]')];
+  assert.deepEqual(themes.map(option=>option.dataset.jobsThemeChoice),['light','dark','system']);
   let preference;
   w.setGaryJobsTheme=value=>{preference=value;};
-  theme.value='dark';
-  theme.dispatchEvent(new w.Event('change',{bubbles:true}));
+  themes.find(option=>option.dataset.jobsThemeChoice==='dark').click();
   assert.equal(preference,'dark');
  }finally{dom.window.close();}
 });
@@ -488,10 +497,10 @@ test('vacancy reveal keeps intact text and reading styles persist independently 
   assert.equal(workspace.dataset.vacancyStyle,'modern-slate');
   assert.equal(w.document.documentElement.dataset.jobsTheme,'dark');
   assert.equal(copy.querySelector('.vacancy-word'),word);
-  d.querySelector('.dialog-job-language').click();
+  switchVacancyLanguage(d);
   assert.equal(d.querySelector('.vacancy-word'),null);
   assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
-  assert.equal(d.querySelector('#vacancy-style').getAttribute('aria-label'),'Kiểu trình bày');
+  assert.equal(d.querySelector('label[for=vacancy-style]').textContent,'Kiểu trình bày');
   storedStyle=JSON.parse(w.localStorage.getItem('gary-jobs-vacancy-style'));
  }finally{dom.window.close();}
  const restored=await publicPage(listing,{url,storedStyle,reducedMotion:true});
@@ -515,7 +524,7 @@ test('closing a directly opened vacancy returns to current listings without leav
 test('language switching keeps the vacancy and campaign parameters with localized metadata',async()=>{
  const dom=await publicPage(records,{url:'https://jobs.garyhome.vn/jobs/teacher?utm_source=test'});
  try{
-  const w=dom.window,d=w.document;d.querySelector('.dialog-job-language').click();
+  const w=dom.window,d=w.document;switchVacancyLanguage(d);
   assert.equal(w.location.pathname,'/jobs/teacher');assert.equal(w.location.search,'?utm_source=test&lang=vi');
   assert.equal(d.querySelector('#detail-dialog').open,true);
   assert.match(d.querySelector('#dialog-title').textContent,/Tuyển giáo viên mới/);
@@ -724,7 +733,7 @@ test('standalone vacancies render employer, predefined bilingual filters and opt
   d.querySelector('#job-grid h3 a').click();await settle();
   assert.match(d.querySelector('#detail-dialog').textContent,/Independent Teaching Team/);
   assert.match(d.querySelector('#detail-dialog').textContent,/West Lake branch · 12 Example Street/);
-  d.querySelector('.dialog-job-language').click();
+  switchVacancyLanguage(d);
   assert.match(d.querySelector('#dialog-title').textContent,/New teacher vacancy/,'English remains readable when Vietnamese is not supplied');
   assert.match(d.querySelector('#detail-dialog').textContent,/Details of this current role/);
   assert.match(d.querySelector('#job-tabs').textContent,/Trung tâm/);

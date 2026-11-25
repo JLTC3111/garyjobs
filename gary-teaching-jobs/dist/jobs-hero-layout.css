@@ -1,4 +1,20 @@
 /* Hero-only composition. Glass geometry/optics remain in React Bits. */
+#jobs-hero-mosaic {
+  --jobs-mosaic-mask: linear-gradient(90deg, transparent 8%, #0002 35%, #000 60%);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: var(--jobs-mosaic-mask);
+  mask-image: var(--jobs-mosaic-mask);
+}
+#jobs-hero-mosaic > .holo-mosaic-canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .jobs-public .hero.jobs-final-hero {
   max-width:1680px;
   grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);
@@ -53,6 +69,7 @@ html:lang(vi) .jobs-public .jobs-final-hero #hero-title em {
 .jobs-public .jobs-final-hero .jobs-hub-fallback a { inline-size:var(--hub-fallback-size);block-size:var(--hub-fallback-size); }
 .jobs-public .jobs-final-hero .jobs-hub-fallback a>span { top:calc(100% + 12px);inline-size:max-content;max-inline-size:calc(var(--hub-fallback-size) + 14px);max-width:calc(var(--hub-fallback-size) + 14px);text-align:center;white-space:normal;overflow-wrap:anywhere;text-wrap:balance; }
 @media(max-width:1000px) {
+  #jobs-hero-mosaic { --jobs-mosaic-mask: linear-gradient(180deg, transparent 12%, #0002 37%, #000 65%); }
   .jobs-public .hero.jobs-final-hero { grid-template-columns:minmax(0,1fr);min-height:0;padding-top:40px;padding-bottom:100px;row-gap:34px; }
   .jobs-public .jobs-final-hero .hero-copy { inline-size:100%;max-width:700px;justify-self:center; }
   .jobs-public .jobs-final-hero #hero-title { font-size:clamp(42px,8.2cqi,64px); }

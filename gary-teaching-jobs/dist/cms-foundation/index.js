@@ -1,7 +1,7 @@
 import { attachEditorWorkspace } from '../editor-workspace/index.js';
 import { showActionToast } from '../action-toast.js';
 import { isConflictResponse } from '../conflict-response.js';
-import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings } from './content.js';
+import { CMS_VERSION, LOCALES, emptyEntry, titleSlug, fieldsFor, getValue, setValue, safeMediaUrl, validateEntry, contentSeoFindings, isBlankOrZero } from './content.js';
 import { cmsText, validationText } from './copy.js';
 import { localizeFinding } from './seo-findings.js';
 import { createSuccessNotification } from './success-notification.js';
@@ -192,13 +192,31 @@ export function mountCms(root, options) {
   function field(key, text, type = 'text', extra = {}) {
     const value = getValue(draft, key) ?? '', controlId = `${id}-${key.replace(/[^a-z0-9]/gi, '-')}`;
     if (type === 'reference') return referenceField(key, text, extra, controlId);
-    const attributes = `id="${controlId}" name="${escape(key)}" data-field="${escape(key)}" aria-describedby="${controlId}-error"${extra.locale ? ` lang="${extra.locale}"` : ''}${extra.minLength !== undefined ? ` minlength="${Number(extra.minLength)}"` : ''}${disabled(!capabilities.edit || busy)}`;
+    const unavailable = extra.enabledWhenEmptyOrZero && !isBlankOrZero(getValue(draft, extra.enabledWhenEmptyOrZero));
+    const attributes = `id="${controlId}" name="${escape(key)}" data-field="${escape(key)}" aria-describedby="${controlId}-error"${extra.locale ? ` lang="${extra.locale}"` : ''}${extra.minLength !== undefined ? ` minlength="${Number(extra.minLength)}"` : ''}${disabled(!capabilities.edit || busy || unavailable)}`;
+    if (type === 'checkbox') return `<label class="cms-field cms-checkbox-field" for="${controlId}"><input ${attributes} type="checkbox"${value === true && !unavailable ? ' checked' : ''}><span>${escape(text)}</span><small id="${controlId}-error" class="cms-field-error" data-error-for="${escape(key)}" aria-live="polite"></small></label>`;
     let control;
     if (type === 'textarea' || type === 'list') control = `<textarea ${attributes} rows="${type === 'list' ? 4 : key.startsWith('body_') ? 10 : 3}" maxlength="50000"${type === 'list' ? ' data-list="true"' : ''}>${escape(Array.isArray(value) ? value.join('\n') : value)}</textarea>`;
     else if (type === 'select') control = `<select ${attributes}><option value="">—</option>${value && !(extra.options || []).some(option => String(typeof option === 'object' ? option.value : option) === String(value)) ? `<option value="${escape(value)}" selected${extra.preservePublished && draft.published_at && !extra.excludedValues?.includes(String(value)) ? '' : ' disabled'}>${escape(value)} (${t('previousValue')})</option>` : ''}${(extra.options || []).map(option => { const v = typeof option === 'object' ? option.value : option; return `<option value="${escape(v)}"${String(v) === String(value) ? ' selected' : ''}>${escape(typeof option === 'object' ? label(option.label || option.value) : option)}</option>`; }).join('')}</select>`;
     else control = `<input ${attributes} type="${['number', 'date', 'url', 'email'].includes(type) ? type : 'text'}" value="${escape(value)}"${extra.min !== undefined ? ` min="${Number(extra.min)}"` : ''}${extra.max !== undefined ? ` max="${Number(extra.max)}"` : ''}${type === 'date' && extra.minDate ? ` min="${extra.minDate === 'today' ? new Date().toISOString().slice(0, 10) : escape(extra.minDate)}"` : ''}${type !== 'number' && type !== 'date' ? ` maxlength="${Number(extra.maxLength || 2000)}"` : ''}>`;
     const requirement = extra.required ? t('required') : extra.optional ? t('optional') : '';
     return `<label class="cms-field" for="${controlId}"><span>${escape(text)}${requirement ? ` <small>(${requirement})</small>` : ''}</span>${control}<small id="${controlId}-error" class="cms-field-error" data-error-for="${escape(key)}" aria-live="polite"></small></label>`;
+  }
+  function syncConditionalCheckboxes(changed) {
+    for (const {key, enabledWhenEmptyOrZero: dependency} of fieldsFor(collection())) {
+      if (!dependency || (changed && changed !== key && changed !== dependency)) continue;
+      const value = getValue(draft, dependency);
+      const available = isBlankOrZero(value);
+      if (getValue(draft, key) === true) {
+        if (!available) setValue(draft, key, false);
+        else setValue(draft, dependency, value == null || String(value).trim() === '' ? null : 0);
+      }
+      const input = root.querySelector(`[data-field="${key}"]`);
+      if (input) {
+        input.checked = getValue(draft, key) === true;
+        input.disabled = !capabilities.edit || busy || !available;
+      }
+    }
   }
   function editor({focus = false} = {}) {
     const dialog = root.querySelector('.cms-dialog');
@@ -240,7 +258,10 @@ export function mountCms(root, options) {
     const target = root.querySelector('[data-cms-checks]');
     if (target) target.innerHTML = contentSeoFindings(draft, collection()).map(finding => { const translated = localizeFinding(finding, language); return `<article class="cms-finding cms-${finding.severity}"><strong>${escape(t(finding.severity))}: ${escape(translated.title)}</strong><p>${escape(translated.recommendation || translated.explanation)}</p></article>`; }).join('');
     const preview = root.querySelector('[data-cms-preview]');
-    if (preview) preview.innerHTML = LOCALES.map(locale => `<article lang="${locale}"><h3>${escape(draft[`title_${locale}`] || draft.title_en || t('noPreview'))}</h3><p>${escape(draft[`summary_${locale}`] || draft.summary_en || '')}</p><div class="cms-plain-content">${escape(draft[`body_${locale}`] || draft.body_en || '')}</div></article>`).join('');
+    if (preview) {
+      const options = fieldsFor(collection()).filter(field => field.previewWhenChecked && getValue(draft, field.key) === true);
+      preview.innerHTML = LOCALES.map(locale => `<article lang="${locale}"><h3>${escape(draft[`title_${locale}`] || draft.title_en || t('noPreview'))}</h3><p>${escape(draft[`summary_${locale}`] || draft.summary_en || '')}</p>${options.map(field => `<p>${escape(field.label[locale])}</p>`).join('')}<div class="cms-plain-content">${escape(draft[`body_${locale}`] || draft.body_en || '')}</div></article>`).join('');
+    }
     const dirtyState = root.querySelector('[data-cms-dirty]'); if (dirtyState) dirtyState.textContent = t(dirty() ? 'changed' : 'clean');
   }
   async function openEditor(record) {
@@ -258,6 +279,7 @@ export function mountCms(root, options) {
       draft = prepared;
     }
     syncAutomaticSlug();
+    syncConditionalCheckboxes();
     baseline = JSON.stringify(draft); revisions = []; editor({focus: true}); void loadReferences(true);
     if (draft.id && adapter.revisions) {
       const selected = draft.id;
@@ -476,10 +498,13 @@ export function mountCms(root, options) {
       values[event.target.dataset.referenceCreateField] = event.target.value; values.open = true; referenceDrafts.set(key, values); return;
     }
     if (draft && event.target.dataset.field) {
+      if (event.target.disabled) return;
       let value = event.target.value;
-      if (event.target.dataset.list) value = value.split('\n').map(item => item.trim()).filter(Boolean);
+      if (event.target.type === 'checkbox') value = event.target.checked;
+      else if (event.target.dataset.list) value = value.split('\n').map(item => item.trim()).filter(Boolean);
       else if (event.target.type === 'number' && value !== '') value = Number(value);
       const key = event.target.dataset.field; setValue(draft, key, value); editorIssues = editorIssues.filter(issue => issue.field !== key);
+      syncConditionalCheckboxes(key);
       const error = [...root.querySelectorAll('[data-error-for]')].find(item => item.dataset.errorFor === key); if (error) error.textContent = ''; event.target.removeAttribute('aria-invalid');
       if (referenceFields().some(item => item.key === key)) renderReference(key); updateEditorChecks(); renderIssueSummary();
     }

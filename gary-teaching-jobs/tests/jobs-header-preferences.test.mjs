@@ -9,10 +9,12 @@ import { vacancyCard, vacancySlug, escapeText, safeLink } from '../dist/jobs-pub
 import * as jobsSeo from '../dist/jobs-seo.js';
 import {mountJobsPublicAccount} from '../dist/jobs-public-account.js';
 import {mountSquishSwitches} from '../dist/squish-switch.js';
+import {createHoloBackground} from '../dist/jobs-hero-background.js';
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const init = await readFile(new URL('../dist/jobs-theme-init.js', import.meta.url), 'utf8');
 const app = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8')).split('\n').filter(line => !line.startsWith('import ')).join('\n');
-async function page({ stored = {}, dark = false, squish = false, path = '/', records = [{kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'}] } = {}) {
+const holoSwitch = '[data-squish-key="jobs-public-holographic"] > .squish-switch';
+async function page({ stored = {}, dark = false, squish = false, path = '/', loadMosaic, records = [{kind:'location',slug:'hanoi',title_en:'Hanoi',title_vi:'Hà Nội'}] } = {}) {
   const dom = new JSDOM(html, { url: `https://jobs.garyhome.vn${path}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window, query = {
     matches: dark,
@@ -23,7 +25,9 @@ async function page({ stored = {}, dark = false, squish = false, path = '/', rec
   bindFeedbackDom(dom.window);
 
   for (const [key,value] of Object.entries(stored)) w.localStorage.setItem(key,value);
-  w.matchMedia = () => query;
+  const motion = { ...query, matches: false, listeners: [] };
+  w.matchMedia = name => name.includes('reduced-motion') ? motion : query;
+  if (loadMosaic) w.createHoloBackground = () => createHoloBackground(loadMosaic);
   w.IntersectionObserver = class { observe() {} disconnect() {} };
   w.HTMLElement.prototype.scrollIntoView = function() {};
   w.scrollTo = () => {};
@@ -36,16 +40,25 @@ async function page({ stored = {}, dark = false, squish = false, path = '/', rec
   vm.runInContext(app,dom.getInternalVMContext());
   mountJobsPublicAccount(w.document,{onAuthStateChange:callback=>callback('INITIAL_SESSION',null)});
   await new Promise(resolve=>setTimeout(resolve,10));
-  return {dom,w,d:w.document,query,switches};
+  return {dom,w,d:w.document,query,motion,switches};
 }
-test('Squish Switch keeps the Jobs public language control focused across a translated render', async () => {
+test('Language and Holographic Background share one row and keep their state across translation', async () => {
   const h=await page({squish:true}),{d,w}=h;
   try {
     d.querySelector('#keyword').value='science';
     d.querySelector('#location').value='hanoi';
     d.querySelector('#jobs-preferences-trigger').click();
-    const button=d.querySelector('#jobs-preferences-panel [role=switch]');
+    const row=d.querySelector('#jobs-preferences-panel .jobs-preferences-switches');
+    const [button,holographic]=row.querySelectorAll('button.squish-switch');
+    assert.equal(button.parentElement.dataset.squishKey,'jobs-public-language');
+    assert.equal(holographic,d.querySelector(holoSwitch));
+    assert.equal(row.querySelector('[role=radiogroup]'),null);
+    assert.equal(row.nextElementSibling.querySelector('[role=radiogroup]').getAttribute('aria-label'),'Appearance, System, currently light');
     assert.equal(d.activeElement,button);
+    assert.equal(holographic.getAttribute('aria-label'),'Holographic background');
+    holographic.click();
+    assert.equal(holographic.getAttribute('aria-checked'),'false');
+    button.focus();
     assert.equal(button.getAttribute('aria-checked'),'false');
     button.click();
     assert.equal(d.documentElement.lang,'vi');
@@ -55,15 +68,29 @@ test('Squish Switch keeps the Jobs public language control focused across a tran
     assert.equal(d.activeElement,button);
     assert.equal(button.getAttribute('aria-label'),'Dùng tiếng Việt');
     assert.equal(button.getAttribute('aria-checked'),'true');
+    assert.equal(d.querySelector('.jobs-preferences-switches '+holoSwitch),holographic);
+    assert.equal(holographic.getAttribute('aria-label'),'Hiệu ứng nền hologram');
+    assert.equal(holographic.getAttribute('aria-checked'),'false');
     assert.equal(d.querySelector('#keyword').value,'science');
     assert.equal(d.querySelector('#location').value,'hanoi');
   } finally {h.switches.destroy();h.dom.window.close();}
 });
-test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboard focus', async () => {
+test('the compact vacancy header shares Site Preferences, focus, and a separate reading style', async () => {
   const path='/jobs/science-teacher';
-  const h=await page({squish:true,path,records:[{kind:'vacancy',id:'fixture',slug:'science-teacher',title_en:'Science Teacher',title_vi:'Giáo viên khoa học'}]}),{d,w}=h;
+  let loads=0;
+  const h=await page({squish:true,path,loadMosaic:async()=>{loads++;},records:[{kind:'vacancy',id:'fixture',slug:'science-teacher',title_en:'Science Teacher',title_vi:'Giáo viên khoa học',body_en:'Teach science.',body_vi:'Dạy khoa học.'}]}),{d,w}=h;
   try {
-    const button=d.querySelector('#detail-dialog[open] [role=switch]');
+    const header=d.querySelector('#detail-dialog[open] #vacancy-public-header .site-header');
+    assert.ok(header);
+    assert.equal(d.querySelectorAll('.site-header').length,1);
+    assert.ok(header.querySelector('.jobs-logo-light'));
+    assert.ok(header.querySelector('.desktop-nav a[href="#opportunities"]'));
+    assert.ok(header.querySelector('#public-account a[href="portal.html?access=staff"]'));
+    assert.ok(d.querySelector('#detail-dialog [data-action=vacancy-listings]'));
+    assert.equal(d.querySelector('.vacancy-workspace-header [data-squish-key]'),null);
+    assert.equal(d.querySelector('#vacancy-theme'),null);
+    header.querySelector('#jobs-preferences-trigger').click();
+    const button=d.querySelector('#jobs-preferences-panel [data-squish-key="jobs-public-language"] [role=switch]');
     assert.ok(button);
     const style=d.querySelector('#vacancy-style');
     style.value='modern-slate';
@@ -73,7 +100,7 @@ test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboa
     assert.equal(w.location.pathname,path);
     assert.equal(d.querySelector('#dialog-title').textContent,'Giáo viên khoa học');
     assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
-    assert.equal(d.querySelector('#detail-dialog[open] [role=switch]'),button);
+    assert.ok(d.querySelector('#detail-dialog[open] #jobs-preferences-panel').contains(button));
     assert.equal(d.activeElement,button);
     assert.equal(button.getAttribute('aria-checked'),'true');
     const appearance=d.querySelector('#detail-dialog[open] [role=radiogroup]');
@@ -82,12 +109,91 @@ test('Squish Switch keeps the Jobs vacancy route, reading preferences and keyboa
     appearance.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
     assert.equal(w.location.pathname,path);
     assert.equal(w.garyJobsTheme.preference,'dark');
-    assert.equal(d.querySelector('#vacancy-theme').value,'dark');
     assert.equal(d.querySelector('#vacancy-style').value,'modern-slate');
     assert.equal(button.getAttribute('aria-checked'),'true');
     assert.equal(d.activeElement,appearance);
+    const holographic=d.querySelector(holoSwitch);
+    assert.equal(holographic.getAttribute('aria-label'),'Hiệu ứng nền hologram');
+    holographic.focus();
+    holographic.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+    assert.equal(holographic.getAttribute('aria-checked'),'false');
+    assert.equal(w.localStorage.getItem('gary-jobs-holographic-background'),'false');
+    assert.equal(loads,0);
   } finally {h.switches.destroy();h.dom.window.close();}
 });
+test('homepage Holo selects the two presets, persists Off, and yields to reduced motion', async () => {
+  const changes=[];
+  const key='gary-jobs-holographic-background';
+  const loadMosaic=async()=>({
+    mountHoloMosaic(host, props){
+      assert.equal(host.id,'jobs-hero-mosaic');
+      changes.push(['mount',props]);
+      return {update: next=>changes.push(['update',next]),destroy:()=>changes.push(['destroy'])};
+    }
+  });
+  const h=await page({squish:true,loadMosaic,records:[{kind:'vacancy',id:'fixture',slug:'science-teacher',title_en:'Science Teacher',body_en:'Teach science.'}]}),{w,d}=h;
+  let offPreference;
+  try {
+    assert.deepEqual(changes,[['mount',{color:'#f4f6fb',metalColor:'#b9c8e2',spectrum:'full',lightMode:true}]]);
+    w.setGaryJobsTheme('dark');
+    assert.deepEqual(changes.at(-1),['update',{}]);
+    d.querySelector('#job-grid [data-action=job]').click();
+    assert.equal(w.location.pathname,'/jobs/science-teacher');
+    assert.deepEqual(changes.at(-1),['destroy']);
+    const returnedHome=new Promise(resolve=>w.addEventListener('popstate',resolve,{once:true}));
+    d.querySelector('[data-action=vacancy-listings]').click();
+    await returnedHome;
+    assert.equal(w.location.pathname,'/');
+    assert.deepEqual(changes.at(-1),['mount',{}]);
+    d.querySelector('#jobs-preferences-trigger').click();
+    const toggle=d.querySelector(holoSwitch);
+    assert.equal(toggle.getAttribute('aria-label'),'Holographic background');
+    toggle.click();
+    assert.equal(toggle.getAttribute('aria-checked'),'false');
+    offPreference=w.localStorage.getItem(key);
+    assert.equal(offPreference,'false');
+    assert.deepEqual(changes.at(-1),['destroy']);
+    const count=changes.length;
+    h.query.matches=false;
+    w.setGaryJobsTheme('system');
+    assert.equal(changes.length,count);
+    toggle.click();
+    await Promise.resolve();
+    assert.equal(toggle.getAttribute('aria-checked'),'true');
+    assert.equal(changes.at(-1)[0],'mount');
+    h.motion.matches=true;
+    h.motion.listeners.forEach(fn=>fn());
+    assert.deepEqual(changes.at(-1),['destroy']);
+    assert.equal(w.localStorage.getItem(key),'true');
+  } finally {h.switches.destroy();h.dom.window.close();}
+  const count=changes.length;
+  const afterReload=await page({stored:{[key]:offPreference},loadMosaic});
+  try {
+    assert.equal(afterReload.d.querySelector('[data-action="holo-background"]').getAttribute('aria-checked'),'false');
+    assert.equal(changes.length,count);
+  } finally {afterReload.dom.window.close();}
+});
+
+test('Flexible Hours renders with a clock on vacancy cards and the detail view', async () => {
+  const records=[
+    {id:'flex',kind:'vacancy',slug:'flexible-teacher',title_en:'Flexible teacher',title_vi:'Giáo viên linh hoạt',body_en:'Teach English.',body_vi:'Dạy tiếng Anh.',data:{flexible_hours:true,hours:null}},
+    {id:'fixed',kind:'vacancy',slug:'fixed-teacher',title_en:'Fixed teacher',data:{hours:60}},
+    {id:'legacy',kind:'vacancy',slug:'legacy-teacher',title_en:'Legacy teacher',data:{hours:0}}
+  ];
+  const home=await page({records});
+  const detail=await page({path:'/jobs/flexible-teacher?lang=vi',records});
+  try {
+    const [flex,fixed,legacy]=home.d.querySelectorAll('#job-grid .job-card');
+    assert.equal(flex.querySelector('.job-tags span').textContent,'Flexible Hours');
+    assert.ok(flex.querySelector('.job-tags span svg'));
+    assert.equal(fixed.querySelector('.job-tags span').textContent,'60 hrs / month');
+    assert.doesNotMatch(legacy.querySelector('.job-tags').textContent,/Flexible Hours|0 hrs/);
+    const hours=detail.d.querySelector('.vacancy-hours');
+    assert.equal(hours.textContent,'Giờ làm việc linh hoạt');
+    assert.ok(hours.querySelector('svg[aria-hidden=true]'));
+  } finally {detail.dom.window.close();home.dom.window.close();}
+});
+
 test('Jobs mounts the dashboard Squish Switch for signed-in staff and candidates', async () => {
   for (const access of ['staff','candidate']) {
     const h=await staffPortal({access,view:access==='staff'?'cms':'mine'});
@@ -115,7 +221,7 @@ test('one globe opens a nonmodal preferences dialog; Escape and close restore fo
     assert.equal(d.querySelectorAll('#gary-apps-header').length,1);
     assert.equal(d.querySelectorAll('#gary-apps-mobile').length,0);
     assert.equal(d.querySelectorAll('.language-button,[data-jobs-theme-select]').length,0);
-    assert.equal(d.querySelectorAll('.jobs-preferences-panel fieldset').length,2);
+    assert.equal(d.querySelectorAll('.jobs-preferences-panel fieldset').length,3);
     const trigger=d.querySelector('#jobs-preferences-trigger'),panel=d.querySelector('#jobs-preferences-panel');
     assert.equal(trigger.getAttribute('aria-controls'),panel.id);assert.equal(trigger.getAttribute('aria-haspopup'),'dialog');
     assert.equal(panel.hidden,true);

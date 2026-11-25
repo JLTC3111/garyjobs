@@ -97,6 +97,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .nav-actions { gap:12px; }
 .jobs-public .nav-actions .nav-cta { border-radius:30px;font-size:14px;padding:11px 22px;min-height:44px;background:var(--jobs-action);border-color:var(--jobs-action);color:var(--jobs-action-ink); }
 /* One preference trigger; panel uses the current site's semantic palette. */
+#jobs-public-header-home { display: contents; }
 .jobs-public .jobs-preferences { position:relative; }
 .jobs-public .jobs-preferences-trigger,.jobs-public .jobs-preferences-close { display:grid;place-items:center;width:44px;height:44px;border:1px solid transparent;border-radius:50%;padding:10px;background:transparent;color:var(--jobs-ink);cursor:pointer; }
 .jobs-public .jobs-preferences-trigger:hover,.jobs-public .jobs-preferences-trigger[aria-expanded=true] { background:var(--jobs-raised);border-color:var(--jobs-line); }
@@ -106,10 +107,12 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-preferences-heading h2 { margin:0;font:600 17px/1.4 var(--sans);letter-spacing:-.01em;color:var(--jobs-ink); }
 .jobs-public .jobs-preferences-close { width:36px;height:36px;flex:none;padding:8px;color:var(--jobs-muted); }
 .jobs-public .jobs-preferences-close:hover { background:var(--jobs-raised);color:var(--jobs-ink); }
+.jobs-public .jobs-preferences-switches { display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:end;gap:12px; }
 .jobs-public .jobs-preferences-panel fieldset { min-width:0;margin:0;padding:16px 0 0;border:0; }
-.jobs-public .jobs-preferences-panel fieldset+fieldset { margin-top:18px;border-top:1px solid var(--jobs-line); }
+.jobs-public .jobs-preferences-switches+fieldset { margin-top:18px;border-top:1px solid var(--jobs-line); }
 .jobs-public .jobs-preferences-panel legend { float:left;width:100%;margin:0 0 10px;padding:0;font-size:13px;font-weight:600;line-height:1.5;color:var(--jobs-ink); }
 .jobs-public .jobs-preferences-options { clear:both;display:flex;gap:5px;padding:4px;background:var(--jobs-soft);border:1px solid var(--jobs-line);border-radius:9px; }
+.jobs-public .jobs-preferences-switches .jobs-preferences-options:not([data-squish-ready]) { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5rem),1fr)); }
 .jobs-public .jobs-preferences-options button { flex:1;min-width:0;min-height:44px;padding:9px 7px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--jobs-muted);font-size:13px;line-height:1.4;cursor:pointer; }
 .jobs-public .jobs-preferences-options button:lang(vi) { font-family:"Be Vietnam Pro",Arial,sans-serif;line-height:1.6; }
 .jobs-public .jobs-preferences-options button:hover { background:var(--jobs-raised);color:var(--jobs-ink); }

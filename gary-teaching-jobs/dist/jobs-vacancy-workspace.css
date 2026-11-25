@@ -12,7 +12,27 @@
   box-shadow: none;
   overflow: hidden;
 }
-#detail-dialog.is-vacancy-workspace[open] { animation: none; }
+#detail-dialog.is-vacancy-workspace[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  animation: none;
+}
+#vacancy-public-header {
+  --vacancy-header-height: 66px;
+  position: relative;
+  z-index: 5;
+}
+#vacancy-public-header[hidden] { display: none; }
+#vacancy-public-header .site-header {
+  position: relative;
+  border-bottom: 1px solid var(--jobs-line);
+  background: var(--jobs-surface);
+}
+#vacancy-public-header .nav-wrap {
+  height: var(--vacancy-header-height);
+  padding-inline: clamp(14px, 3vw, 42px);
+}
+#vacancy-public-header .brand-logo { width: 124px; max-height: 56px; }
 #detail-dialog.is-vacancy-workspace > .dialog-shell { padding: 0; }
 .is-vacancy-workspace :is(.dialog-shell, #dialog-content, .vacancy-workspace) { height: 100%; min-height: 0; }
 .is-vacancy-workspace .dialog-close { display: none; }
@@ -35,18 +55,11 @@
   background: var(--jobs-raised);
 }
 .vacancy-workspace .text-button { color: var(--jobs-action); font-size: 14px; white-space: normal; }
-.vacancy-workspace .dialog-job-language { -webkit-appearance: none; appearance: none; overflow: visible; }
-.vacancy-workspace .dialog-job-language:lang(vi),
-.vacancy-workspace .dialog-job-language:lang(vi) > span {
-  font-family: "Be Vietnam Pro", Arial, sans-serif;
-}
-.vacancy-workspace .dialog-job-language:lang(vi) > span {
-  display: inline-block;
-  line-height: 1.6;
-  padding-block: 0.28em 0.08em;
-}
 .vacancy-workspace-header :is(a, button), .vacancy-workspace :is(input, select) { min-height: 44px; }
-.vacancy-preferences { flex: none; }
+.vacancy-preferences { min-width: 0; gap: 8px; }
+.vacancy-preferences label { color: var(--jobs-muted); font-size: 13px; }
+.vacancy-hours { display: inline-flex; align-items: center; gap: 6px; }
+.vacancy-hours > .icon { width: 16px; height: 16px; flex: none; }
 .vacancy-workspace :is(input, select) {
   border: 1px solid var(--jobs-line);
   border-radius: 6px;
@@ -253,6 +266,15 @@ html[data-jobs-theme="dark"] .vacancy-workspace[data-vacancy-style="modern-slate
   .vacancy-word { animation: vacancy-word-reveal 240ms ease-out calc(var(--vacancy-word-index) * 8ms) both; }
 }
 
+@media (max-width: 720px) {
+  #vacancy-public-header { --vacancy-header-height: 60px; }
+  #vacancy-public-header .nav-wrap { gap: 8px; }
+  #vacancy-public-header .brand-logo { width: 106px; max-height: 48px; }
+  #vacancy-public-header :is(.jobs-preferences-panel, .gary-apps-menu-panel) {
+    top: var(--vacancy-header-height);
+    max-height: calc(100dvh - var(--vacancy-header-height) - 12px);
+  }
+}
 @media (max-width: 620px) {
   .vacancy-workspace-header { display: grid; gap: 4px; }
   .vacancy-preferences { flex-wrap: wrap; gap: 6px; }

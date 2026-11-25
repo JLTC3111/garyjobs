@@ -2,6 +2,9 @@ export const CMS_VERSION = '1.0.0';
 export const CONTENT_STATUSES = Object.freeze(['draft', 'review', 'published', 'archived']);
 export const LOCALES = Object.freeze(['en', 'vi']);
 export function getValue(record, key) { return key.split('.').reduce((value, part) => value?.[part], record); }
+export function isBlankOrZero(value) {
+  return value == null || ((typeof value === 'string' || typeof value === 'number') && Number(value) === 0);
+}
 export function setValue(record, key, value) {
   const parts = key.split('.');
   if (parts.some(part => ['__proto__', 'prototype', 'constructor'].includes(part))) throw new Error('Invalid field');
@@ -47,6 +50,13 @@ export function validateEntry(record, collection, publish = false) {
   }
   for (const field of fieldsFor(collection)) {
     const value = getValue(record, field.key);
+    if (field.type === 'checkbox') {
+      if (value != null && typeof value !== 'boolean' ||
+          value === true && field.enabledWhenEmptyOrZero && !isBlankOrZero(getValue(record, field.enabledWhenEmptyOrZero))) {
+        issue('cms-option-invalid', field.key);
+      }
+      continue;
+    }
     if (publish && field.required && (value === null || value === undefined || typeof value === 'string' && !value.trim() || Array.isArray(value) && !value.length)) issue('cms-field-required', field.key, { field: field.label?.en || field.key, language: field.locale || '' });
     if (value !== undefined && value !== null && String(value).trim() !== '') {
       const text = String(value).trim();

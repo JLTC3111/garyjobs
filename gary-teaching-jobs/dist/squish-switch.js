@@ -318,6 +318,7 @@ export function mountSquishSwitches(doc = document) {
       for (const child of holder.children) if (child !== button) child.hidden = true;
       if (button.parentElement !== holder) {
         if (key === 'jobs-public-language') button.dataset.preferenceFocus = 'language-switch';
+        if (key === 'jobs-public-holographic') button.dataset.preferenceFocus = 'holographic-switch';
         holder.append(button);
       }
       holder.dataset.squishReady = '';
@@ -327,15 +328,22 @@ export function mountSquishSwitches(doc = document) {
         continue;
       }
       const vi = doc.documentElement.lang === 'vi';
-      const effects = mode === 'effects';
-      const effectsEnabled = doc.defaultView.garyVisaPreferences?.effects ?? (on?.getAttribute('aria-pressed') === 'true');
-      const checked = effects ? effectsEnabled : vi;
+      let checked = vi, presentation = languagePresentation(vi);
+      if (mode === 'effects') {
+        const toggleState = toggle?.getAttribute('aria-checked');
+        checked = toggleState == null
+          ? (doc.defaultView.garyVisaPreferences?.effects ?? (on?.getAttribute('aria-pressed') === 'true'))
+          : toggleState === 'true';
+        const labelId = toggle?.getAttribute('aria-labelledby');
+        const label = labelId && doc.getElementById(labelId)?.textContent;
+        presentation = {
+          labels: vi ? ['Tắt', 'Bật'] : ['Off', 'On'],
+          label: label || (vi ? 'Hiệu ứng' : 'Visual effects'),
+          title: label || (vi ? (checked ? 'Tắt hiệu ứng' : 'Bật hiệu ứng') : (checked ? 'Turn effects off' : 'Turn effects on'))
+        };
+      }
       button.disabled = toggle?.disabled ?? Boolean(checked ? off?.disabled : on?.disabled);
-      present(checked, effects ? {
-        labels: vi ? ['Tắt', 'Bật'] : ['Off', 'On'],
-        label: vi ? 'Hiệu ứng' : 'Visual effects',
-        title: vi ? (checked ? 'Tắt hiệu ứng' : 'Bật hiệu ứng') : (checked ? 'Turn effects off' : 'Turn effects on')
-      } : languagePresentation(vi));
+      present(checked, presentation);
     }
   }
 
