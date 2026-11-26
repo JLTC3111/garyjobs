@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {createDiscoveryHandler} from '../api/discovery.js';
-import {createVacancyHandler} from '../api/vacancy.js';
+import {createClient} from '@supabase/supabase-js';
+import {createDiscoveryHandler,readVacancyIndex} from '../api/discovery.js';
+import {createVacancyHandler,readPublishedVacancy} from '../api/vacancy.js';
+import {createJobsPublicClient} from '../dist/jobs-public-data.js';
 import {mountSquishSwitches} from '../dist/squish-switch.js';
 
 const row={
@@ -12,9 +14,9 @@ const row={
   seo_title_en:'English teaching opportunity',
   data:{employer_name_en:'Example School',location_slug:'hanoi',street_address:'School street'},
 };
-async function request(handler,url,method='GET'){
+async function request(handler,url,method='GET',headers={}){
   const res={writeHead(status,headers){Object.assign(this,{status,headers});return this;},end(body){this.body=body;}};
-  await handler({url,method},res);
+  await handler({url,method,headers},res);
   return res;
 }
 
@@ -34,6 +36,62 @@ test('the Jobs homepage and sitemap expose active vacancy links in the response'
   const failed=createDiscoveryHandler(async()=>{throw Error('offline');});
   assert.equal((await request(failed,'/sitemap.xml')).status,503);
   assert.match((await request(failed,'/')).body,/temporarily unavailable/);
+});
+
+test('the public HTTP handlers fetch the current snapshot on every request without forwarding a session',async()=>{
+  let live=null, reads=0;
+  const client=createJobsPublicClient(createClient,async(input,options)=>{
+    reads++;
+    const {pathname,searchParams}=new URL(input),headers=new Headers(options.headers);
+    assert.equal(pathname,'/rest/v1/jobs_public_content');
+    assert.equal(searchParams.get('kind'),'eq.vacancy');
+    assert.equal(options.cache,'no-store');
+    assert.equal(headers.has('cookie'),false);
+    const authorization=headers.get('authorization');
+    assert.ok(authorization===null||authorization===`Bearer ${headers.get('apikey')}`);
+    const slug=searchParams.get('slug');
+    const rows=live&&(!slug||slug===`eq.${live.slug}`)?[live]:[];
+    return Response.json(rows,{headers:{'Content-Range':rows.length?'0-0/1':'*/0'}});
+  });
+  const discovery=createDiscoveryHandler(sitemap=>readVacancyIndex(client,sitemap));
+  const vacancy=createVacancyHandler(slug=>readPublishedVacancy(slug,client));
+  const check=async(headers, expected)=>{
+    const home=await request(discovery,'/','GET',headers);
+    const sitemap=await request(discovery,'/sitemap.xml','GET',headers);
+    const detail=await request(vacancy,'/jobs/teacher','GET',headers);
+    for(const res of [home,sitemap,detail])assert.equal(res.headers['Cache-Control'],'no-store');
+    assert.equal(home.status,200);
+    assert.equal(sitemap.status,200);
+    assert.equal(detail.status,expected?200:404);
+    if(expected){
+      assert.ok(home.body.includes(expected.title_en));
+      assert.match(sitemap.body,/jobs\/teacher/);
+      assert.ok(detail.body.includes(expected.seo_title_en));
+      assert.ok(detail.body.includes(expected.body_en));
+      assert.match(detail.body,/JobPosting/);
+    }else{
+      assert.doesNotMatch(home.body,/href="\/jobs\/teacher"/);
+      assert.doesNotMatch(sitemap.body,/jobs\/teacher/);
+      assert.doesNotMatch(detail.body,/JobPosting|data-vacancy-alternate|rel="canonical"/);
+      assert.match(detail.body,/noindex,follow/);
+    }
+  };
+  const candidate={authorization:'Bearer fixture-candidate'};
+  const staff={authorization:'Bearer fixture-staff',cookie:'jobs-session=fixture-staff'};
+  await check({},null);
+  await check(candidate,null);
+  live=row;
+  await check({},row);
+  await check(staff,row);
+  live={...row,title_en:'Newly published title',seo_title_en:'Newly published SEO',body_en:'Newly published body.'};
+  await check(candidate,live);
+  live=null;
+  await check(staff,null); // Unpublish
+  live=row;
+  await check(staff,row);
+  live=null;
+  await check(candidate,null); // Delete
+  assert.equal(reads,24);
 });
 
 test('translated vacancies expose self canonicals, reciprocal alternates and escaped JobPosting',async()=>{

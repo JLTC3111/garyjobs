@@ -1,5 +1,6 @@
 import {createClient} from './vendor/supabase.js';
 import {jobsConfig} from './jobs-config.js';
+import {createJobsPublicClient} from './jobs-public-data.js';
 import {isConflictResponse,responseError} from './conflict-response.js';
 import {attachCv, validateCv as validateCvFile} from './jobs-cv.js';
 import {createJobsPublishingAdapter} from './jobs-publishing-adapter.js';
@@ -28,10 +29,12 @@ export function errorText(error,language='en'){
  return vi?'Chưa thể hoàn tất thao tác. Kiểm tra kết nối và thử lại.':'The action could not be completed. Check your connection and try again.';
 }
 export async function capabilities(){return unwrap(await db.rpc('jobs_capabilities'));}
+let publicDb;
 export async function publicContent(){
+ publicDb??=createJobsPublicClient(createClient);
  const rows=[],signal=AbortSignal.timeout(8000);
  for(let from=0;from<10000;from+=500){
-  const page=unwrap(await db.from('jobs_public_content').select('*').order('published_at',{ascending:false}).order('id').range(from,from+499).abortSignal(signal));
+  const page=unwrap(await publicDb.from('jobs_public_content').select('*').order('published_at',{ascending:false}).order('id').range(from,from+499).abortSignal(signal));
   if(!Array.isArray(page))throw new Error('Invalid published catalogue response.');
   rows.push(...page);if(page.length<500)return rows;
  }

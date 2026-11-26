@@ -1,18 +1,16 @@
 import {readFile} from 'node:fs/promises';
 import {createClient} from '@supabase/supabase-js';
-import {jobsConfig} from '../dist/jobs-config.js';
+import {createJobsPublicClient} from '../dist/jobs-public-data.js';
 import {escapeText, hasFlexibleHours, vacancyPath, vacancySlug} from '../dist/jobs-public-content.js';
 import {jobParagraphs,jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePath,vacancyLanguages,vacancySeoText} from '../dist/jobs-seo.js';
 import {locationOptions} from '../dist/jobs-vacancy-options.js';
 
 const shell = readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
-const db = createClient(jobsConfig.supabaseUrl, jobsConfig.publishableKey, {
-  auth: {persistSession: false, autoRefreshToken: false, detectSessionInUrl: false},
-});
+const db = createJobsPublicClient(createClient);
 
-async function readPublishedVacancy(slug) {
+export async function readPublishedVacancy(slug, client = db) {
   const signal=AbortSignal.timeout(8000);
-  const {data, error} = await db.from('jobs_public_content')
+  const {data, error} = await client.from('jobs_public_content')
     .select('id,kind,slug,title_en,title_vi,summary_en,summary_vi,body_en,body_vi,seo_title_en,seo_title_vi,seo_description_en,seo_description_vi,data,published_at,expires_on')
     .eq('kind', 'vacancy').eq('slug', slug).abortSignal(signal).maybeSingle();
   if (error) throw error;
@@ -21,7 +19,7 @@ async function readPublishedVacancy(slug) {
   if(!fields.employer_name_en&&!fields.employer_name_vi&&fields.employer_slug)refs.push(fields.employer_slug);
   if(fields.location_slug&&!locationOptions.some(option=>option.value===fields.location_slug))refs.push(fields.location_slug);
   if(refs.length){
-    const reference=await db.from('jobs_public_content').select('kind,slug,title_en,title_vi')
+    const reference=await client.from('jobs_public_content').select('kind,slug,title_en,title_vi')
       .in('kind',['employer','location']).in('slug',refs).abortSignal(signal);
     if(!reference.error)data.seoReferences=reference.data||[];
   }

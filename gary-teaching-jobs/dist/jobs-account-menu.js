@@ -15,7 +15,7 @@ const paths = {
 const icon = name => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const text = value => typeof value === 'string' ? value.trim() : '';
 
-export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGuest = true}) {
+export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGuest = true, publicHeader = false}) {
   const doc = root.ownerDocument;
   const signoutDescriptionId = `${root.id}-signout-description`;
   root.innerHTML = '<summary></summary><div class="jobs-login-options"></div>';
@@ -27,6 +27,9 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
     const t = (en, vi) => language === 'vi' ? vi : en;
     const label = loading ? t('Checking session…', 'Đang kiểm tra phiên đăng nhập…')
       : user || failed ? t('My account', 'Tài khoản của tôi') : t('Sign in', 'Đăng nhập');
+    const triggerLabel = publicHeader ? t('Account', 'Tài khoản') : label;
+    const triggerTitle = loading ? t('Checking account session', 'Đang kiểm tra phiên tài khoản')
+      : user || failed ? t('Account Dashboard', 'Bảng điều khiển tài khoản') : t('Account sign-in', 'Đăng nhập tài khoản');
     const email = text(user?.email);
     const name = text(user?.user_metadata?.full_name) || text(user?.user_metadata?.name) || email;
     const initials = name.split(/\s+/).slice(0, 2).map(part => Array.from(part)[0] || '').join('').toUpperCase();
@@ -35,10 +38,11 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
     const role = staff && Object.hasOwn(roles, caps.role) ? t(...roles[caps.role]) : '';
     const destination = (access, label) => `<a href="portal.html?access=${access}">${icon(access)}<span class="jobs-account-item-label">${label}</span></a>`;
     const candidate = t('Candidate', 'Ứng viên');
-    const summary = `${avatar}<span class="jobs-account-trigger-label">${label}</span>`;
+    const summary = `${avatar}<span class="jobs-account-trigger-label">${triggerLabel}</span>`;
     root.hidden = !showGuest && (!user || loading);
     root.setAttribute('aria-busy', String(!!loading));
-    trigger.setAttribute('aria-label', label);
+    trigger.setAttribute('aria-label', publicHeader ? triggerTitle : label);
+    if (publicHeader) trigger.title = triggerTitle;
     if (loading) trigger.setAttribute('aria-disabled', 'true');
     else trigger.removeAttribute('aria-disabled');
     if (triggerMarkup !== summary) {

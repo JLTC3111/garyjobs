@@ -251,18 +251,19 @@ function installPublishedLatticeCss(doc) {
   doc.head.append(style);
 }
 
-test('a slow published-vacancy refresh shows Orbit beside the heading and keeps the current cards', async () => {
+test('a slow initial catalogue load shows Orbit beside the heading before published cards arrive', async () => {
   let resolveContent;
-  const h = bootPublic({result: () => new Promise(resolve => { resolveContent = resolve; })});
+  const content = new Promise(resolve => { resolveContent = resolve; });
+  const h = bootPublic({result: () => content});
   installPublishedLatticeCss(h.doc);
   try {
     const grid = () => h.doc.getElementById('job-grid').textContent;
-    assert.match(grid(), /English Teacher/);
+    assert.match(grid(), /Loading vacancies/);
     assert.equal(h.doc.querySelector('.lattice-loader'), null);
     assert.equal(h.doc.getElementById('published-lattice').dataset.reserve, undefined);
     await wait(160);
     assert.equal(h.doc.querySelector('.lattice-loader'), null);
-    assert.match(grid(), /English Teacher/);
+    assert.match(grid(), /Loading vacancies/);
     await wait(90);
     const loader = assertPattern(h.doc, 'orbit', 3);
     const slot = h.doc.getElementById('published-lattice');
@@ -270,17 +271,15 @@ test('a slow published-vacancy refresh shows Orbit beside the heading and keeps 
     assert.ok(slot.contains(loader));
     assert.equal(slot.getAttribute('role'), 'status');
     assert.match(loader.textContent, /Updating vacancies/);
-    assert.match(grid(), /English Teacher/);
+    assert.match(grid(), /Loading vacancies/);
     assert.doesNotMatch(grid(), /New teacher vacancy/);
     assert.equal(h.doc.getElementById('lattice-navigation'), null);
     assert.equal(h.doc.defaultView.getComputedStyle(slot).position, 'absolute');
     assert.equal(h.doc.defaultView.getComputedStyle(slot).pointerEvents, 'none');
     assertMonochrome(h.doc, loader);
-    click(h.doc.querySelector('[data-action="job"][data-id="bac-giang"]'), h.w);
-    assert.match(h.doc.querySelector('#dialog-title').textContent, /English Teacher/);
+    assert.equal(h.doc.querySelector('#job-grid [data-action="job"]'), null);
     assert.equal(h.doc.querySelector('#detail-dialog .lattice-loader'), null);
     assert.equal(h.doc.querySelectorAll('.lattice-loader').length, 1);
-    h.doc.querySelector('.dialog-close').click();
     resolveContent(published);
     await wait(30);
     assert.equal(h.doc.querySelector('.lattice-loader'), null);
@@ -298,12 +297,12 @@ test('published-vacancy refresh removes Orbit on failure, stays silent when fast
   const slow = bootPublic({result: () => new Promise((_, reject) => { rejectContent = reject; })});
   try {
     await reveal(slow.doc, 'orbit', 3);
-    assert.match(slow.doc.getElementById('job-grid').textContent, /English Teacher/);
+    assert.match(slow.doc.getElementById('job-grid').textContent, /Loading vacancies/);
     rejectContent(new Error('offline'));
     await wait(30);
     assert.equal(slow.doc.querySelector('.lattice-loader'), null);
     assert.equal(slow.doc.getElementById('published-lattice'), null);
-    assert.match(slow.doc.getElementById('job-grid').textContent, /English Teacher/);
+    assert.match(slow.doc.getElementById('job-grid').textContent, /Vacancies are temporarily unavailable/);
     assert.equal(slow.doc.querySelectorAll('.jobs-live-note').length, 0, 'anonymous visitors do not see the offline note');
     const user = {id: 'lattice-user', email: 'teacher@example.test'};
     mountJobsPublicAccount(slow.doc, {
@@ -312,7 +311,7 @@ test('published-vacancy refresh removes Orbit on failure, stays silent when fast
       signOut: async () => ({error: null}),
     }, async () => ({}));
     await wait(20);
-    assert.match(slow.doc.querySelector('.jobs-live-note').textContent, /not available yet/);
+    assert.match(slow.doc.querySelector('.jobs-live-note').textContent, /temporarily unavailable/);
     assert.equal(slow.doc.querySelector('.jobs-live-note').nextElementSibling?.id, 'job-grid');
   } finally { slow.dom.window.close(); }
   const fast = bootPublic({result: () => new Promise(resolve => setTimeout(() => resolve(published), 40))});
@@ -335,15 +334,8 @@ test('published-vacancy refresh removes Orbit on failure, stays silent when fast
 });
 
 test('real page navigation shows delayed Orbit, while a ready vacancy and a hash link do not', async () => {
-  let resolveContent;
-  const h = bootPublic({result: () => new Promise(resolve => { resolveContent = resolve; })});
+  const h = bootPublic({result: published});
   try {
-    click(h.doc.querySelector('[data-action="job"][data-id="bac-giang"]'), h.w);
-    await wait(250);
-    assert.equal(h.doc.querySelector('#detail-dialog .lattice-loader'), null);
-    assert.match(h.doc.querySelector('#dialog-title').textContent, /English Teacher/);
-    h.doc.querySelector('.dialog-close').click();
-    resolveContent(published);
     await wait(30);
     click(h.doc.querySelector('a[href="#opportunities"]'), h.w);
     click(h.doc.querySelector('a[href="https://visa.garyhome.vn/"]'), h.w);

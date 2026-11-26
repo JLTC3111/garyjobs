@@ -7,6 +7,7 @@ const ids={a:'10000000-0000-4000-8000-000000000001',b:'10000000-0000-4000-8000-0
 const migration = new URL('../supabase/migrations/20261117102706_simplify_vacancy_publication.sql',import.meta.url);
 const cvMigration = new URL('../supabase/migrations/20261124162809_jobs_cv_upload_recovery.sql',import.meta.url);
 const conflictMigration = new URL('../supabase/migrations/20261124202611_jobs_postgrest_conflict_sqlstates.sql',import.meta.url);
+const publicationMigration = new URL('../supabase/migrations/20261126065147_jobs_publication_boundary.sql',import.meta.url);
 const versionConflict = error => error.code==='PT409'&&error.message==='jobs.version_conflict';
 test('database publication choices match all curated editor category and location values',async()=>{
  const sql=await readFile(migration,'utf8');
@@ -18,7 +19,7 @@ test('database publication choices match all curated editor category and locatio
   assert.deepEqual(values.sort(),options.map(option=>option.value).sort());
  }
 });
-async function setup({latest=true}={}){
+async function setup({latest=true,publicationBoundary=latest}={}){
  const db=new PGlite();
  await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;
  create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
@@ -32,6 +33,7 @@ async function setup({latest=true}={}){
  await db.exec(await readFile(new URL('../supabase/migrations/20261116043122_teaching_jobs_cms_and_recruitment.sql',import.meta.url),'utf8'));
  if(latest)await db.exec(await readFile(migration,'utf8'));
  if(latest)await db.exec(await readFile(conflictMigration,'utf8'));
+ if(publicationBoundary)await db.exec(await readFile(publicationMigration,'utf8'));
  for(const role of ['admin','editor','recruiter'])await db.query('insert into jobs_private.staff_members(user_id,role) values($1,$2)',[ids[role],role]);
  const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec('set role '+(id?'authenticated':'anon'));};
  const q=(s,p=[])=>db.query(s,p),one=async(s,p=[])=>(await q(s,p)).rows[0];
@@ -163,6 +165,57 @@ test('archiving renamed taxonomy drafts cannot orphan current published vacancy 
 });
 
 const vacancyData = {employer_name_en:'A new school',category_slug:'public',location_slug:'hanoi',closes_on:'2099-12-31',contact_email:'jobs@example.test'};
+test('the database serves only the last live publication to anonymous, candidate and staff readers',async()=>{
+ const h=await setup({publicationBoundary:false});
+ try{
+  await h.as(ids.admin);
+  const cover={id:'40000000-0000-4000-8000-000000000001',width:800,height:450,alt_en:'Classroom',alt_vi:'Lớp học'};
+  const live=await h.publish(h.record('vacancy','live-teacher',{...vacancyData,vacancy_image:cover}));
+  const pending=await h.save({...live,slug:'replacement-teacher',title_en:'Unpublished replacement',seo_title_en:'Private SEO'});
+  const draft=await h.save(h.record('vacancy','draft-teacher',vacancyData));
+  const removed=await h.publish(h.record('vacancy','removed-teacher',vacancyData));
+  await h.save(await h.transition(removed,'archived'));
+
+  await h.db.exec('reset role');
+  const gallery={...vacancyData,vacancy_images:[{...cover,cover:true}]};
+  // The earlier gallery migration changed this projection without rewriting its audit record.
+  await h.q('update public.jobs_public_content set data=$1 where id=$2',[gallery,live.id]);
+  const insertSnapshot=row=>h.q('insert into public.jobs_public_content select * from jsonb_populate_record(null::public.jobs_public_content,$1::jsonb)',[
+   {...row,published_at:row.published_at||new Date(),expires_on:row.data.closes_on},
+  ]);
+  await insertSnapshot(draft);
+  await insertSnapshot(removed);
+  // A timezone change between publication and rollout must preserve the live copy.
+  await h.db.exec("set timezone to 'Asia/Ho_Chi_Minh'");
+  await h.db.exec(await readFile(publicationMigration,'utf8'));
+  await assert.rejects(()=>insertSnapshot(draft),/jobs.published_snapshot_required/);
+  await assert.rejects(()=>h.q('update public.jobs_public_content set title_en=$1,seo_title_en=$2 where id=$3',[pending.title_en,pending.seo_title_en,live.id]),/jobs.published_snapshot_required/);
+  const checkPublic=async expected=>{
+   for(const user of [null,ids.a,ids.editor]){
+    await h.as(user);
+    const {rows}=await h.q('select slug,title_en,seo_title_en,version from public.jobs_public_content order by slug');
+    assert.deepEqual(rows,expected?[{slug:expected.slug,title_en:expected.title_en,seo_title_en:expected.seo_title_en,version:expected.version}]:[]);
+   }
+  };
+  await checkPublic(live);
+  assert.deepEqual((await h.one('select data from public.jobs_public_content where id=$1',[live.id])).data,gallery);
+  assert.equal((await h.one('select status from public.jobs_cms_entries where id=$1',[draft.id])).status,'draft');
+
+  await h.as(ids.admin);
+  const republished=await h.transition(pending,'published');
+  await checkPublic(republished);
+  await h.as(ids.admin);
+  const archived=await h.transition(republished,'archived');
+  await checkPublic(null);
+  await h.as(ids.admin);
+  const activeAgain=await h.transition(archived,'published');
+  await checkPublic(activeAgain);
+  await h.db.exec('reset role');
+  await h.q('delete from public.jobs_cms_entries where id=$1',[activeAgain.id]);
+  await checkPublic(null);
+ }finally{await h.db.close();}
+});
+
 test('one complete English vacancy publishes directly from draft with no employer, category or location records',async()=>{
  const h=await setup();try{
   await h.as(ids.admin);

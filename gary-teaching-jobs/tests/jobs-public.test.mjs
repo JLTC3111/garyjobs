@@ -31,7 +31,7 @@ w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.
  mountJobsPublicAccount(w.document,auth,loadCapabilities);
  await settle();return dom;
 }
-test('published vacancies replace reference cards and managed categories/locations survive filter changes',async()=>{
+test('published vacancies and managed categories/locations survive filter changes',async()=>{
  const dom=await publicPage(records);try{const d=dom.window.document;assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.doesNotMatch(d.querySelector('#job-grid').textContent,/Bắc Giang/);assert.match(d.querySelector('#location').textContent,/Hanoi/);d.querySelector('[data-action="filter"][data-id="public"]').click();assert.match(d.querySelector('#job-grid').textContent,/New teacher vacancy/);assert.equal(d.querySelectorAll('[data-action="filter"][data-id="public"]').length,1);assert.equal(d.querySelectorAll('.jobs-live-note').length,0);}finally{dom.window.close();}
 });
 test('signed-in visitors see the vacancies guidance above the card grid with natural copy',async()=>{
@@ -96,17 +96,52 @@ test('published vacancy cards keep the location, bookmark and optional image wit
   assert.equal(card(first).querySelector('img').alt,image.alt_vi);
  }finally{dom.window.close();}
 });
-test('the two reference vacancies also omit the house badge',async()=>{
- const dom=await publicPage(new Error('not provisioned'));
- try{
-  const d=dom.window.document;
-  d.querySelector('#more-jobs').click();
-  for(const id of ['hai-phong','thai-nguyen']){
-   const card=d.querySelector(`#job-grid [data-action="save"][data-id="${id}"]`).closest('.job-card');
-   assert.ok(card.querySelector('.job-card-top .job-location'));
-   assert.equal(card.querySelector('.job-school-icon'),null);
-  }
- }finally{dom.window.close();}
+test('anonymous, candidate and staff public pages show only current catalogue cards and featured guides',async t=>{
+ for(const [name,options] of [
+  ['anonymous',{}],
+  ['candidate',{auth:signedInAuth()}],
+  ['staff',{auth:signedInAuth(),loadCapabilities:async()=>({read:true,role:'editor'})}],
+ ])await t.test(name,async()=>{
+  let read,load=new Promise(resolve=>{read=resolve;});
+  const dom=await publicPage(null,{...options,loadCatalogue:()=>load});
+  try{
+   const {window:w}=dom,d=w.document;
+   const grid=()=>d.querySelector('#job-grid');
+   const search=keyword=>{
+    const form=d.querySelector('#job-search');
+    form.elements.keyword.value=keyword;
+    form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+   };
+   assert.match(grid().textContent,/Loading vacancies/);
+   assert.equal(grid().querySelectorAll('.job-card').length,0);
+   assert.doesNotMatch(grid().textContent,/Bắc Giang/);
+
+   const publishedGuide={kind:'guide',slug:'welcome-guide',title_en:'Published teaching guide'};
+   read([...records,publishedGuide]);
+   await settle();
+   assert.match(grid().textContent,/New teacher vacancy/);
+   assert.match(d.querySelector('#published-guides').textContent,/Published teaching guide/);
+   search('Hải Phòng');
+   assert.equal(grid().querySelectorAll('.job-card').length,0);
+   search('New teacher');
+   assert.equal(grid().querySelectorAll('.job-card').length,1);
+
+   const refresh=()=>w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));
+   load=Promise.reject(new Error('offline'));
+   refresh();
+   await settle();
+   assert.match(grid().textContent,/temporarily unavailable/);
+   assert.equal(grid().querySelectorAll('.job-card').length,0);
+   assert.equal(d.querySelector('#published-guides'),null);
+   assert.doesNotMatch(grid().textContent,/Bắc Giang/);
+
+   load=Promise.resolve([]);
+   grid().querySelector('[data-action="retry-catalogue"]').click();
+   await settle();
+   assert.equal(grid().querySelectorAll('.job-card').length,0);
+   assert.equal(d.querySelector('#published-guides'),null);
+  }finally{dom.window.close();}
+ });
 });
 test('missing backend remains an honest email fallback without a fake application receipt',async()=>{
  const dom=await publicPage(new Error('not provisioned'));try{const d=dom.window.document;assert.equal(d.querySelectorAll('.jobs-live-note').length,0);d.querySelector('[data-action="apply"]').click();assert.match(d.querySelector('#application-form').textContent,/Nothing is submitted/);assert.equal(d.querySelector('[data-action="copy-email"]'),null);}finally{dom.window.close();}
@@ -116,7 +151,7 @@ test('signed-in visitors see the offline vacancies note when the catalogue is un
  try{
   const d=dom.window.document;
   assert.equal(d.querySelectorAll('.jobs-live-note').length,1);
-  assert.match(d.querySelector('.jobs-live-note').textContent,/not available yet/);
+  assert.match(d.querySelector('.jobs-live-note').textContent,/temporarily unavailable/);
   assert.equal(d.querySelector('.jobs-live-note').nextElementSibling?.id,'job-grid');
  }finally{dom.window.close();}
 });
@@ -144,9 +179,14 @@ test('public account restores verified dual access and removes revoked staff lin
  const dom=await publicPage(records,{auth,loadCapabilities:async()=>caps});
  try{
   const {document:d}=dom.window,menu=d.getElementById('public-account');
-  assert.equal(menu.querySelector('summary').getAttribute('aria-disabled'),'true');
+  const trigger=menu.querySelector('summary');
+  assert.equal(trigger.getAttribute('aria-disabled'),'true');
   assert.equal(menu.querySelector('a'),null);
   finishIdentity({data:{user}});await settle();
+  assert.equal(trigger.title,'Account Dashboard');
+  assert.equal(trigger.getAttribute('aria-label'),trigger.title);
+  assert.equal(trigger.querySelector('.jobs-account-trigger-label').textContent,'Account');
+  assert.equal(trigger.querySelector('.jobs-account-avatar').textContent,'T<');
   assert.equal(menu.querySelector('strong').textContent,'Teacher <One>');
   assert.equal(menu.querySelector('small').textContent,user.email);
   assert.match(menu.textContent,/Staff · Editor/);
@@ -158,6 +198,9 @@ test('public account restores verified dual access and removes revoked staff lin
   assert.equal(signout.nextElementSibling.textContent,'End your session on this website.');
   d.querySelector('[data-language=vi]').click();
   assert.equal(d.getElementById('public-account'),menu);
+  assert.equal(trigger.title,'Bảng điều khiển tài khoản');
+  assert.equal(trigger.getAttribute('aria-label'),trigger.title);
+  assert.equal(trigger.querySelector('.jobs-account-trigger-label').textContent,'Tài khoản');
   assert.match(menu.textContent,/Bảng điều khiển nhân viên/);
   assert.match(menu.textContent,/Bảng điều khiển ứng viên/);
   assert.equal(menu.querySelector('#sign-out + p').textContent,'Kết thúc phiên đăng nhập trên trang web này.');
@@ -187,7 +230,9 @@ test('public account rechecks a restored page and signs out after backend confir
  const dom=await publicPage(records,{auth});
  try{
   const w=dom.window,menu=w.document.getElementById('public-account');
-  assert.equal(menu.querySelector('summary').textContent,'Sign in');
+  assert.equal(menu.querySelector('summary').title,'Account sign-in');
+  assert.equal(menu.querySelector('summary .jobs-account-trigger-label').textContent,'Account');
+  assert.ok(menu.querySelector('summary .jobs-account-avatar svg[aria-hidden=true]'));
   signedIn=true;
   w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));
   assert.equal(menu.querySelector('a'),null);
@@ -539,7 +584,7 @@ test('unknown or unpublished vacancy URLs show unavailable state instead of refe
   try{
    const d=dom.window.document;
    assert.match(d.querySelector('#dialog-title').textContent,/Vacancy unavailable/);
-   assert.equal(d.querySelector('#detail-dialog [data-action="apply"]'),null);
+   assert.equal(d.querySelector('#dialog-content [data-action="apply"]'),null);
    assert.equal(d.querySelector('meta[name="robots"]').content,'noindex,follow');
    d.querySelector('[data-action="vacancy-listings"]').click();
    assert.equal(dom.window.location.pathname,'/');
@@ -553,7 +598,7 @@ test('backend failure on a vacancy URL offers a retry without opening a referenc
   const d=dom.window.document;
   assert.match(d.querySelector('#dialog-title').textContent,/Vacancy could not be loaded/);
   assert.ok(d.querySelector('[data-action="retry-vacancy"]'));
-  assert.equal(d.querySelector('#detail-dialog [data-action="apply"]'),null);
+  assert.equal(d.querySelector('#dialog-content [data-action="apply"]'),null);
  }finally{dom.window.close();}
 });
 

@@ -6,6 +6,7 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
   const win = doc.defaultView;
   let snapshot = {loading: true}, revision = 0, checking = -1, observedUserId = null, queued;
   const menu = mountJobsAccountMenu(root, {
+    publicHeader: true,
     async signOut() {
       const attempt = revision;
       const {error} = await withinDeadline(auth.signOut({scope: 'local'}));

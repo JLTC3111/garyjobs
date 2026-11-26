@@ -60,6 +60,7 @@ const icons = {
   check: '<path d="m5 12 4 4L19 6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/>',
+  sliders: '<path d="M3 6h6m4 0h8M3 12h10m4 0h4M3 18h4m4 0h10"/><circle cx="11" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="9" cy="18" r="2"/>',
   books: '<path d="M3 4h5v16H3zM10 4h5v16h-5zM17 5l4-1 3 16-4 1zM4 8h3m4 0h3"/>',
   cap: '<path d="m2 9 10-6 10 6-10 6zM6 12v6q6 5 12 0v-6M22 9v9"/>',
   chat: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l1-5a8.5 8.5 0 1 1 16-3.5Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/>',
@@ -90,43 +91,7 @@ const serviceSiteLink = (id, className = '') => {
   return `<a class="service-site-link ${className}" href="${site.url}" target="_blank" rel="noopener noreferrer" aria-label="${site.name}${t(' (opens in a new tab)', ' (mở trong thẻ mới)')}">${site.name} ${arrow()}</a>`;
 };
 
-let jobs = [
-  {
-    id: 'bac-giang', location: 'Bắc Giang', region: 'bac-giang', category: 'centers', type: ['Center & international school', 'Trung tâm & trường quốc tế'], title: ['English Teacher', 'Giáo viên tiếng Anh'], hours: 100, age: '4–16', date: '2026-09-12', email: 'thuyylingg2107@gmail.com', color: 'peach', icon: 'books',
-    benefit: ['50% WP / TRC support', 'Hỗ trợ 50% WP / TRC'], intro: ['Bring your energy to a language center and international school in Bắc Giang. A full-time role teaching young learners, with accommodation support and a negotiable salary.', 'Giảng dạy tại trung tâm và trường quốc tế ở Bắc Giang. Vị trí toàn thời gian dành cho học sinh nhỏ tuổi, có hỗ trợ chỗ ở và mức lương thỏa thuận.'],
-    requirements: [['Bachelor’s degree', 'Bằng cử nhân'], ['TESOL or TEFL teaching certificate', 'Chứng chỉ giảng dạy TESOL hoặc TEFL'], ['English proficiency certificate (C1, VSTEP, TOEIC, TOEFL, ESOL or equivalent)', 'Chứng chỉ năng lực tiếng Anh (C1, VSTEP, TOEIC, TOEFL, ESOL hoặc tương đương)'], ['All required documents must be legalized', 'Các giấy tờ cần thiết phải được hợp pháp hóa']],
-    notes: ['The original listing gives an ASAP start and 50% work permit / temporary residence card support. Confirm the start date and accommodation arrangements with the recruiter.', 'Tin gốc ghi nhận bắt đầu sớm và hỗ trợ 50% giấy phép lao động / thẻ tạm trú. Xác nhận ngày bắt đầu và chỗ ở với chuyên viên tuyển dụng.'],
-    source: 'https://garyagency.com/offer-in-bac-giang-2/',
-  },
-  {
-    id: 'hai-phong', location: 'Hải Phòng', region: 'hai-phong', category: 'public', type: ['Public schools', 'Trường công lập'], title: ['Public School English Teacher', 'Giáo viên tiếng Anh trường công'], hours: 60, age: null, date: '2026-08-19', email: 'chloevu02@gmail.com',
-    benefit: ['WP / TRC support', 'Hỗ trợ WP / TRC'], intro: ['Find your rhythm in the port city of Hải Phòng with an English teaching role in public schools. The published teaching load is 60 hours per month, with work permit and residence card support.', 'Giảng dạy tiếng Anh tại các trường công lập ở thành phố cảng Hải Phòng. Khối lượng giảng dạy được công bố là 60 giờ/tháng, có hỗ trợ giấy phép lao động và thẻ tạm trú.'],
-    requirements: [['CV and bachelor’s degree', 'CV và bằng cử nhân'], ['TEFL, TESOL, CELTA or equivalent teaching certificate', 'Chứng chỉ TEFL, TESOL, CELTA hoặc tương đương'], ['Short introduction video', 'Video giới thiệu ngắn'], ['The listing names South African, Russian, Moroccan, EU and native English-speaking applicants as preferred; ask the recruiter about eligibility.', 'Tin gốc ưu tiên ứng viên Nam Phi, Nga, Ma-rốc, EU và người bản ngữ; liên hệ chuyên viên để xác nhận điều kiện.']],
-    notes: ['The published start date was 7 September 2026. Ask the recruiter to confirm whether recruitment is still open and discuss the current start date.', 'Ngày bắt đầu được đăng là 7/9/2026. Liên hệ chuyên viên để xác nhận vị trí còn tuyển và ngày bắt đầu hiện tại.'],
-    source: 'https://garyagency.com/%f0%9f%9a%a8-teaching-opportunity-in-hai-phong-%f0%9f%87%bb%f0%9f%87%b3-public-schools-2/',
-  },
-  {
-    id: 'hanoi', location: 'Thạch Thất, Hà Nội', region: 'hanoi', category: 'public', type: ['Public school', 'Trường công lập'], title: ['English Teacher in Hanoi', 'Giáo viên tiếng Anh tại Hà Nội'], hours: 100, age: ['Grades 1–12', 'Lớp 1–12'], date: '2026-08-19', email: 'thuyylingg2107@gmail.com', color: 'lavender', icon: 'cap',
-    benefit: ['100% work permit support', 'Hỗ trợ 100% giấy phép lao động'], intro: ['A full-time public school opportunity in Thạch Thất, Hanoi, for Filipino English teachers. Teach students from grades 1 to 12, with work permit support provided.', 'Cơ hội toàn thời gian tại trường công ở Thạch Thất, Hà Nội, dành cho giáo viên tiếng Anh Philippines. Giảng dạy học sinh lớp 1–12, có hỗ trợ giấy phép lao động.'],
-    requirements: [['This listing is for Filipino English teachers', 'Vị trí dành cho giáo viên tiếng Anh Philippines'], ['Bachelor’s degree and a C1 / C2 English certificate', 'Bằng cử nhân và chứng chỉ tiếng Anh C1 / C2'], ['TEFL, TESOL, CELTA or equivalent is preferred', 'Ưu tiên chứng chỉ TEFL, TESOL, CELTA hoặc tương đương'], ['Good English communication and a full-time commitment in Hanoi', 'Giao tiếp tiếng Anh tốt và cam kết làm việc toàn thời gian tại Hà Nội']],
-    notes: ['Teachers already in Vietnam or able to relocate soon are given priority. Salary is negotiable; confirm the full package directly with the recruiter.', 'Ưu tiên giáo viên đang ở Việt Nam hoặc có thể sớm chuyển đến. Lương thỏa thuận; xác nhận gói quyền lợi trực tiếp với chuyên viên.'],
-    source: 'https://garyagency.com/job-offer-in-thach-that-hanoi/',
-  },
-  {
-    id: 'dong-nai', location: 'Định Quán, Đồng Nai', region: 'dong-nai', category: 'centers', type: ['Kindergarten & language center', 'Mầm non & trung tâm tiếng Anh'], title: ['Full-time English Teacher', 'Giáo viên tiếng Anh toàn thời gian'], hours: 100, age: '3–18', date: '2026-08-14', email: 'chloevu02@gmail.com', color: 'peach', icon: 'books',
-    benefit: ['Free accommodation', 'Chỗ ở miễn phí'], intro: ['Teach kindergarten and language center classes in Định Quán, Đồng Nai. The listing includes free accommodation, teaching materials and support with invitation letters, visas and 50% of WP / TRC costs.', 'Giảng dạy tại trường mầm non và trung tâm tiếng Anh ở Định Quán, Đồng Nai. Tin tuyển dụng có chỗ ở miễn phí, tài liệu giảng dạy, hỗ trợ thư mời, visa và 50% chi phí WP / TRC.'],
-    requirements: [['University degree; English major preferred', 'Bằng đại học; ưu tiên chuyên ngành tiếng Anh'], ['TESOL, CELTA or equivalent', 'Chứng chỉ TESOL, CELTA hoặc tương đương'], ['Teaching experience and relevant certificates', 'Kinh nghiệm giảng dạy và chứng chỉ liên quan'], ['C1 certificate / IELTS is preferred', 'Ưu tiên chứng chỉ C1 / IELTS']],
-    notes: ['The listing specifies weekday daytime and evening classes plus Saturday classes, with Sunday off. Confirm your exact timetable and start date with the recruiter.', 'Tin tuyển dụng có lớp ban ngày và buổi tối trong tuần, thêm thứ Bảy, nghỉ Chủ nhật. Xác nhận thời khóa biểu và ngày bắt đầu với chuyên viên.'],
-    source: 'https://garyagency.com/%f0%9f%8c%9f-full-time-english-teacher-needed-dong-nai-%f0%9f%8c%9f-4/',
-  },
-  {
-    id: 'thai-nguyen', location: 'Thái Nguyên', region: 'thai-nguyen', category: 'centers', type: ['Language center', 'Trung tâm tiếng Anh'], title: ['Native English Teacher', 'Giáo viên tiếng Anh bản ngữ'], hours: 100, age: '3–15', date: '2026-08-12', email: 'chloevu02@gmail.com',
-    benefit: ['Housing allowance', 'Hỗ trợ tiền nhà'], intro: ['A language center role in Thái Nguyên City for a native English speaker. Teach learners aged 3–15, with a published housing allowance of 2,000,000 VND per month and 50% WP / TRC support.', 'Vị trí tại trung tâm tiếng Anh ở thành phố Thái Nguyên dành cho giáo viên bản ngữ. Học sinh từ 3–15 tuổi, hỗ trợ tiền nhà 2.000.000 VNĐ/tháng và 50% WP / TRC theo tin gốc.'],
-    requirements: [['Native English speaker', 'Người nói tiếng Anh bản ngữ'], ['Bachelor’s degree', 'Bằng cử nhân'], ['CELTA, TESOL, TEFL or equivalent', 'Chứng chỉ CELTA, TESOL, TEFL hoặc tương đương'], ['CV, degree, teaching certificate and introduction video', 'CV, bằng cấp, chứng chỉ giảng dạy và video giới thiệu']],
-    notes: ['Salary is negotiable and paid monthly. Confirm the current availability, start date and housing arrangements with the recruiter.', 'Lương thỏa thuận, thanh toán hằng tháng. Xác nhận vị trí còn tuyển, ngày bắt đầu và chỗ ở với chuyên viên.'],
-    source: 'https://garyagency.com/native-english-teacher-needed-thai-nguyen-2/',
-  },
-];
+let jobs = [];
 
 const destinations = {
   hagiang: {
@@ -192,7 +157,7 @@ function renderPage() {
   const previousAccount=$('#public-account');
   const accountFocus=previousAccount?.contains(document.activeElement)?document.activeElement:null;
   $('#vacancy-public-header .site-header')?.remove();
-  if(managedRecords)jobs=managedRecords.filter(r=>r.kind==='vacancy').map((r,i)=>vacancyCard(r,i,managedRecords,state.lang));
+  jobs=(managedRecords||[]).filter(r=>r.kind==='vacancy').map((r,i)=>vacancyCard(r,i,managedRecords,state.lang));
   photoGalleryMount?.unmount();
   photoGalleryMount = null;
   clearHeaderApps();
@@ -200,16 +165,16 @@ function renderPage() {
   if(!document.documentElement.hasAttribute('data-server-vacancy'))document.title = t('English Teaching Jobs in Vietnam | Gary Agency', 'Việc làm giảng dạy tiếng Anh tại Việt Nam | Gary Agency');
   $('.skip-link').textContent = t('Skip to content', 'Chuyển đến nội dung');
   $('#app').innerHTML = `
-    <div class="announcement"><div class="container announcement-inner"><span>${icon('globe')} ${t('Your local connection to a world of opportunity.', 'Kết nối địa phương, mở ra cơ hội mới.')}</span><div class="announcement-links"><a href="#why-gary">${t('No placement fees. Ever.', 'Không phí giới thiệu việc làm.')} ${icon('arrow')}</a></div></div></div>
+    <div class="announcement"><div class="container announcement-inner"><span>${icon('pin')} ${t('Your local connection to a world of opportunity.', 'Kết nối địa phương, mở ra cơ hội mới.')}</span><div class="announcement-links"><a href="#why-gary">${t('No placement fees. Ever.', 'Không phí giới thiệu việc làm.')} ${icon('arrow')}</a></div></div></div>
     <div id="jobs-public-header-home"><header class="site-header"><div class="container nav-wrap">${brand()}
       <nav class="desktop-nav" aria-label="${t('Main navigation', 'Điều hướng chính')}">
         <a href="#opportunities">${t('Find Jobs', 'Tìm việc')}</a><a href="#questions">${t('Guides', 'Cẩm nang')}</a><a href="#life">${t('Life in Vietnam', 'Sống ở Việt Nam')}</a><a href="https://visa.garyhome.vn/" target="_blank" rel="noopener noreferrer">${t('Visa Support', 'Hỗ trợ visa')}</a>
       </nav>
       <div class="nav-actions"><details id="public-account" class="jobs-login-menu" hidden></details><div id="gary-apps-header" class="gary-apps-slot"></div>
-        <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('globe')}</button>
+        <div class="jobs-preferences"><button type="button" class="jobs-preferences-trigger" id="jobs-preferences-trigger" data-action="preferences" aria-label="${t('Website preferences','Tùy chọn website')}" title="${t('Website preferences','Tùy chọn website')}" aria-haspopup="dialog" aria-controls="jobs-preferences-panel" aria-expanded="${preferencesOpen}">${icon('sliders','jobs-preferences-icon')}</button>
           <div id="jobs-preferences-panel" class="jobs-preferences-panel" role="dialog" aria-modal="false" aria-labelledby="jobs-preferences-title" ${preferencesOpen?'':'hidden'}><div class="jobs-preferences-heading"><h2 id="jobs-preferences-title">${t('Website preferences','Tùy chọn website')}</h2><button type="button" class="jobs-preferences-close" data-action="close-preferences" data-preference-focus="close" aria-label="${t('Close preferences','Đóng tùy chọn')}">${icon('close')}</button></div>
             <div class="jobs-preferences-switches">
-              <fieldset><legend>${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
+              <fieldset><legend title="${t('Change language','Đổi ngôn ngữ')}">${icon('globe','jobs-language-icon')} ${t('Language','Ngôn ngữ')}</legend><div class="jobs-preferences-options" data-squish-key="jobs-public-language"><button type="button" data-action="language" data-language="en" data-squish-target="off" data-preference-focus="language-en" lang="en" aria-pressed="${state.lang==='en'}">English</button><button type="button" data-action="language" data-language="vi" data-squish-target="on" data-preference-focus="language-vi" lang="vi" aria-pressed="${state.lang==='vi'}">Tiếng Việt</button></div></fieldset>
               <fieldset><legend id="jobs-holo-label">${t('Iridescent Background','Quang Phổ')}</legend>
                 <div class="jobs-preferences-options" data-squish-key="jobs-public-holographic" data-squish-mode="effects">
                   <button type="button" role="switch" aria-labelledby="jobs-holo-label" aria-checked="${holoEnabled}" data-action="holo-background" data-squish-target="toggle" data-preference-focus="holographic"><span data-holo-status aria-hidden="true">${holoEnabled?t('On','Bật'):t('Off','Tắt')}</span></button>
@@ -241,7 +206,7 @@ function renderPage() {
       ].map(([symbol,title,description],index)=>`<li class="journey-step"><span class="journey-index" aria-hidden="true">0${index+1}</span><div class="journey-card"><span class="journey-symbol">${icon(symbol)}</span><div><h3>${pick(title)}</h3><p>${pick(description)}</p></div>${index<3?`<span class="journey-connector" aria-hidden="true">${icon('arrow')}</span>`:''}</div></li>`).join('')}</ol></div><div class="why-copy"><p class="eyebrow">${t('A LITTLE LOCAL KNOWLEDGE GOES A LONG WAY', 'HIỂU ĐỊA PHƯƠNG, ĐỒNG HÀNH LÂU DÀI')}</p><h2>${t('A recruitment team.<br><em>In your corner.</em>', 'Đội ngũ tuyển dụng.<br><em>Luôn đồng hành.</em>')}</h2><p class="body-copy">${t('Moving abroad is a big step. We make the work part feel smaller. Gary Agency connects English teachers with schools across Vietnam, with real people to guide you along the way.', 'Chuyển đến một đất nước khác là bước đi lớn. Gary Agency giúp việc tìm công việc trở nên dễ dàng hơn, kết nối giáo viên tiếng Anh với trường học trên khắp Việt Nam và đồng hành trong hành trình của bạn.')}</p><div class="benefit-list">${[
         ['heart', ['Your next role, without the fees', 'Công việc mới, không phí giới thiệu'], ['Our job placement service is free for teachers. You focus on what comes next.', 'Dịch vụ giới thiệu việc làm miễn phí cho giáo viên. Bạn tập trung vào hành trình phía trước.']],
         ['people', ['A local team who gets it', 'Đội ngũ địa phương thấu hiểu'], ['Personal conversations and practical support, from the very first hello.', 'Trao đổi trực tiếp và hỗ trợ thiết thực, từ lời chào đầu tiên.']],
-        ['globe', ['More places. More possibilities.', 'Nhiều điểm đến. Thêm cơ hội.'], ['Public schools, language centers and international schools. Let’s find your fit.', 'Trường công, trung tâm tiếng Anh và trường quốc tế. Cùng tìm nơi phù hợp với bạn.']],
+        ['pin', ['More places. More possibilities.', 'Nhiều điểm đến. Thêm cơ hội.'], ['Public schools, language centers and international schools. Let’s find your fit.', 'Trường công, trung tâm tiếng Anh và trường quốc tế. Cùng tìm nơi phù hợp với bạn.']],
       ].map(([symbol,title,desc])=>`<div class="benefit-row"><span class="benefit-icon">${icon(symbol)}</span><div><h3>${pick(title)}</h3><p>${pick(desc)}</p></div></div>`).join('')}</div></div></div></section>
       <section id="how-it-works" class="process-section"><div class="container"><div class="process-intro"><p class="eyebrow">${t('BIG MOVE. SIMPLE STEPS.', 'BƯỚC ĐI LỚN. KHỞI ĐẦU ĐƠN GIẢN.')}</p><h2>${t('Your application.<br><em>One step at a time.</em>', 'Hồ sơ của bạn.<br><em>Từng bước rõ ràng.</em>')}</h2></div><div class="process-grid">${[
         [['Tell us your story', 'Chia sẻ câu chuyện của bạn'], ['Your experience, your goals, your kind of place. We start by getting to know you.', 'Kinh nghiệm, mục tiêu và nơi bạn yêu thích. Chúng tôi bắt đầu bằng việc hiểu bạn.']],
@@ -427,6 +392,7 @@ function workHoursLabel(job, short = false) {
 
 function renderJobs() {
   const results = filteredJobs();
+  const ready=publicLoadState==='ready',failed=publicLoadState==='failed';
   const visible = state.expanded ? results : results.slice(0,3);
   const labels = managedRecords ? [['all',t('All opportunities','Tất cả cơ hội')],...managedCategoryLabels(),['saved',t('Saved','Đã lưu')]] : [['all', t('All opportunities','Tất cả cơ hội')], ['public',t('Public schools','Trường công lập')], ['centers',t('Language centers','Trung tâm tiếng Anh')], ['saved', `${icon('bookmark')} ${t('Saved','Đã lưu')} <span>${state.saved.size}</span>`]];
   $('#job-tabs').innerHTML = labels.map(([id,label])=>`<button data-action="filter" data-id="${esc(id)}" class="job-tab ${state.category===id?'is-active':''}" aria-pressed="${state.category===id}">${label}</button>`).join('');
@@ -436,6 +402,7 @@ function renderJobs() {
   $('#active-filters').innerHTML = state.keyword || state.location !== 'all' ? `<div class="active-filter"><span>${t('Your search', 'Tìm kiếm')}: <strong>${esc(state.keyword || t('All roles', 'Tất cả vị trí'))}</strong>${state.location !== 'all' ? ` · ${esc(jobs.find(j=>j.region===state.location)?.location || '')}` : ''}</span><button data-action="clear-search">${t('Clear search', 'Xóa tìm kiếm')} ${icon('close')}</button></div>` : '';
   $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card">${vacancyPhoto(job)}<div class="job-card-top"><div class="job-location">${icon('pin')} ${job.location}</div><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-button-variant="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags">${job.flexibleHours||job.hours>0?`<span>${icon('clock')}${workHoursLabel(job,true)}</span>`:''}<span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
   const more = $('#more-jobs');
+  if(!ready)$('#job-grid').innerHTML=`<div class="empty-state"><p role="status">${failed?t('Vacancies are temporarily unavailable.','Chưa thể tải tin tuyển dụng.'):t('Loading vacancies…','Đang tải tin tuyển dụng…')}</p>${failed?`<button class="button" type="button" data-action="retry-catalogue">${t('Try again','Thử lại')}</button>`:''}</div>`;
   more.hidden = results.length <= 3;
   more.innerHTML = `${state.expanded?t('Show fewer opportunities','Thu gọn danh sách'):t(`Explore all ${results.length} opportunities`,`Xem cả ${results.length} cơ hội`)} ${icon(state.expanded?'chevron':'arrow')}`;
 }
@@ -872,6 +839,7 @@ document.addEventListener('click',event=>{
   if(action==='vacancy-browse')control.setAttribute('aria-expanded',String(control.getAttribute('aria-expanded')!=='true'));
   if(action==='share-vacancy')void shareVacancy(id,control);
   if(action==='retry-vacancy')void loadPublishedContent({interactive:true});
+  if(action==='retry-catalogue'){publicLoadState='loading';renderJobs();syncPublishedLattice();void loadPublishedContent();}
   if(action==='apply'){toggleMenu(false);openApplication(id);}
   if(action==='close-dialog')closeDialog();
   if(action==='destination')openDestination(id);
@@ -980,9 +948,9 @@ function syncLiveNote(){
   $$('.jobs-live-note').forEach(el=>el.remove());
   // Wait for auth to resolve, then show only for an active signed-in session.
   if(publicAuth.loading||!publicAuth.user)return;
+  if(publicLoadState==='loading')return;
   const note=document.createElement('p');note.className='jobs-live-note';note.setAttribute('role','status');
-  note.textContent=backendReady?t('Vacancies are shown until their application deadline. You can apply and track your application status in the Candidate Portal.','Các tin tuyển dụng được hiển thị đến hạn nhận hồ sơ. Bạn có thể ứng tuyển và theo dõi trạng thái hồ sơ tại Cổng ứng viên.'):t('Online applications are not available yet. These reference listings require recruiter confirmation; the fallback form only prepares an email.','Ứng tuyển trực tuyến chưa khả dụng. Tin tham khảo cần được chuyên viên xác nhận; biểu mẫu dự phòng chỉ chuẩn bị email.');
-  if(!backendReady&&managedRecords)note.textContent=t('The vacancy list could not be refreshed. Open a listing to check its availability.','Chưa thể cập nhật danh sách tuyển dụng. Hãy mở tin để kiểm tra xem vị trí còn tuyển không.');
+  note.textContent=backendReady?t('Vacancies are shown until their application deadline. You can apply and track your application status in the Candidate Portal.','Các tin tuyển dụng được hiển thị đến hạn nhận hồ sơ. Bạn có thể ứng tuyển và theo dõi trạng thái hồ sơ tại Cổng ứng viên.'):t('Online applications are temporarily unavailable. You can contact our recruitment team by email.','Chưa thể ứng tuyển trực tuyến. Bạn có thể liên hệ đội tuyển dụng qua email.');
   const grid=$('#job-grid');
   if(grid)grid.before(note);
 }
@@ -1005,7 +973,11 @@ function loadPublishedContent({interactive=false}={}){
     }
   }).catch(()=>{
     document.documentElement.removeAttribute('data-server-vacancy');
-    backendReady=false;publicLoadState='failed';stopPublishedLattice();renderManagedContent();syncVacancyRoute();
+    const hadPublishedContent=managedRecords!==null;
+    managedRecords=null;catalogueStamp=null;
+    backendReady=false;publicLoadState='failed';stopPublishedLattice();
+    if(hadPublishedContent)renderPage();
+    else {renderJobs();syncLiveNote();syncVacancyRoute();}
   }).finally(()=>{catalogueFlight=null;});
   return catalogueFlight;
 }

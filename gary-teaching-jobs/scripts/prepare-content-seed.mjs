@@ -1,10 +1,7 @@
 // Optional editorial import. Every imported record is a draft; no stale role is
 // published and no current staff-edited content is overwritten.
-import {readFile,writeFile} from 'node:fs/promises';
-import vm from 'node:vm';
-const source=await readFile(new URL('../dist/app.js',import.meta.url),'utf8');
-const start=source.indexOf('let jobs = [')+'let jobs = '.length,end=source.indexOf('\n];',start)+2;
-const jobs=vm.runInNewContext('('+source.slice(start,end)+')',Object.create(null),{timeout:100});
+import {writeFile} from 'node:fs/promises';
+import {jobs} from './jobs-reference-listings.mjs';
 const records=[],taxonomy=(kind,slug,en,vi)=>({kind,slug,title_en:en,title_vi:vi,summary_en:`Teaching recruitment ${kind}: ${en}.`,summary_vi:`Thông tin tuyển dụng: ${vi}.`,body_en:'',body_vi:'',data:{}});
 records.push(taxonomy('category','public','Public schools','Trường công lập'),taxonomy('category','centers','Language centers','Trung tâm tiếng Anh'));
 for(const job of jobs){

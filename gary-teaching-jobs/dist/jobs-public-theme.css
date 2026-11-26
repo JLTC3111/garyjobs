@@ -113,6 +113,7 @@ html[data-jobs-theme=dark] .jobs-public .brand-logo.jobs-logo-dark { display:blo
 .jobs-public .jobs-preferences-panel fieldset { min-width:0;margin:0;padding:16px 0 0;border:0; }
 .jobs-public .jobs-preferences-switches+fieldset { margin-top:18px;border-top:1px solid var(--jobs-line); }
 .jobs-public .jobs-preferences-panel legend { float:left;width:100%;margin:0 0 10px;padding:0;font-size:13px;font-weight:600;line-height:1.5;color:var(--jobs-ink); }
+.jobs-public .jobs-language-icon { width:15px;height:15px;vertical-align:text-bottom; }
 .jobs-public .jobs-preferences-options { clear:both;display:flex;gap:5px;padding:4px;background:var(--jobs-soft);border:1px solid var(--jobs-line);border-radius:9px;overflow:visible; }
 .jobs-public .jobs-preferences-options[data-squish-ready] { display:block;width:100%;padding:0;border:0;background:transparent; }
 .jobs-public .jobs-preferences-switches .jobs-preferences-options:not([data-squish-ready]) { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5rem),1fr)); }

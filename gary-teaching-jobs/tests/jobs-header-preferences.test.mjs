@@ -214,7 +214,7 @@ test('Jobs mounts the dashboard Squish Switch for signed-in staff and candidates
     } finally {await h.close();}
   }
 });
-test('one globe opens a nonmodal preferences dialog; Escape and close restore focus', async () => {
+test('sliders open Site Preferences and the language control owns the globe', async () => {
   const h=await page(),{d,w}=h;
   try {
     assert.equal(d.querySelectorAll('#jobs-preferences-trigger').length,1);
@@ -224,6 +224,13 @@ test('one globe opens a nonmodal preferences dialog; Escape and close restore fo
     assert.equal(d.querySelectorAll('.jobs-preferences-panel fieldset').length,3);
     const trigger=d.querySelector('#jobs-preferences-trigger'),panel=d.querySelector('#jobs-preferences-panel');
     assert.equal(trigger.getAttribute('aria-controls'),panel.id);assert.equal(trigger.getAttribute('aria-haspopup'),'dialog');
+    assert.equal(trigger.title,'Website preferences');
+    assert.equal(trigger.getAttribute('aria-label'),trigger.title);
+    assert.ok(trigger.querySelector('.jobs-preferences-icon[aria-hidden=true]'));
+    assert.equal(trigger.querySelector('.jobs-language-icon'),null);
+    const language=panel.querySelector('.jobs-language-icon').closest('legend');
+    assert.equal(language.title,'Change language');
+    assert.equal(language.textContent.trim(),'Language');
     assert.equal(panel.hidden,true);
     d.querySelector('.jobs-login-menu').open=true;d.querySelector('.gary-apps-menu').open=true;
     trigger.click();
@@ -234,6 +241,11 @@ test('one globe opens a nonmodal preferences dialog; Escape and close restore fo
     assert.equal(panel.hidden,true);assert.equal(d.activeElement,trigger);
     trigger.click();d.querySelector('[data-action=close-preferences]').click();
     assert.equal(panel.hidden,true);assert.equal(d.activeElement,trigger);
+    trigger.click();d.querySelector('[data-language=vi]').click();
+    const translated=d.querySelector('#jobs-preferences-trigger');
+    assert.equal(translated.title,'Tùy chọn website');
+    assert.equal(translated.getAttribute('aria-label'),translated.title);
+    assert.equal(d.querySelector('.jobs-language-icon').closest('legend').title,'Đổi ngôn ngữ');
   } finally {h.dom.window.close();}
 });
 test('outside pointer and Tab focus dismiss without stealing focus; inside choices remain usable', async () => {

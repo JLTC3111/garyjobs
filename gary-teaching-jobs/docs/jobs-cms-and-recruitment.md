@@ -61,7 +61,7 @@ The vacancy handler reads published snapshots and serves vacancy-specific HTML w
 
 Draft save -> review -> publisher publish is enforced in the database, not just the UI. Publishing requires bilingual titles/summaries/body as applicable; vacancies additionally require a valid future/current closing date, contact email, and published employer/category/location references. An open vacancy prevents archiving or renaming a referenced profile.
 
-Working drafts live in `jobs_cms_entries`; public readers see only `jobs_public_content` snapshots. Saving a draft never changes/disappears the currently published content. Archive removes its public snapshot. Every save/transition/restore records a revision. Writes require the expected version; stale editors receive conflicts rather than overwriting newer work. Restoring a revision creates a fresh draft/version and requires review before republishing.
+Working drafts live in `jobs_cms_entries`. Public readers use `jobs_public_content` snapshots, and the database checks each new snapshot against the approved CMS version. Draft edits preserve the current published snapshot. Archive and hard deletion remove it. Every save, transition and restore records a revision. Writes require the expected version, so stale editors receive conflicts. Restoring a revision creates a fresh draft and version.
 
 Marketing image media is public in `jobs-media`, limited to JPEG/PNG/WebP/AVIF at 8 MiB, with both English and Vietnamese alt text. This library must never store CVs or other candidate documents.
 
@@ -80,9 +80,9 @@ Marketing image media is public in `jobs-media`, limited to JPEG/PNG/WebP/AVIF a
 
 ## Honest unavailable state
 
-Until the reviewed migration is applied, public queries cannot find the new tables. The public site keeps explicitly labelled reference listings and its email-draft fallback. It never claims that fallback data was submitted. The portal displays an unavailable/provisioning message rather than fake saved content or demo recruitment records.
+The public site shows a loading, empty or unavailable state when it has no current catalogue response. Visitors can prepare an email to the recruitment team during an outage. The portal displays a provisioning message when its database is unavailable.
 
-Once provisioned, an empty published catalogue is shown honestly as empty; it does not silently substitute old vacancies. Optional source seed records are drafts only, require employer and closing-date review, and never auto-publish stale listings.
+The homepage, vacancy URLs and sitemap fetch fresh snapshots on each request. Open public pages also refresh when visitors return to them. Optional source seed records remain editorial drafts until a publisher verifies the employer and closing date and publishes them.
 
 ## Rollout (database migration applied; remaining steps pending)
 

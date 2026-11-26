@@ -1,11 +1,11 @@
 import {readFile} from 'node:fs/promises';
 import {createClient} from '@supabase/supabase-js';
-import {jobsConfig} from '../dist/jobs-config.js';
+import {createJobsPublicClient} from '../dist/jobs-public-data.js';
 import {escapeText,vacancyPath} from '../dist/jobs-public-content.js';
 import {jobsOrigin,vacancyLanguages,vacancyLanguagePath,vacancyAlternates} from '../dist/jobs-seo.js';
 
 const shell=readFile(new URL('../dist/index.html',import.meta.url),'utf8');
-const db=createClient(jobsConfig.supabaseUrl,jobsConfig.publishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+const db=createJobsPublicClient(createClient);
 
 export async function readVacancyIndex(client,includeLocales) {
   const rows=[],signal=AbortSignal.timeout(5000);
@@ -59,8 +59,7 @@ export function createDiscoveryHandler(load=(sitemap)=>readVacancyIndex(db,sitem
     }
     const type=sitemap?'application/xml':'text/html';
     const body=sitemap?jobsSitemap(rows):jobsHomepage(await shell,rows);
-    const cache=rows&&!sitemap?'public, max-age=0, s-maxage=60':'no-store';
-    res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':cache,'X-Content-Type-Options':'nosniff'})
+    res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
       .end(req.method==='HEAD'?undefined:body);
   };
 }

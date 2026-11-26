@@ -37,7 +37,7 @@ The Sites project is registered in `.openai/hosting.json`. Publication was not c
 - Direct links to [Gary Homes](https://garyhome.vn/) and [Gary Visa Service](https://visa.garyhome.vn/) in the desktop service navigation, phone menu, support cards, matching service dialogs, and footer. External service links open in a new tab.
 - Keyboard focus, native modal focus containment, reduced-motion support, larger phone controls, and local browser storage.
 
-The Jobs CMS and candidate/recruitment portal are implemented in `/portal.html`. Published backend content replaces reference listings when the reviewed schema is provisioned. Verified candidates submit applications with durable receipts and private CVs; Jobs staff roles independently control publishing and recruitment. Until the database release is installed, the site clearly labels reference listings and uses its email-draft fallback without claiming a submission. See [CMS/backend architecture, tests and rollout](docs/jobs-cms-and-recruitment.md). The database migration was applied on 16 November 2026; staff-role bootstrap and website deployment remain pending.
+The Jobs CMS and candidate/recruitment portal are implemented in `/portal.html`. The public catalogue displays current published vacancies. Verified candidates submit applications with durable receipts and private CVs. Jobs staff roles independently control publishing and recruitment. If the catalogue is unavailable, visitors can still prepare an email to the recruitment team. See [CMS/backend architecture, tests and rollout](docs/jobs-cms-and-recruitment.md). The original database migration was applied on 16 November 2026.
 
 ## Files
 
