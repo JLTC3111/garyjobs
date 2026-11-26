@@ -18,7 +18,7 @@ function signedInAuth(user=signedInUser){
   signOut:async()=>({error:null}),
  };
 }
-async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),reducedMotion=false,storedStyle,loadCatalogue,shell}={}){
+async function publicPage(result,{url='https://jobs.garyhome.vn/',auth={onAuthStateChange:callback=>callback('INITIAL_SESSION',null)},loadCapabilities=async()=>({}),loadPhoto,reducedMotion=false,storedStyle,loadCatalogue,shell}={}){
  const dom=new JSDOM(shell??await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),{url,runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;
  if(storedStyle!==undefined)w.localStorage.setItem('gary-jobs-vacancy-style',JSON.stringify(storedStyle));
@@ -28,7 +28,8 @@ w.IntersectionObserver=class{observe(){}disconnect(){}};w.HTMLElement.prototype.
  w.vacancyCard=vacancyCard;w.vacancySlug=vacancySlug;w.escapeText=escapeText;w.safeLink=safeLink;w.publicContent=loadCatalogue||(()=>result instanceof Error?Promise.reject(result):Promise.resolve(result));
  const source=(await readFile(new URL('../dist/app.js',import.meta.url),'utf8')).split('\n').filter(l=>!l.startsWith('import ')).join('\n');
  vm.runInContext(source,dom.getInternalVMContext());
- mountJobsPublicAccount(w.document,auth,loadCapabilities);
+ if(loadPhoto){w.URL.createObjectURL=()=> 'blob:jobs-avatar-fixture';w.URL.revokeObjectURL=()=>{};}
+ mountJobsPublicAccount(w.document,auth,loadCapabilities,loadPhoto);
  await settle();return dom;
 }
 test('published vacancies and managed categories/locations survive filter changes',async()=>{
@@ -835,4 +836,49 @@ test('Undo restores the local shortlist after a confirmed bookmark change',async
   assert.ok(!JSON.parse(dom.window.localStorage.getItem(key)).includes(id));
   assert.match(doc.querySelector('[data-tone="info"] [data-success-message]').textContent,/undone/);
  }finally{dom.window.close();}
+});
+
+test('the Account uses an uploaded photo, saved name, then the generic user icon',async()=>{
+ const id='90000000-0000-4000-8000-000000000001';
+ const user={id,email:'email-only@example.test',user_metadata:{full_name:'email-only@example.test'}};
+ const path=id+'/90000000-0000-4000-8000-000000000002.webp';
+ let account={full_name:'Saved Name',avatar_path:path}, photoReads=0;
+ const dom=await publicPage(records,{auth:signedInAuth(user),loadCapabilities:async()=>({account}),loadPhoto:async key=>{
+  assert.equal(key,path);photoReads++;
+  return new Blob(['fixture'],{type:'image/webp'});
+ }});
+ try {
+  const {window:w}=dom,d=w.document;
+  const avatar=()=>d.querySelector('#public-account summary .jobs-account-avatar');
+  // The photo promise can resolve before publicPage returns.
+  await settle();
+  assert.equal(avatar().querySelector('img')?.getAttribute('src'),'blob:jobs-avatar-fixture');
+  w.dispatchEvent(new w.Event('focus'));await settle();assert.equal(photoReads,1);
+  account={full_name:'Saved Name',avatar_path:null};
+  w.dispatchEvent(new w.Event('focus'));await settle();assert.equal(avatar().textContent,'SN');
+  account={full_name:'',avatar_path:null};
+  w.dispatchEvent(new w.Event('focus'));await settle();
+  assert.equal(avatar().textContent,'');
+  assert.ok(avatar().querySelector('svg[aria-hidden=true]'));
+  assert.equal(d.querySelector('#public-account .jobs-account-trigger-label').textContent,'Account');
+  assert.ok(d.querySelector('#jobs-preferences-trigger svg'));
+ } finally {dom.window.close();}
+});
+
+test('restoring the page hides cached vacancy cards until a new publication read finishes',async()=>{
+ let catalogue=Promise.resolve([...records,{id:'faq',kind:'faq',title_en:'Retired answer',body_en:'An old public answer'}]);
+ const dom=await publicPage(null,{loadCatalogue:()=>catalogue});
+ try {
+  const {window:w}=dom,d=w.document;
+  let resolved;
+  catalogue=new Promise(resolve=>{resolved=resolve;});
+  assert.ok(d.querySelector('#job-grid a[href="/jobs/teacher"]'));
+  assert.match(d.querySelector('#questions .faq-list').textContent,/Retired answer/);
+  w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));
+  assert.equal(d.querySelector('#job-grid a[href="/jobs/teacher"]'),null);
+  assert.doesNotMatch(d.querySelector('#questions .faq-list').textContent,/Retired answer/);
+  resolved(records.filter(row=>row.kind!=='vacancy'));
+  await settle();
+  assert.equal(d.querySelector('#job-grid a[href="/jobs/teacher"]'),null);
+ } finally {dom.window.close();}
 });

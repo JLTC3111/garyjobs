@@ -292,3 +292,61 @@ test('function-only upgrade preserves published vacancies, revisions and legacy 
   await h.as(null);await assert.rejects(()=>h.q('select jobs_private.check_publication(null::public.jobs_cms_entries)'),/permission/);
  }finally{await h.db.close();}
 });
+
+test('a current draft withdraws its old vacancy snapshot for public roles and republishing restores only approved data',async()=>{
+ const h=await setup();
+ try {
+  await h.as(ids.admin);
+  const data=vacancyData;
+  const first=await h.publish(h.record('vacancy','former-live',data));
+  const pending=await h.save({...first,title_en:'Unpublished edit'});
+  const guide=await h.publish(h.record('guide','former-guide'));
+  await h.save({...guide,title_en:'Unpublished guide'});
+  const location=await h.publish(h.record('location','hanoi'));
+  await h.save({...location,title_en:'Unpublished location name'});
+  await h.publish(h.record('vacancy','still-live',{...data,location_slug:location.slug}));
+  const faq=await h.publish(h.record('faq','live-faq'));
+  await h.db.exec('reset role');
+  await h.db.exec(await readFile(new URL('../supabase/migrations/20261126114000_jobs_vacancy_current_publication.sql',import.meta.url),'utf8'));
+  for(const id of [null,ids.a,ids.editor]) {
+   await h.as(id);
+   assert.deepEqual((await h.q('select slug from public.jobs_public_content order by slug')).rows,
+    [{slug:'hanoi'},{slug:'live-faq'},{slug:'still-live'}]);
+  }
+  await h.as(ids.admin);
+  const restored=await h.transition(await h.transition(pending,'review'),'published');
+  await h.as(null);
+  assert.equal((await h.one('select title_en from public.jobs_public_content where id=$1',[first.id])).title_en,'Unpublished edit');
+  await h.as(ids.admin);
+  await h.save({...restored,title_en:'Next draft'});
+  await h.save({...faq,title_en:'Unpublished answer'});
+  await h.db.exec('reset role');
+  assert.equal((await h.q('select id from public.jobs_public_content where id in ($1,$2)',[first.id,faq.id])).rows.length,0);
+  assert.ok((await h.q('select id from public.jobs_cms_revisions where entry_id=$1',[first.id])).rows.length>0);
+ } finally {await h.db.close();}
+});
+
+test('the existing capability request carries only the current Jobs account profile',async()=>{
+ const h=await setup();
+ try {
+  await h.db.exec(`create function auth.jwt() returns jsonb language sql stable as 'select ''{}''::jsonb';
+   create or replace function jobs_private.can_manage_staff() returns boolean language sql as 'select false';
+   create or replace function jobs_private.can_manage_admins() returns boolean language sql as 'select false';`);
+  await h.q("insert into public.jobs_candidates(id,full_name,email) values($1,'Saved Full Name','first@example.test'),($2,'Other Name','other@example.test')",
+   [ids.a,ids.b]);
+  await h.db.exec(await readFile(new URL('../supabase/migrations/20261126114100_jobs_account_profile_in_capabilities.sql',import.meta.url),'utf8'));
+  await h.as(ids.a);
+  let access=(await h.one('select public.jobs_capabilities() access')).access;
+  assert.deepEqual(access.account,{full_name:'Saved Full Name',avatar_path:null});
+  await h.db.exec('reset role');
+  await h.db.exec(`create table public.jobs_avatar_profiles(user_id uuid,path text);
+   alter table public.jobs_avatar_profiles enable row level security;
+   grant select on public.jobs_avatar_profiles to authenticated;
+   create policy own_avatar on public.jobs_avatar_profiles for select using(user_id=auth.uid());`);
+  await h.q('insert into public.jobs_avatar_profiles values($1,$2),($3,$4)',[ids.a,'own.webp',ids.b,'other.webp']);
+  await h.as(ids.a);
+  access=(await h.one('select public.jobs_capabilities() access')).access;
+  assert.deepEqual(access.account,{full_name:'Saved Full Name',avatar_path:'own.webp'});
+  assert.equal(access.recruit,false);
+ } finally {await h.db.close();}
+});

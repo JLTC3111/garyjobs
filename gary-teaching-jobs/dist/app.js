@@ -2,10 +2,13 @@ import { mountGaryApps, mountPhotoGallery, mountGlassHero } from './photo-galler
 import {publicContent} from './jobs-backend.js';
 import {vacancyCard,vacancySlug,escapeText,safeLink} from './jobs-public-content.js';
 import {jobPosting,jobSchemaJson,jobsOrigin,vacancyAlternates,vacancyLanguagePath,vacancyLanguages,vacancySeoText} from './jobs-seo.js';
-import {showActionToast,setCounterValues} from './action-toast.js';
+import {showActionToast,setCounterValues,clearCounterValues} from './action-toast.js';
 import {createHoloBackground} from './jobs-hero-background.js';
 let managedRecords=null,backendReady=false,publicLoadState='loading',routeDialog=false;
 let catalogueStamp=null,catalogueFlight=null;
+let catalogueCheckedAt=0;
+const catalogueFreshnessMs=30_000;
+let defaultFaqMarkup='';
 let publicAuth={loading:true,user:null,failed:false};
 let vacancyQuery='';
 const defaultSocialImage=document.querySelector('meta[property="og:image"]')?.content;
@@ -246,6 +249,7 @@ function renderPage() {
   else if(typeof mountGlassHero==='function')glassHeroMount=mountGlassHero($('#jobs-glass-hero'),{locale:state.lang,guidesTarget:managedRecords?.some(record=>record.kind==='guide')?'#published-guides':'#questions'});
   renderThemeControls();
   renderJobs();
+  defaultFaqMarkup=$('#questions .faq-list').innerHTML;
   renderManagedContent();
   document.dispatchEvent(new CustomEvent('jobs:public-render'));
   observeNavigation();
@@ -398,7 +402,10 @@ function renderJobs() {
   $('#job-tabs').innerHTML = labels.map(([id,label])=>`<button data-action="filter" data-id="${esc(id)}" class="job-tab ${state.category===id?'is-active':''}" aria-pressed="${state.category===id}">${label}</button>`).join('');
   $('#job-count-label').textContent = t(results.length === 1 ? ' opportunity to explore' : ' opportunities to explore', ' cơ hội để khám phá');
   if (managedRecords !== null) setCounterValues(document, {'job-count-value': results.length}, state.lang);
-  else $('#job-count-value').textContent = String(results.length);
+  else {
+    clearCounterValues(document,['job-count-value']);
+    $('#job-count-value').textContent = String(results.length);
+  }
   $('#active-filters').innerHTML = state.keyword || state.location !== 'all' ? `<div class="active-filter"><span>${t('Your search', 'Tìm kiếm')}: <strong>${esc(state.keyword || t('All roles', 'Tất cả vị trí'))}</strong>${state.location !== 'all' ? ` · ${esc(jobs.find(j=>j.region===state.location)?.location || '')}` : ''}</span><button data-action="clear-search">${t('Clear search', 'Xóa tìm kiếm')} ${icon('close')}</button></div>` : '';
   $('#job-grid').innerHTML = visible.length ? visible.map(job=>`<article class="job-card">${vacancyPhoto(job)}<div class="job-card-top"><div class="job-location">${icon('pin')} ${job.location}</div><button class="icon-button button-utility save-job ${state.saved.has(job.id)?'is-saved':''}" data-action="save" data-button-variant="save" data-id="${job.id}" aria-pressed="${state.saved.has(job.id)}" aria-label="${state.saved.has(job.id)?t('Unsave','Bỏ lưu'):t('Save','Lưu')} ${esc(pick(job.title))} · ${job.location}">${icon('bookmark')}</button></div><h3>${job.url?`<a href="${esc(job.url)}" data-action="job" data-id="${job.id}">${pick(job.title)}</a>`:`<button data-action="job" data-id="${job.id}">${pick(job.title)}</button>`}</h3><p class="job-type">${pick(job.type)}</p>${job.employer&&pick(job.employer)?`<p class="job-employer">${pick(job.employer)}</p>`:''}<div class="job-tags">${job.flexibleHours||job.hours>0?`<span>${icon('clock')}${workHoursLabel(job,true)}</span>`:''}<span>${t('Full-time','Toàn thời gian')}</span></div><div class="job-benefit">${icon('check')} ${pick(job.benefit)}</div><div class="job-card-bottom"><div><span>${t('Salary','Mức lương')}</span><strong>${job.salary?pick(job.salary)||t('Let’s discuss','Thỏa thuận'):t('Let’s discuss','Thỏa thuận')}</strong></div>${job.url?`<a class="round-arrow button-utility" href="${esc(job.url)}" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</a>`:`<button class="round-arrow button-utility" data-action="job" data-id="${job.id}" aria-label="${t('View role in','Xem vị trí ở')} ${job.location}">${arrow()}</button>`}</div></article>`).join('') : `<div class="empty-state">${icon(state.category==='saved'?'bookmark':'search')}<h3>${state.category==='saved'?t('Your next chapter is waiting.','Chương tiếp theo đang chờ bạn.'):t('Let’s widen the search.','Cùng mở rộng tìm kiếm.')}</h3><p>${state.category==='saved'?t('Tap the bookmark on a role to keep it here.','Bấm biểu tượng lưu trên công việc để lưu tại đây.'):t('No roles match these filters. Try another location or tell our team what you’re looking for.','Không có công việc phù hợp bộ lọc. Thử nơi khác hoặc chia sẻ mong muốn với đội ngũ.')}</p><button class="button" data-action="reset-jobs">${t('See all opportunities','Xem tất cả cơ hội')} ${icon('arrow')}</button></div>`;
   const more = $('#more-jobs');
@@ -868,7 +875,9 @@ document.addEventListener('change',event=>{
 
 document.addEventListener('submit',event=>{
   if(event.target.id==='job-search'){
-    event.preventDefault();const form=new FormData(event.target);state.keyword=String(form.get('keyword')||'').trim();state.location=String(form.get('location')||'all');state.category='all';state.expanded=true;renderJobs();$('#opportunities').scrollIntoView({behavior:'smooth'});
+    event.preventDefault();const form=new FormData(event.target);state.keyword=String(form.get('keyword')||'').trim();state.location=String(form.get('location')||'all');state.category='all';state.expanded=true;
+    if(catalogueCheckedAt&&Date.now()-catalogueCheckedAt>=catalogueFreshnessMs)refreshStaleCatalogue();else renderJobs();
+    $('#opportunities').scrollIntoView({behavior:'smooth'});
   }
   if(event.target.id==='application-form'){
     event.preventDefault();const form=new FormData(event.target);const job=jobs.find(j=>j.id===event.target.dataset.job);const email=job?.email||'thuyylingg2107@gmail.com';
@@ -936,7 +945,9 @@ function renderManagedContent(){
   const guides=records.filter(r=>r.kind==='guide'),employers=records.filter(r=>r.kind==='employer'),faqs=records.filter(r=>r.kind==='faq');
   section.innerHTML=(guides.length?`<h2>${t('Teaching guides','Cẩm nang giảng dạy')}</h2>`+guides.map(r=>`<article><h3>${pickRecord(r,'title')}</h3><p>${pickRecord(r,'summary')}</p><p style="white-space:pre-line">${pickRecord(r,'body')}</p></article>`).join(''):'')+(employers.length?`<h2>${t('Meet our employers','Nhà tuyển dụng')}</h2>`+employers.map(r=>{const website=safeLink(r.data?.website),logo=safeLink(r.data?.logo_url);return `<article>${logo?`<img src="${escapeText(logo)}" alt="${pickRecord(r,'title')}" loading="lazy" width="96" height="96">`:''}<h3>${pickRecord(r,'title')}</h3><p>${pickRecord(r,'summary')}</p>${r['body_'+state.lang]?`<p style="white-space:pre-line">${pickRecord(r,'body')}</p>`:''}${website?`<a href="${escapeText(website)}" target="_blank" rel="noopener noreferrer">${t('Employer website','Website nhà tuyển dụng')}</a>`:''}</article>`;}).join(''):'');
   if(section.innerHTML)$('#questions').before(section);
-  if(faqs.length)$('#questions .faq-list').innerHTML=faqs.map(r=>`<details class="faq-item"><summary><span>${pickRecord(r,'title')}</span><span aria-hidden="true">+</span></summary><p>${pickRecord(r,'body')}</p></details>`).join('');
+  const faqList=$('#questions .faq-list');
+  if(faqs.length)faqList.innerHTML=faqs.map(r=>`<details class="faq-item"><summary><span>${pickRecord(r,'title')}</span><span aria-hidden="true">+</span></summary><p>${pickRecord(r,'body')}</p></details>`).join('');
+  else if(faqList.innerHTML!==defaultFaqMarkup)faqList.innerHTML=defaultFaqMarkup;
   if(managedRecords){
     const locations=new Map(records.filter(r=>r.kind==='location').map(r=>[r.slug,pickRecord(r,'title')]));
     for(const job of jobs)if(job.region)locations.set(job.region,job.location);
@@ -964,6 +975,7 @@ function loadPublishedContent({interactive=false}={}){
   catalogueFlight=Promise.resolve().then(publicContent).then(records=>{
     const isRecovering=!backendReady,needsRoute=publicLoadState!=='ready';
     const stamp=JSON.stringify(records),changed=stamp!==catalogueStamp;
+    catalogueCheckedAt=Date.now();
     document.documentElement.removeAttribute('data-server-vacancy');
     backendReady=true;publicLoadState='ready';stopPublishedLattice();
     if(changed){managedRecords=records;catalogueStamp=stamp;renderPage();}
@@ -974,13 +986,23 @@ function loadPublishedContent({interactive=false}={}){
   }).catch(()=>{
     document.documentElement.removeAttribute('data-server-vacancy');
     const hadPublishedContent=managedRecords!==null;
-    managedRecords=null;catalogueStamp=null;
+    managedRecords=null;catalogueStamp=null;catalogueCheckedAt=0;
     backendReady=false;publicLoadState='failed';stopPublishedLattice();
     if(hadPublishedContent)renderPage();
     else {renderJobs();syncLiveNote();syncVacancyRoute();}
   }).finally(()=>{catalogueFlight=null;});
   return catalogueFlight;
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void loadPublishedContent();});
-window.addEventListener('pageshow',event=>{if(event.persisted){syncHoloBackground();void loadPublishedContent();}});
+function refreshStaleCatalogue(){
+  managedRecords=null;catalogueStamp=null;catalogueCheckedAt=0;
+  jobs=[];backendReady=false;publicLoadState='loading';
+  renderJobs();renderManagedContent();syncVacancyRoute();syncPublishedLattice();
+  void loadPublishedContent();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  if(catalogueCheckedAt&&Date.now()-catalogueCheckedAt>=catalogueFreshnessMs)refreshStaleCatalogue();
+  else void loadPublishedContent();
+});
+window.addEventListener('pageshow',event=>{if(event.persisted){syncHoloBackground();refreshStaleCatalogue();}});
 void loadPublishedContent();

@@ -73,7 +73,9 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities, loadPhoto) {
           if (observedUserId!==user.id||photoKey!==key||snapshot.user?.id!==user.id||!blob)return;
           photoUrl=win.URL.createObjectURL(blob);
           snapshot={...snapshot,photo:photoUrl}; paint();
-        }).catch(()=>{});
+        }).catch(()=>{
+          if (observedUserId===user.id&&photoKey===key) releasePhoto();
+        });
       }
     } catch {
       if (attempt === revision) show({user, failed: true});
