@@ -8,6 +8,8 @@ import vm from 'node:vm';
 import {PGlite} from '@electric-sql/pglite';
 import {createClient} from '@supabase/supabase-js';
 import {readAvatarReferences, saveProfilePhoto} from '../dist/profile-photo-editor.js';
+import {normalizeProfileWebp} from '../dist/profile-webp.js';
+import {imageBytes, taggedAlphaBytes, taggedImageBytes, taggedLosslessBytes} from './helpers/jobs-avatar-webp.mjs';
 
 const origin = 'https://jobs-avatar-fixture.invalid';
 const functionUrl = origin + '/functions/v1/jobs-profile-avatar';
@@ -20,10 +22,6 @@ const actors = [
   {id:'90000000-0000-4000-8000-000000000002', email:'peer@avatar.test', is_anonymous:false},
   {id:'90000000-0000-4000-8000-000000000003', email:'anonymous@avatar.test', is_anonymous:true},
 ];
-const imageBytes = Buffer.from(
-  'UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoQABAAAMAWJaACdLoB+AADsAD+8ut//cHHsHHsHH71v/z8zu3F/OYAAAA=',
-  'base64',
-);
 const bundle = new URL('../supabase/functions/jobs-profile-avatar/index.ts', import.meta.url);
 
 async function fixture(t) {
@@ -184,8 +182,8 @@ async function fixture(t) {
       assert.equal(data.user.id, actor.id);
       return client;
     },
-    rawUpload(token, actor) {
-      return api(functionUrl, {method:'POST', body:imageBytes, headers:{
+    rawUpload(token, actor, body = imageBytes) {
+      return api(functionUrl, {method:'POST', body, headers:{
         authorization:'Bearer ' + token, apikey:publishableKey,
         'x-avatar-owner':actor.id, 'x-avatar-version':'none', 'content-type':'image/webp',
       }});
@@ -201,7 +199,7 @@ test('the default Jobs Edge entry point is the current standalone bundle', () =>
   ]);
 });
 
-test('the standalone authenticates a signed-in user, uploads WebP, and enforces an owner-only lifecycle', async t => {
+test('the standalone accepts a tagged WebP from a signed-in user and enforces the owner-only lifecycle', async t => {
   const h = await fixture(t);
   const [actor, other, anonymous] = actors;
   const owner = await h.signIn(actor);
@@ -214,10 +212,15 @@ test('the standalone authenticates a signed-in user, uploads WebP, and enforces 
   assert.equal((await h.rawUpload(h.tokenFor(actor, 0), actor)).status, 401);
   assert.equal((await h.rawUpload(h.tokenFor(anonymous), anonymous)).status, 401);
   assert.equal((await h.rawUpload(token, other)).status, 403);
+  const invalid = await h.rawUpload(token, actor, new Uint8Array(24));
+  assert.equal(invalid.status, 415);
+  assert.equal((await invalid.json()).error, 'avatarInvalidWebp');
   assert.equal(h.bodies.size, 0);
   assert.equal((await h.pg.query('select id from jobs_private.jobs_avatar_uploads')).rows.length, 0);
 
-  const first = await saveProfilePhoto(owner, 'jobs', actor.id, null, photo);
+  // Going straight to the function models an already-deployed client that
+  // has not yet removed the optional chunks from its canvas export.
+  const first = await saveProfilePhoto(owner, 'jobs', actor.id, null, new Blob([taggedImageBytes], {type:'image/webp'}));
   await h.settle();
   assert.equal(first.path, actor.id + '/' + first.version + '.webp');
   const reference = (await readAvatarReferences(owner, 'jobs', [actor.id])).get(actor.id);
@@ -250,4 +253,41 @@ test('the standalone authenticates a signed-in user, uploads WebP, and enforces 
     user_id:actor.id, version:removed.version, path:null,
   });
   assert.equal(h.bodies.size, 0);
+});
+
+function webpChunks(image) {
+  const bytes = Buffer.from(image);
+  const chunks = new Map();
+  for (let offset = 12; offset < bytes.length;) {
+    const tag = bytes.toString('ascii', offset, offset + 4);
+    const size = bytes.readUInt32LE(offset + 4);
+    chunks.set(tag, bytes.subarray(offset + 8, offset + 8 + size));
+    offset += 8 + size + (size % 2);
+  }
+  return chunks;
+}
+
+test('WebP normalization strips ancillary chunks while preserving the image and transparency', () => {
+  assert.deepEqual(Buffer.from(normalizeProfileWebp(taggedImageBytes)), imageBytes);
+  const cleanAlpha = webpChunks(normalizeProfileWebp(taggedAlphaBytes));
+  const originalAlpha = webpChunks(taggedAlphaBytes);
+  assert.deepEqual([...cleanAlpha.keys()], ['VP8X','ALPH','VP8 ']);
+  assert.equal(cleanAlpha.get('VP8X')[0], 0x10);
+  assert.deepEqual(cleanAlpha.get('ALPH'), originalAlpha.get('ALPH'));
+  assert.deepEqual(cleanAlpha.get('VP8 '), originalAlpha.get('VP8 '));
+
+  const cleanLossless = webpChunks(normalizeProfileWebp(taggedLosslessBytes));
+  assert.deepEqual([...cleanLossless.keys()], ['VP8L']);
+  assert.deepEqual(cleanLossless.get('VP8L'), webpChunks(taggedLosslessBytes).get('VP8L'));
+});
+
+test('WebP normalization still rejects animated, truncated, and oversized images', () => {
+  const animated = Buffer.from(taggedImageBytes);
+  animated[20] |= 0x02;
+  assert.equal(normalizeProfileWebp(animated), null);
+  assert.equal(normalizeProfileWebp(taggedImageBytes.subarray(0, -1)), null);
+  const wide = Buffer.from(imageBytes);
+  wide.writeUInt16LE(513, 26);
+  assert.equal(normalizeProfileWebp(wide), null);
+  assert.equal(normalizeProfileWebp(new Uint8Array(100 * 1024 + 1)), null);
 });

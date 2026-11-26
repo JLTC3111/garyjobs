@@ -17,6 +17,7 @@ export type CmsAdapter = {
   list(input: {kind: string; query: string; status: string; page: number; pageSize: number}): Promise<{records: CmsEntry[]; total: number}>;
   save(record: CmsEntry, input: {expectedVersion: number}): Promise<CmsEntry>;
   transition(id: string, status: CmsStatus, input: {expectedVersion: number}): Promise<CmsEntry>;
+  withdraw?(id: string, input: {expectedVersion: number}): Promise<CmsEntry>;
   revisions(id: string): Promise<Array<{id: string; version: number; created_at: string; status: CmsStatus}>>;
   restore(id: string, revisionId: string, input: {expectedVersion: number}): Promise<CmsEntry>;
   listMedia?(): Promise<unknown[]>;

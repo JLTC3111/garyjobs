@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
 import {mountJobsProfileAvatar} from '../dist/jobs-profile-avatar.js';
+import {imageBytes, taggedImageBytes} from './helpers/jobs-avatar-webp.mjs';
 
 const html = await readFile(new URL('../dist/portal.html', import.meta.url), 'utf8');
 const id = 'b0000000-0000-4000-8000-000000000001';
@@ -18,6 +19,7 @@ test('a Jobs identity uses one private avatar in the Staff and Candidate portals
     const {window} = new JSDOM(html, {url: 'https://jobs.example.test/portal.html?access=' + access});
     windows.push(window);
     const doc = window.document, get = id => doc.getElementById(id);
+    window.Blob = Blob;
     window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
     window.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new window.Event('close')); };
     window.URL.createObjectURL = () => `blob:https://jobs.example.test/${++serial}`;
@@ -26,7 +28,7 @@ test('a Jobs identity uses one private avatar in the Staff and Candidate portals
     const canvas = get('profile-avatar-canvas'), draws = [], output = [];
     canvas.getContext = () => ({clearRect() {}, drawImage(_image, ...crop) { draws.push(crop); }});
     canvas.toBlob = (callback, mime) => {
-      output.push(new window.Blob(['cropped webp'], {type: mime}));
+      output.push(new window.Blob([taggedImageBytes], {type: mime}));
       callback(output.at(-1));
     };
     const db = {
@@ -88,7 +90,9 @@ test('a Jobs identity uses one private avatar in the Staff and Candidate portals
     assert.equal(zoom.getAttribute('aria-valuetext'), '105%');
     candidate.get('profile-avatar-save').click();
     await tick();
-    assert.equal(writes[0].body, candidate.output[0]);
+    assert.equal(writes[0].body.type, 'image/webp');
+    assert.ok(writes[0].body.size < candidate.output[0].size);
+    assert.deepEqual(Buffer.from(await writes[0].body.arrayBuffer()), imageBytes);
     assert.ok(candidate.photo()?.src.startsWith('blob:'));
     const before = active.path;
 

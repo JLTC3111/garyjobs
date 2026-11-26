@@ -11,18 +11,41 @@ const fields=kinds.map(kind=>({key:kind+'_slug',label:{en:{employer:'Employer',c
 const collection={kind:'vacancy',label:{en:'Vacancies',vi:'Tin tuyển dụng'},automaticSlug:true,publicPath:'/jobs/',publishMinimums:{title:3,summary:10,body:20},fields:[...fields,{key:'contact_email',label:{en:'Recruiter email',vi:'Email chuyên viên'},type:'email',required:true},{key:'closes_on',label:{en:'Closing date',vi:'Hạn tuyển dụng'},type:'date',required:true,minDate:'today'}]};
 const record={id:'vacancy-1',kind:'vacancy',slug:'english-teacher',title_en:'English teacher',title_vi:'Giáo viên tiếng Anh',summary_en:'A complete English summary',summary_vi:'Tóm tắt tiếng Việt đầy đủ',body_en:'Detailed English information about this teaching position.',body_vi:'Thông tin tiếng Việt chi tiết về vị trí giảng dạy này.',data:{employer_slug:'school',category_slug:'public-schools',location_slug:'hanoi',contact_email:'recruiter@example.test',closes_on:'2099-12-31'},version:2,status:'review'};
 const choices={employer:[{value:'school',label:{en:'ABC School',vi:'Trường ABC'},status:'published',published:true}],category:[{value:'public-schools',label:{en:'Public schools',vi:'Trường công'},status:'published',published:true}],location:[{value:'hanoi',label:{en:'Hanoi',vi:'Hà Nội'},status:'published',published:true},{value:'danang',label:{en:'Da Nang',vi:'Đà Nẵng'},status:'published',published:true}]};
-function harness({language='en',entry=record,options=choices,referenceOptions,onCreate,onValidate,onTransition,onSave,publisher=true}={}){
+function harness({language='en',entry=record,options=choices,referenceOptions,onCreate,onValidate,onTransition,onSave,onWithdraw,publisher=true}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://jobs.garyhome.vn/portal.html'}),root=dom.window.document.querySelector('main'),calls={options:[],creates:[],validation:[],transitions:[],saves:[]};
   bindFeedbackDom(dom.window);
 
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};dom.window.HTMLElement.prototype.scrollIntoView=function(){};dom.window.confirm=()=>true;
  const adapter={errorText:()=>language==='vi'?'Thao tác chưa hoàn tất.':'The action could not be completed.',capabilities:async()=>({read:true,edit:true,publish:publisher,media:false}),list:async()=>({records:[structuredClone(entry)],total:1}),revisions:async()=>[],referenceOptions:async kind=>{calls.options.push(kind);return referenceOptions?referenceOptions(kind):structuredClone(options[kind]||[]);},validatePublication:async value=>{calls.validation.push(structuredClone(value));return onValidate?onValidate(value):[];},transition:async(...args)=>{calls.transitions.push(args);return onTransition?onTransition(...args):{...entry,status:args[1],version:entry.version+1};},save:async(value,input)=>{calls.saves.push({value:structuredClone(value),input});return onSave?onSave(value,input):{...value,version:value.version+1};},createReference:async(kind,value)=>{calls.creates.push({kind,value:structuredClone(value)});return onCreate?onCreate(kind,value):{id:'reference-1',kind,slug:'new-school',version:3,status:'published'};}};
+ if(onWithdraw)adapter.withdraw=onWithdraw;
  const controller=mountCms(root,{appId:'jobs',collections:[collection],language,adapter});
  const input=(selector,value)=>{const el=root.querySelector(selector);assert.ok(el,selector);el.focus();el.value=value;el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));return el;};
  const click=async selector=>{const el=root.querySelector(selector);assert.ok(el,selector);el.click();await settle();};
  const open=async()=>{await controller.ready;await click('[data-action="edit"]');};
  return {dom,root,calls,controller,input,click,open,close(){controller.destroy({force:true});dom.window.close();}};
 }
+
+test('a live vacancy revision shows the approved version and requires a separate confirmed withdrawal',async()=>{
+ const draft={...record,status:'draft',jobs_public_content:{version:1}};
+ const withdrawals=[];
+ const onWithdraw=async(...args)=>{withdrawals.push(args);return {...draft,version:3,jobs_public_content:null};};
+ const h=harness({entry:draft,onWithdraw});
+ try {
+  await h.open();assert.match(h.root.querySelector('tbody').textContent,/Published v1 is live/);
+  h.dom.window.confirm=()=>false;
+  await h.click('[data-action="withdraw"]');assert.equal(withdrawals.length,0);
+  h.dom.window.confirm=()=>true;
+  h.input('[name="body_en"]','A newer unsaved description');
+  await h.click('[data-action="withdraw"]');assert.equal(withdrawals.length,0);
+  assert.equal(h.root.querySelector('[name="body_en"]').value,'A newer unsaved description');
+  h.input('[name="body_en"]',draft.body_en);
+  await h.click('[data-action="withdraw"]');
+  assert.deepEqual(withdrawals,[[draft.id,{expectedVersion:draft.version}]]);
+  assert.equal(h.root.querySelector('[data-action="withdraw"]'),null);
+ } finally {h.close();}
+ const editor=harness({entry:draft,onWithdraw,publisher:false});
+ try {await editor.open();assert.equal(editor.root.querySelector('[data-action="withdraw"]'),null);} finally {editor.close();}
+});
 
 test('reference selectors display bilingual names and save the underlying selected values',async()=>{
  const h=harness();try{

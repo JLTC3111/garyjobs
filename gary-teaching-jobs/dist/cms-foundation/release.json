@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "sha256": "9244246a12282a07ae7b9e0adead7db6d55e75cb8fd61f5719e28424dbb3a028",
+  "sha256": "647d7631868b444d17a05fb327bc7bccbdad374d08c4fb80d187740042499156",
   "source": "gary-home/shared/cms-foundation",
   "files": [
     "index.js",
@@ -10,9 +10,8 @@
     "styles.css",
     "seo-findings.js",
     "seo-findings.d.ts",
-    "success-notification.js",
-    "success-notification.css"
+    "success-notification.js"
   ],
-  "applicationPatch": "jobs-reference-publishing-2026-11-16 + vacancy-simplification-2026-11-17 + persistent-editor-workspace-2026-11-17 + staff-sidebar-navigation-2026-11-17 + portal-semantic-themes-and-publication-confirmation-2026-11-17",
+  "applicationPatch": "jobs-reference-publishing-2026-11-16 + vacancy-simplification-2026-11-17 + persistent-editor-workspace-2026-11-17 + staff-sidebar-navigation-2026-11-17 + portal-semantic-themes-and-publication-confirmation-2026-11-17 + vacancy-revision-and-withdrawal-2026-11-26",
   "hashScope": "vendored-files"
 }

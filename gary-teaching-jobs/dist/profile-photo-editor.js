@@ -1,5 +1,6 @@
+import {maxProfilePhotoBytes, normalizeProfileWebp} from './profile-webp.js';
+
 const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-const maxOutputBytes = 100 * 1024;
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export const managedAvatarBucket = app => `gary-${app}-profile-photos`;
@@ -35,7 +36,7 @@ export async function encodeProfilePhoto(canvas, win = globalThis) {
       surface = win.document.createElement('canvas');
       surface.width = Math.max(1, Math.floor(canvas.width * scale));
       surface.height = Math.max(1, Math.floor(canvas.height * scale));
-      const context = surface.getContext('2d');
+      const context = surface.getContext('2d', {colorSpace: 'srgb'});
       context.imageSmoothingQuality = 'high';
       context.drawImage(canvas, 0, 0, surface.width, surface.height);
     } else if (edge < 512) {
@@ -44,7 +45,12 @@ export async function encodeProfilePhoto(canvas, win = globalThis) {
     for (const quality of [0.88, 0.82]) {
       const blob = await encode(surface, quality);
       if (!blob?.size || blob.type !== 'image/webp') throw new Error('Avatar WebP encoding unavailable');
-      if (blob.size <= maxOutputBytes) return blob;
+      if (blob.size <= maxProfilePhotoBytes) {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const normalized = normalizeProfileWebp(bytes);
+        if (!normalized) throw new Error('Invalid encoded WebP');
+        return normalized === bytes ? blob : new win.Blob([normalized], {type: 'image/webp'});
+      }
     }
   }
   throw new Error('Avatar could not be compressed');
@@ -145,7 +151,7 @@ export function mountProfilePhoto({
     const side = Math.min(width, height) / Number(zoom.value);
     const size = Math.max(1, Math.min(512, Math.floor(side)));
     canvas.width = canvas.height = size;
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d', {colorSpace: 'srgb'});
     context.imageSmoothingQuality = 'high';
     context.clearRect(0, 0, size, size);
     context.drawImage(image, (width - side) / 2, (height - side) / 2, side, side, 0, 0, size, size);

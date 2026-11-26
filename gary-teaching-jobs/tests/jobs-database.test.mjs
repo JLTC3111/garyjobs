@@ -21,7 +21,7 @@ test('database publication choices match all curated editor category and locatio
 });
 async function setup({latest=true,publicationBoundary=latest}={}){
  const db=new PGlite();
- await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;
+ await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema storage;
  create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
@@ -293,7 +293,7 @@ test('function-only upgrade preserves published vacancies, revisions and legacy 
  }finally{await h.db.close();}
 });
 
-test('a current draft withdraws its old vacancy snapshot for public roles and republishing restores only approved data',async()=>{
+test('vacancy draft revisions keep the approved publication until withdrawal, archive or deletion',async()=>{
  const h=await setup();
  try {
   await h.as(ids.admin);
@@ -304,24 +304,43 @@ test('a current draft withdraws its old vacancy snapshot for public roles and re
   await h.save({...guide,title_en:'Unpublished guide'});
   const location=await h.publish(h.record('location','hanoi'));
   await h.save({...location,title_en:'Unpublished location name'});
-  await h.publish(h.record('vacancy','still-live',{...data,location_slug:location.slug}));
+  const second=await h.publish(h.record('vacancy','still-live',{...data,location_slug:location.slug}));
   const faq=await h.publish(h.record('faq','live-faq'));
   await h.db.exec('reset role');
+  const publisher='10000000-0000-4000-8000-000000000008';
+  await h.q("insert into auth.users values($1,'publisher@example.test',now())",[publisher]);
+  await h.q("insert into jobs_private.staff_members(user_id,role) values($1,'publisher')",[publisher]);
   await h.db.exec(await readFile(new URL('../supabase/migrations/20261126114000_jobs_vacancy_current_publication.sql',import.meta.url),'utf8'));
   for(const id of [null,ids.a,ids.editor]) {
    await h.as(id);
    assert.deepEqual((await h.q('select slug from public.jobs_public_content order by slug')).rows,
-    [{slug:'hanoi'},{slug:'live-faq'},{slug:'still-live'}]);
+    [{slug:'former-live'},{slug:'hanoi'},{slug:'live-faq'},{slug:'still-live'}]);
+   assert.equal((await h.one('select title_en from public.jobs_public_content where id=$1',[first.id])).title_en,first.title_en);
+   await assert.rejects(h.q('select public.jobs_cms_withdraw($1,$2)',[first.id,pending.version]),error=>error.code==='42501');
   }
   await h.as(ids.admin);
-  const restored=await h.transition(await h.transition(pending,'review'),'published');
+  const review=await h.transition(pending,'review');
+  const prior=await h.one('select id from public.jobs_cms_revisions where entry_id=$1 and version=$2',[first.id,first.version]);
+  const working=await h.one('select * from public.jobs_cms_restore($1,$2,$3)',[first.id,prior.id,review.version]);
+  assert.equal((await h.one('select version from public.jobs_public_content where id=$1',[first.id])).version,first.version);
+  await assert.rejects(h.q('select public.jobs_cms_withdraw($1,$2)',[first.id,pending.version]),versionConflict);
+  await h.as(publisher);
+  const withdrawn=await h.one('select * from public.jobs_cms_withdraw($1,$2)',[first.id,working.version]);
+  assert.equal(withdrawn.status,'draft');
+  assert.equal(withdrawn.title_en,working.title_en);
+  assert.equal((await h.one("select snapshot->>'publication_action' action from public.jobs_cms_revisions where entry_id=$1 and version=$2",[first.id,withdrawn.version])).action,'withdrawn');
   await h.as(null);
-  assert.equal((await h.one('select title_en from public.jobs_public_content where id=$1',[first.id])).title_en,'Unpublished edit');
+  assert.equal(await h.one('select id from public.jobs_public_content where id=$1',[first.id]),undefined);
   await h.as(ids.admin);
-  await h.save({...restored,title_en:'Next draft'});
+  const revised=await h.save({...withdrawn,title_en:'Approved after withdrawal'});
+  assert.equal(await h.one('select id from public.jobs_public_content where id=$1',[first.id]),undefined);
+  const published=await h.transition(revised,'published');
+  assert.equal((await h.one('select title_en from public.jobs_public_content where id=$1',[first.id])).title_en,'Approved after withdrawal');
+  await h.transition(await h.save({...published,title_en:'Next draft'}),'archived');
   await h.save({...faq,title_en:'Unpublished answer'});
   await h.db.exec('reset role');
-  assert.equal((await h.q('select id from public.jobs_public_content where id in ($1,$2)',[first.id,faq.id])).rows.length,0);
+  await h.q('delete from public.jobs_cms_entries where id=$1',[second.id]);
+  assert.equal((await h.q('select id from public.jobs_public_content where id in ($1,$2,$3)',[first.id,faq.id,second.id])).rows.length,0);
   assert.ok((await h.q('select id from public.jobs_cms_revisions where entry_id=$1',[first.id])).rows.length>0);
  } finally {await h.db.close();}
 });

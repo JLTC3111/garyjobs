@@ -1,54 +1,17 @@
-const maxBytes = 100 * 1024;
+import {maxProfilePhotoBytes, normalizeProfileWebp} from '../../../dist/profile-webp.js';
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const photoPath = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/;
 const timeout = 12_000;
 
-// Inspect the RIFF container independently of the request's declared MIME.
-// Only static WebP image data, optional alpha, and the extended header are allowed.
-export function isAvatarWebp(bytes) {
-  if (bytes.length < 20 || bytes.length > maxBytes) return false;
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const tag = offset => String.fromCharCode(...bytes.subarray(offset, offset + 4));
-  const u24 = offset => view.getUint8(offset) + 256 * view.getUint16(offset + 1, true);
-  if (tag(0) !== 'RIFF' || tag(8) !== 'WEBP' || view.getUint32(4, true) !== bytes.length - 8) return false;
-  let width, height, canvasWidth, canvasHeight, alpha = false;
-  for (let offset = 12; offset < bytes.length;) {
-    if (offset + 8 > bytes.length) return false;
-    const type = tag(offset), size = view.getUint32(offset + 4, true), start = offset + 8;
-    offset = start + size + (size % 2);
-    if (offset > bytes.length || width) return false;
-    if (type === 'VP8X' && start === 20 && size === 10 && (view.getUint32(start) & 0xefffffff) === 0) {
-      canvasWidth = u24(start + 4) + 1;
-      canvasHeight = u24(start + 7) + 1;
-    } else if (type === 'ALPH' && canvasWidth && !alpha && size >= 1 && (bytes[20] & 0x10)) {
-      alpha = true;
-    } else if (type === 'VP8 ' && size >= 10 && (bytes[start] & 1) === 0 &&
-      bytes[start + 3] === 0x9d && bytes[start + 4] === 1 && bytes[start + 5] === 0x2a) {
-      if ((u24(start) >>> 5) > size - 10) return false;
-      width = view.getUint16(start + 6, true) & 0x3fff;
-      height = view.getUint16(start + 8, true) & 0x3fff;
-    } else if (type === 'VP8L' && !alpha && size >= 5 && bytes[start] === 0x2f) {
-      const dimensions = view.getUint32(start + 1, true);
-      if (dimensions >>> 29) return false;
-      width = (dimensions & 0x3fff) + 1;
-      height = ((dimensions >>> 14) & 0x3fff) + 1;
-    } else {
-      return false;
-    }
-  }
-  return width > 0 && height > 0 && width <= 512 && height <= 512 &&
-    (!canvasWidth || (canvasWidth === width && canvasHeight === height));
-}
-
 async function readBounded(request) {
-  if (Number(request.headers.get('content-length')) > maxBytes || !request.body) return null;
+  if (Number(request.headers.get('content-length')) > maxProfilePhotoBytes || !request.body) return null;
   const reader = request.body.getReader();
-  const bytes = new Uint8Array(maxBytes);
+  const bytes = new Uint8Array(maxProfilePhotoBytes);
   let offset = 0;
   for (;;) {
     const {value, done} = await reader.read();
     if (done) return offset ? bytes.subarray(0, offset) : null;
-    if (offset + value.length > maxBytes) {
+    if (offset + value.length > maxProfilePhotoBytes) {
       await reader.cancel();
       return null;
     }
@@ -142,10 +105,12 @@ export function createProfilePhotoHandler({
       }
       let bytes;
       if (!removing) {
-        if (requestIn.headers.get('content-type')?.toLowerCase() !== 'image/webp') return error('avatarType', 415);
-        bytes = await readBounded(requestIn);
-        if (!bytes) return error('avatarSize', 413);
-        if (!isAvatarWebp(bytes)) return error('avatarType', 415);
+        const mime = requestIn.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+        if (mime !== 'image/webp') return error('avatarType', 415);
+        const encoded = await readBounded(requestIn);
+        if (!encoded) return error('avatarSize', 413);
+        bytes = normalizeProfileWebp(encoded);
+        if (!bytes) return error('avatarInvalidWebp', 415);
       }
 
       id = crypto.randomUUID();
