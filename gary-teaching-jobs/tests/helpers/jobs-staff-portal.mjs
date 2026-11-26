@@ -5,6 +5,7 @@ import {bindFeedbackDom} from './feedback-dom.mjs';
 import {mountCms} from '../../dist/cms-foundation/index.js';
 import {mountJobsStaffSidebar} from '../../dist/jobs-staff-sidebar.js';
 import {mountJobsAccountMenu} from '../../dist/jobs-account-menu.js';
+import {mountJobsProfileAvatar} from '../../dist/jobs-profile-avatar.js';
 import {mountStaffManagement} from '../../dist/jobs-staff-management.js';
 import {mountTalentPool} from '../../dist/jobs-talent-pool.js';
 import * as vacancyOptions from '../../dist/jobs-vacancy-options.js';
@@ -18,6 +19,7 @@ export async function staffPortal({caps={read:true,edit:true,publish:true,media:
  const dom=new JSDOM(await readFile(new URL('../../dist/portal.html',import.meta.url),'utf8'),{url:url.href,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,doc=w.document;
   bindFeedbackDom(dom.window);
  w.mountJobsAccountMenu=mountJobsAccountMenu;
+ w.mountJobsProfileAvatar=mountJobsProfileAvatar;
 
  Object.defineProperty(w,'innerWidth',{value:width,writable:true});Object.defineProperty(w,'innerHeight',{value:height,writable:true});doc.documentElement.dataset.jobsTheme=theme;
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=confirm;
@@ -27,7 +29,7 @@ export async function staffPortal({caps={read:true,edit:true,publish:true,media:
  w.mountCms=(root,options)=>{cms=mountCms(root,options);return cms;};
  w.createStaffAdapter=()=>staff||{overview:async()=>({viewer:{},members:[],events:[]})};w.mountStaffManagement=mountStaffManagement;
  w.createTalentAdapter=()=>talent;w.mountTalentPool=mountTalentPool;
- w.db={auth:{getUser:async()=>({data:{user:{id:'test-user',email:'staff@example.test'}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({data:{}})},rpc:async()=>({data:[]}),from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null})})};
+ w.db={auth:{getUser:async()=>({data:{user:{id:'test-user',email:'staff@example.test'}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({data:{}})},rpc:async()=>({data:[]}),from:()=>({select(){return this;},in:async()=>({data:[]}),eq(){return this;},maybeSingle:async()=>({data:null})})};
  w.applicationList=async options=>{calls.applications.push(options);return{records:[],total:0};};w.uploadCv=async()=>{};w.transitionApplication=async()=>{};w.submitApplication=async()=>({});
  const sidebar=mountJobsStaffSidebar(doc);
  const source=(await readFile(new URL('../../dist/jobs-portal.js',import.meta.url),'utf8')).split('\n').filter(line=>!line.startsWith('import ')).join('\n');vm.runInContext(source,dom.getInternalVMContext());await settle();if(cms)await cms.ready;await settle();

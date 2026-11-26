@@ -7,6 +7,7 @@ import {showActionToast,setCounterValues,clearCounterValues} from './action-toas
 import {createTalentAdapter} from './jobs-talent-data.js';
 import {mountTalentPool} from './jobs-talent-pool.js';
 import {mountJobsAccountMenu} from './jobs-account-menu.js';
+import {mountJobsProfileAvatar} from './jobs-profile-avatar.js';
 import {mountLanguageSwitch} from './squish-switch.js';
 
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -47,7 +48,8 @@ function renderChrome(){
  document.title=`${access==='staff'?t('Staff portal','Cổng nhân viên'):t('Candidate portal','Cổng ứng viên')} | Vietnam English Teaching Jobs`;
  $('.skip-link').textContent=t('Skip to content','Chuyển đến nội dung');
  updateLanguageSwitch(language);
- accountMenu.update({language,user:recovery?null:user,caps,loading});
+ profilePhoto.account(loading||recovery?null:user,caps.account);
+ updateAccountMenu();
  const context=$('[data-portal-context]');
  if(context)context.textContent=access==='staff'?t('Staff','Nhân viên'):t('Candidate','Ứng viên');
  $('#portal-access').setAttribute('aria-label',t('Choose your portal','Chọn cổng đăng nhập'));
@@ -352,14 +354,23 @@ const updateLanguageSwitch=mountLanguageSwitch($('#portal-language'),language,ne
  else if(talentPage)talentPage.setLanguage(language);
  else if(user&&!loading&&!recovery)void renderView().catch(e=>status(errorText(e,language),true,true));
 });
+let accountPhoto='';
+function updateAccountMenu(){
+ accountMenu.update({language,user:recovery?null:user,caps,loading,photo:accountPhoto});
+}
 const accountMenu=mountJobsAccountMenu($('#portal-account'),{
  showGuest:false,
  canNavigate:mayLeave,
+ editPhoto:trigger=>profilePhoto.open(trigger),
  async signOut(){
   const actor=user.id;
   unwrap(await deadline(db.auth.signOut({scope:'local'})));
   if(user?.id===actor)showSignedOut();
  },
+});
+const profilePhoto=mountJobsProfileAvatar($('#jobs-photo-dialog'),{
+ db,language:()=>language,notify:success,
+ onPhotoChange(url){accountPhoto=url;updateAccountMenu();},
 });
 function showSignedOut(){
  clearTimeout(authSyncTimer);

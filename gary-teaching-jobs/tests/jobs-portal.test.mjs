@@ -5,12 +5,14 @@ import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
+import {mountJobsProfileAvatar} from '../dist/jobs-profile-avatar.js';
 import {mountPortalAppearance} from '../dist/jobs-portal-appearance.js';
 const settle=()=>new Promise(r=>setTimeout(r,15));
 async function portal({caps={},view='mine',canLeave=()=>true,listApplications,stats={}}={}){
  const dom=new JSDOM(await readFile(new URL('../dist/portal.html',import.meta.url),'utf8'),{url:'https://jobs.garyhome.vn/portal.html?view='+view,runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window;
   bindFeedbackDom(dom.window);
  w.mountJobsAccountMenu=mountJobsAccountMenu;
+ w.mountJobsProfileAvatar=mountJobsProfileAvatar;
 
  let currentUser={id:'10000000-0000-4000-8000-000000000001',email:'candidate@example.test'};const calls={submissions:[],cms:[],destroy:[]};
  w.HTMLElement.prototype.scrollIntoView=function(){};w.errorText=e=>e.message;w.unwrap=r=>{if(r.error)throw r.error;return r.data;};w.capabilities=async()=>caps;w.collections=[];w.createCmsAdapter=()=>({});w.STAGES=['submitted','screening'];w.STAGE_LABELS={submitted:['Submitted','Đã nộp'],screening:['Screening','Sàng lọc']};w.jobsConfig={cvBucket:'jobs-cv'};

@@ -14,8 +14,10 @@ const paths = {
 };
 const icon = name => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const text = value => typeof value === 'string' ? value.trim() : '';
+export const savedJobsAccountName = (user, account) => [account?.full_name, user?.user_metadata?.full_name]
+  .map(text).find(name => name && !name.includes('@')) || '';
 
-export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGuest = true, publicHeader = false}) {
+export function mountJobsAccountMenu(root, {signOut, retry, editPhoto, canNavigate, showGuest = true, publicHeader = false}) {
   const doc = root.ownerDocument;
   const signoutDescriptionId = `${root.id}-signout-description`;
   root.innerHTML = '<summary></summary><div class="jobs-login-options"></div>';
@@ -23,7 +25,7 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
   let state = {}, signingOut = false, signOutFailed = false, triggerMarkup = '', panelMarkup = '';
 
   function render() {
-    const {language, user, caps, loading, failed} = state;
+    const {language, user, caps, loading, failed, photo} = state;
     const t = (en, vi) => language === 'vi' ? vi : en;
     const label = loading ? t('Checking session…', 'Đang kiểm tra phiên đăng nhập…')
       : user || failed ? t('My account', 'Tài khoản của tôi') : t('Sign in', 'Đăng nhập');
@@ -31,9 +33,10 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
     const triggerTitle = loading ? t('Checking account session', 'Đang kiểm tra phiên tài khoản')
       : user || failed ? t('Account Dashboard', 'Bảng điều khiển tài khoản') : t('Account sign-in', 'Đăng nhập tài khoản');
     const email = text(user?.email);
-    const name = text(user?.user_metadata?.full_name) || text(user?.user_metadata?.name) || email;
-    const initials = name.split(/\s+/).slice(0, 2).map(part => Array.from(part)[0] || '').join('').toUpperCase();
-    const avatar = `<span class="jobs-account-avatar" aria-hidden="true">${initials ? escapeText(initials) : icon('user')}</span>`;
+    const savedName = savedJobsAccountName(user, caps?.account);
+    const name = savedName || email;
+    const initials = savedName.split(/\s+/).slice(0, 2).map(part => Array.from(part)[0] || '').join('').toUpperCase();
+    const avatar = `<span class="jobs-account-avatar" aria-hidden="true">${initials ? escapeText(initials) : icon('user')}${photo ? `<img src="${escapeText(photo)}" alt="" decoding="async">` : ''}</span>`;
     const staff = caps?.read === true || caps?.recruit === true;
     const role = staff && Object.hasOwn(roles, caps.role) ? t(...roles[caps.role]) : '';
     const destination = (access, label) => `<a href="portal.html?access=${access}">${icon(access)}<span class="jobs-account-item-label">${label}</span></a>`;
@@ -56,6 +59,7 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
         <div class="jobs-account-badges">${role ? `<span>${t('Staff', 'Nhân viên')} · ${role}</span>` : ''}<span>${candidate}</span></div></div></div>
         ${staff ? destination('staff', t('Staff Dashboard', 'Bảng điều khiển nhân viên')) : ''}
         ${destination('candidate', t('Candidate Dashboard', 'Bảng điều khiển ứng viên'))}
+        ${editPhoto ? `<button type="button" data-jobs-photo-edit>${icon('user')}<span class="jobs-account-item-label">${t('Edit profile photo', 'Đổi ảnh hồ sơ')}</span></button>` : ''}
         <footer><button id="sign-out" type="button" aria-describedby="${signoutDescriptionId}" ${signingOut ? 'disabled' : ''}>${icon('signOut')}<span class="jobs-account-item-label">${signingOut ? t('Signing out…', 'Đang đăng xuất…') : t('Sign out', 'Đăng xuất')}</span></button>
         <p class="jobs-account-signout-description" id="${signoutDescriptionId}">${t('End your session on this website.', 'Kết thúc phiên đăng nhập trên trang web này.')}</p>
         ${signOutFailed ? `<p role="alert">${t('Sign-out failed. Try again.', 'Đăng xuất chưa thành công. Vui lòng thử lại.')}</p>` : ''}</footer>`;
@@ -87,7 +91,15 @@ export function mountJobsAccountMenu(root, {signOut, retry, canNavigate, showGue
     root.open = false;
     trigger.focus({preventScroll: true});
   });
+  root.addEventListener('error', event => {
+    if (event.target.matches?.('.jobs-account-avatar img')) event.target.remove();
+  }, true);
   root.addEventListener('click', async event => {
+    if (event.target.closest('[data-jobs-photo-edit]') && state.user) {
+      root.open = false;
+      editPhoto?.(trigger);
+      return;
+    }
     if (event.target.closest('summary') && state.loading) {
       event.preventDefault();
       return;

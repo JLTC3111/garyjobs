@@ -4,3 +4,6 @@ project_id = "gary-teaching-jobs"
 # JWT and CMS role before image processing. The reservation checks again before writing.
 [functions.jobs-vacancy-image]
 verify_jwt = false
+
+[functions.jobs-profile-avatar]
+verify_jwt = false # The handler verifies the user with Auth before reserving an upload.

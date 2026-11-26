@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import {bindFeedbackDom} from './helpers/feedback-dom.mjs';
 import {mountJobsAccountMenu} from '../dist/jobs-account-menu.js';
+import {mountJobsProfileAvatar} from '../dist/jobs-profile-avatar.js';
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const candidate={id:'10000000-0000-4000-8000-000000000001',email:'candidate@example.test'};
@@ -18,6 +19,7 @@ async function portal({access,view,user=candidate,caps={},getUser,getCapabilitie
 
  const w=dom.window,calls={cms:0,destroy:0,applications:0,applicationOptions:[],rpc:[],users:0,signIns:[],registrations:[]};
  w.mountJobsAccountMenu=mountJobsAccountMenu;
+ w.mountJobsProfileAvatar=mountJobsProfileAvatar;
  let currentUser=user,authListener;
  if(fastTimeout){const schedule=w.setTimeout.bind(w);w.setTimeout=(fn,delay,...args)=>schedule(fn,delay>=1000?25:delay,...args);}
  w.HTMLElement.prototype.scrollIntoView=function(){};
@@ -79,7 +81,7 @@ test('staff sign-in entry hides candidate registration',async()=>{
 });
 
 test('staff entry opens content management for an authorized editor',async()=>{
- const h=await portal({access:'staff',caps:{read:true,edit:true,role:'editor'}});
+ const h=await portal({access:'staff',caps:{read:true,edit:true,media:true,role:'editor'}});
  try{
   await h.settle();
   assert.equal(h.calls.cms,1);

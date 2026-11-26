@@ -1,10 +1,11 @@
 import {mountJobsAccountMenu} from './jobs-account-menu.js';
 
-export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
+export function mountJobsPublicAccount(doc, auth, loadCapabilities, loadPhoto) {
   const root = doc.getElementById('public-account');
   if (!root) return;
   const win = doc.defaultView;
   let snapshot = {loading: true}, revision = 0, checking = -1, observedUserId = null, queued;
+  let photoKey = '', photoUrl = '';
   const menu = mountJobsAccountMenu(root, {
     publicHeader: true,
     async signOut() {
@@ -23,6 +24,10 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
     }));
   }
   function show(next) { snapshot = next; paint(); announce(); }
+  function releasePhoto() {
+    if (photoUrl) win.URL.revokeObjectURL(photoUrl);
+    photoKey = ''; photoUrl = '';
+  }
   function withinDeadline(promise) {
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -34,6 +39,7 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
     revision++;
     observedUserId = null;
     win.clearTimeout(queued);
+    releasePhoto();
     show({});
   }
   async function verify() {
@@ -55,7 +61,20 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
       if (!user) { signedOut(); return; }
       observedUserId = user.id;
       const caps = await withinDeadline(loadCapabilities());
-      if (attempt === revision) show({user, caps});
+      if (attempt !== revision) return;
+      const path=caps?.account?.avatar_path;
+      const key=typeof path==='string'&&path.startsWith(user.id+'/')&&/^[a-f0-9-]{36}\.webp$/i.test(path.split('/')[1]||'')
+        &&path.split('/').length===2 ? path : '';
+      if (key!==photoKey) releasePhoto();
+      show({user,caps,photo:photoUrl});
+      if (key&&key!==photoKey&&loadPhoto&&typeof win.URL.createObjectURL==='function') {
+        photoKey=key;
+        void withinDeadline(loadPhoto(key)).then(blob=>{
+          if (observedUserId!==user.id||photoKey!==key||snapshot.user?.id!==user.id||!blob)return;
+          photoUrl=win.URL.createObjectURL(blob);
+          snapshot={...snapshot,photo:photoUrl}; paint();
+        }).catch(()=>{});
+      }
     } catch {
       if (attempt === revision) show({user, failed: true});
     } finally {
@@ -75,6 +94,7 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
     if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION' && !next) { signedOut(); return; }
     if (!next || !['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
     if (next !== observedUserId) {
+      releasePhoto();
       observedUserId = next;
       revision++;
       show({loading: true});
@@ -94,6 +114,7 @@ export function mountJobsPublicAccount(doc, auth, loadCapabilities) {
 }
 
 if (typeof document !== 'undefined') {
-  const {db, capabilities} = await import('./jobs-backend.js');
-  mountJobsPublicAccount(document, db.auth, capabilities);
+  const {db, capabilities, unwrap} = await import('./jobs-backend.js');
+  mountJobsPublicAccount(document, db.auth, capabilities,
+    async path => unwrap(await db.storage.from('gary-jobs-profile-photos').download(path)));
 }

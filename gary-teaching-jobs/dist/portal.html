@@ -103,5 +103,39 @@
       </div>
     </section>
   </main>
+  <dialog id="jobs-photo-dialog" class="jobs-photo-dialog" aria-labelledby="profile-avatar-title">
+    <header>
+      <span data-avatar-current aria-hidden="true"></span>
+      <h2 id="profile-avatar-title" data-avatar-text="avatarTitle">Profile photo</h2>
+      <button type="button" data-avatar-close data-avatar-text="avatarClose" data-button-variant="cancel">Close</button>
+    </header>
+    <section id="profile-avatar-controls" class="profile-avatar-controls">
+      <div class="form-field">
+        <label for="profile-avatar-file" data-avatar-text="avatarChoose">Choose a picture</label>
+        <input id="profile-avatar-file" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" aria-describedby="profile-avatar-formats profile-avatar-feedback">
+        <small id="profile-avatar-formats" data-avatar-text="avatarFormats">JPG, JPEG, PNG or WebP. Up to 5 MB.</small>
+      </div>
+      <div id="profile-avatar-preview" hidden>
+        <canvas id="profile-avatar-canvas" role="img" width="512" height="512"></canvas>
+        <label class="profile-zoom-label" for="profile-avatar-zoom" data-avatar-text="avatarZoom">Crop zoom</label>
+        <div class="profile-zoom">
+          <button id="profile-zoom-out" type="button" aria-label="Zoom out"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <div class="profile-zoom-slider">
+            <span class="profile-zoom-track" aria-hidden="true"></span>
+            <input id="profile-avatar-zoom" type="range" min="1" max="3" step="0.05" value="1">
+          </div>
+          <button id="profile-zoom-in" type="button" aria-label="Zoom in"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+          <span id="profile-zoom-value" aria-hidden="true">100%</span>
+        </div>
+        <div class="profile-avatar-actions">
+          <button id="profile-avatar-save" type="button" data-button-variant="save" class="primary" data-avatar-text="avatarSave">Save picture</button>
+          <button id="profile-avatar-cancel" type="button" data-button-variant="cancel" data-avatar-text="avatarCancel">Cancel crop</button>
+        </div>
+      </div>
+      <p id="profile-avatar-feedback" class="jobs-photo-error" role="alert"></p>
+      <button id="profile-avatar-retry" type="button" data-button-variant="cancel" data-avatar-text="avatarRetry" hidden>Retry picture</button>
+      <button id="profile-avatar-remove" type="button" data-button-variant="danger" data-avatar-text="avatarRemove" hidden>Remove picture</button>
+    </section>
+  </dialog>
 </body>
 </html>
